@@ -1,0 +1,83 @@
+DEFAULTS:
+  display:
+    dsize: &dsize [100, 16]
+    type: &dtype ws0010
+    
+  paths:
+    'images': '../images'
+    'fonts': '../fonts'
+
+  widgets:
+    scroll: &scroll
+      type: scroll
+      dgap: __self__['size'][0]/4, 0
+      size: [100, 8]
+      wait: 'atStart'
+      actions:
+        - [pause, 5]
+        - rtl
+
+FONTS:
+  tiny: upperascii_3x5.fnt
+  small: hd44780.fnt
+  large: Vintl01_10x16.fnt
+  
+
+WIDGETS:
+
+    # STARTING WIDGET
+    splash:
+        type: text
+        value: f"Tagg's Tap #{sys['tapnr']}"
+        font: large
+
+    # Beer Display
+    name:
+        type: text
+        value: f"{beers[taps[sys['tapnr']]]['Name']}"
+        font: small
+    description:
+        type: text
+        font: small
+        value: f"{beers[taps[sys['tapnr']]]['Description']}"
+        effect: *scroll
+    abv:
+        type: text
+        font: tiny
+        just: rt
+        value: f"{beers[taps[sys['tapnr']]]['abv']}"
+
+CANVASES:
+
+  # PLAY CANVASES
+  beerCanvas: &beerCanvas
+    type: canvas
+    placements:
+      - name, 0, 0
+      - abv, 0, 0, rt 
+      - description, 0, 0, lb
+    size: [100, 16]
+    activeWhen: True
+
+
+  splashCanvas: &splashCanvas
+    type: canvas
+    placements:
+      - splash, 0, 0, mt
+    size: [100, 16]
+    minDuration: 4
+    z: 1000
+    offset: 0,0
+    just: 'lt'
+    activeWhen: sys['status']=='start'
+
+
+DISPLAY:
+  size: *dsize
+  items:
+    - name: RUN
+      <<: *beerCanvas
+
+    - name: START
+      <<: *splashCanvas
+

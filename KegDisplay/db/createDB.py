@@ -21,11 +21,11 @@ cur.execute(
     'Color' float DEFAULT NULL,
     'OriginalGravity' float DEFAULT NULL,
     'FinalGravity' float DEFAULT NULL,
-    'Description' text,
+    'Description' text DEFAULT NULL,
     'Brewed' datetime DEFAULT NULL,
     'Kegged' datetime DEFAULT NULL,
     'Tapped' datetime DEFAULT NULL,
-    'Notes' text
+    'Notes' text DEFAULT NULL
   )
   '''  
 )
@@ -34,9 +34,31 @@ cur.execute(
   '''
   CREATE TABLE if not exists taps (
     'idTap' integer primary key,
-    'idBeer' tinytext NOT NULL
+    'idBeer' integer
   )
   '''  
 )
+
+cur.execute(
+    '''
+    INSERT INTO beers (Name, ABV, Description) VALUES 
+      ('Porter', 6.4, 'A standard porter from the land of porters'), 
+      ('Golden Ale', 4.5, 'Like sunshine in a bottle.  Enjoy while it lasts')
+    '''
+)
+
+cur.execute(
+    '''
+    INSERT INTO taps (idTap, idBeer) VALUES 
+      (1, 1),
+      (2, 2)
+    '''
+)
+
+
+
+
+cur.close()
+con.close()
 
 
