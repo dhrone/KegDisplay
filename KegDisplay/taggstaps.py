@@ -89,7 +89,7 @@ if __name__ == u'__main__':
     def updateData(dbSrc, ds):
         print (f"updateData being called if {dbSrc}")
         while True:
-            dbRow = dbSrc.get(wait=0)
+            dbRow = dbSrc.get()
             if dbRow is not None:
                 print ("Got from database: ", dbRow)
                 for key, value in dbRow.items():
