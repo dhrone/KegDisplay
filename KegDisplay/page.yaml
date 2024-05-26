@@ -1,12 +1,13 @@
+PATHS:
+  'images': './images'
+  'fonts': 'fonts/'
+
+
 DEFAULTS:
   display:
     dsize: &dsize [100, 16]
     type: &dtype ws0010
     
-  paths:
-    'images': '../images'
-    'fonts': '../fonts'
-
   widgets:
     scroll: &scroll
       type: scroll
@@ -26,49 +27,60 @@ FONTS:
 WIDGETS:
 
     # STARTING WIDGET
-    splash:
+    splash: &splash
         type: text
-        value: f"Tagg's Tap #{sys['tapnr']}"
+        dvalue: f"Tap {sys['tapnr']}"
         font: large
 
     # Beer Display
-    name:
+    name: &name
         type: text
-        value: f"{beers[taps[sys['tapnr']]]['Name']}"
+        dvalue: f"{beers[taps[sys['tapnr']]]['Name']}"
         font: small
-    description:
+    description: &description
         type: text
         font: small
-        value: f"{beers[taps[sys['tapnr']]]['Description']}"
+        dvalue: f"{beers[taps[sys['tapnr']]]['Description']}"
         effect: *scroll
-    abv:
+    abv: &abv
         type: text
         font: tiny
         just: rt
-        value: f"{beers[taps[sys['tapnr']]]['abv']}"
+        dvalue: f"{beers[taps[sys['tapnr']]]['ABV']}"
+
+    rectStart: &rectStart
+        type: rectangle
+        xy: [0, 0, 99, 15]
+        fill: black
+        outline: black
 
 CANVASES:
 
   # PLAY CANVASES
   beerCanvas: &beerCanvas
     type: canvas
-    placements:
-      - name, 0, 0
-      - abv, 0, 0, rt 
-      - description, 0, 0, lb
+    items:
+      - <<: *name
+        placement: [0, 0]
+      - <<: *abv
+        placement: [0, 0, rt] 
+      - <<: *description
+        placement: [0, 0, lb] 
     size: [100, 16]
     activeWhen: True
 
 
   splashCanvas: &splashCanvas
     type: canvas
-    placements:
-      - splash, 0, 0, mt
+    items:
+      - <<: *splash
+        placement: [0, 0]
+        z: 10
+      - <<: *rectStart
+        placement: [0, 0]
+        z: 1
     size: [100, 16]
-    minDuration: 4
     z: 1000
-    offset: 0,0
-    just: 'lt'
     activeWhen: sys['status']=='start'
 
 
@@ -77,7 +89,6 @@ DISPLAY:
   items:
     - name: RUN
       <<: *beerCanvas
-
     - name: START
       <<: *splashCanvas
 

@@ -1,0 +1,340 @@
+info face="HD44780" size=6 bold=0 italic=0 charset="" unicode=1 stretchH=100 smooth=0 aa=1 padding=0,0,0,0 spacing=0,0
+common lineHeight=8 base=8 scaleW=96 scaleH=128 pages=1 packed=0
+page id=0 file="hd44780a02.png"
+page id=1 file="hd44780a00.png"
+chars count=311
+char id=0x25b6 x=0 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '▶', Play
+char id=0x25c0 x=6 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '◀', Reverse
+char id=0x201C x=12 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '“', Left Double Quotation Mark
+char id=0x201D x=18 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '”', Right Double Quotation Mark
+char id=0x23EB x=24 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '⏫', Black Up Pointing Double Triable
+char id=0x23EC x=30 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '⏬', Black Down Pointing Double Triable
+char id=0x25CF x=36 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '●', Black Circle
+char id=0x21B2 x=42 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '↲', Downwards Arrow with Tip Leftwards
+char id=0x2191 x=48 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '↑', Upwards Arrow
+char id=0x2193 x=54 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '↓', Downwards Arrow
+char id=0x2190 x=60 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '←', Leftwards Arrow
+char id=0x2192 x=66 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '→', Rightwards Arrow
+char id=0x2264 x=72 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '≤', Less-than or Equal to
+char id=0x2265 x=78 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '≥', Greater-than or Equal to
+char id=0x25b2 x=84 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '▲', Black up-pointing triangle
+char id=0x25bc x=90 y=8 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '▼', Black down-pointing triangle
+char id=32 x=0 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # ' ', Space
+char id=33 x=6 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '!', Exclamation Mark
+char id=34 x=12 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '"', Quote Mark
+char id=35 x=18 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '#'
+char id=36 x=24 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '$'
+char id=37 x=30 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '%'
+char id=38 x=36 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '&'
+char id=39 x=42 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '''
+char id=40 x=48 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '('
+char id=41 x=54 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # ')'
+char id=42 x=60 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '*'
+char id=43 x=66 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '+'
+char id=44 x=72 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # ','
+char id=45 x=78 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '-'
+char id=46 x=84 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '.'
+char id=47 x=90 y=16 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '/'
+char id=48 x=0 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '0'
+char id=49 x=6 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '1'
+char id=50 x=12 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '2'
+char id=51 x=18 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '3'
+char id=52 x=24 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '4'
+char id=53 x=30 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '5'
+char id=54 x=36 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '6'
+char id=55 x=42 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '7'
+char id=56 x=48 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '8'
+char id=57 x=54 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '9'
+char id=58 x=60 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # ':'
+char id=59 x=66 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # ';'
+char id=60 x=72 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '<'
+char id=61 x=78 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '='
+char id=62 x=84 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '>'
+char id=63 x=90 y=24 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '?'
+char id=64 x=0 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '@'
+char id=65 x=6 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'A'
+char id=66 x=12 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'B'
+char id=67 x=18 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'C'
+char id=68 x=24 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'D'
+char id=69 x=30 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'E'
+char id=70 x=36 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'F'
+char id=71 x=42 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'G'
+char id=72 x=48 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'H'
+char id=73 x=54 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'I'
+char id=74 x=60 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'J'
+char id=75 x=66 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'K'
+char id=76 x=72 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'L'
+char id=77 x=78 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'M'
+char id=78 x=84 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'N'
+char id=79 x=90 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'O'
+char id=80 x=0 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'P'
+char id=81 x=6 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Q'
+char id=82 x=12 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'R'
+char id=83 x=18 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'S'
+char id=84 x=24 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'T'
+char id=85 x=30 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'U'
+char id=86 x=36 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'V'
+char id=87 x=42 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'W'
+char id=88 x=48 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'X'
+char id=89 x=54 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Y'
+char id=90 x=60 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Z'
+char id=91 x=68 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '['
+char id=92 x=72 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '\'
+char id=93 x=78 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # ']'
+char id=94 x=84 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '^'
+char id=95 x=90 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '_', underscore, Low Line
+char id=96 x=0 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '`'
+char id=97 x=6 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'a'
+char id=98 x=12 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'b'
+char id=99 x=18 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'c'
+char id=100 x=24 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'd'
+char id=101 x=30 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'e'
+char id=102 x=36 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'f'
+char id=103 x=42 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'g'
+char id=104 x=48 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'h'
+char id=105 x=54 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'i'
+char id=106 x=60 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'j'
+char id=107 x=66 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'k'
+char id=108 x=72 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'l'
+char id=109 x=78 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'm'
+char id=110 x=84 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'n'
+char id=111 x=90 y=48 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'o'
+char id=112 x=0 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'p'
+char id=113 x=6 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'q'
+char id=114 x=12 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'r'
+char id=115 x=18 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 's'
+char id=116 x=24 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 't'
+char id=117 x=30 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'u'
+char id=118 x=36 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'v'
+char id=119 x=42 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'w'
+char id=120 x=48 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'x'
+char id=121 x=54 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'y'
+char id=122 x=60 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'z'
+char id=123 x=66 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '{'
+char id=124 x=72 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '|'
+char id=125 x=78 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '}'
+char id=126 x=84 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '~'
+char id=0x2302 x=90 y=56 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '⌂', House
+char id=0x0411 x=0 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Б', Cyrillic Capital Letter BE
+char id=0x0414 x=6 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Д', Cyrillic Capital Letter DE
+char id=0x0416 x=12 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ж', Cyrillic Capital Letter ZHE
+char id=0x0417 x=18 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'З', Cyrillic Capital Letter ZE
+char id=0x0418 x=24 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'И', Cyrillic Capital Letter I
+char id=0x0419 x=30 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Й', Cyrillic Capital Letter Short I
+char id=0x041B x=36 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Л', Cyrillic Capital Letter EL
+char id=0x041F x=42 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'П', Cyrillic Capital Letter PE
+char id=0x0423 x=48 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'У', Cyrillic Capital Letter U
+char id=0x0426 x=54 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ц', Cyrillic Capital Letter TSE
+char id=0x0427 x=60 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ч', Cyrillic Capital Letter CHE
+char id=0x0428 x=66 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ш', Cyrillic Capital Letter SHA
+char id=0x0429 x=72 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Щ', Cyrillic Capital Letter SHCHA
+char id=0x042A x=78 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ъ', Cyrillic Capital Letter Hard Sign
+char id=0x042B x=84 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ы', Cyrillic Capital Letter Yeru
+char id=0x042D x=90 y=64 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Э', Cyrillic Capital Letter E
+char id=0x03b1 x=0 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'α', Greek Small Letter Alpha
+char id=0x266A x=6 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '♪', musicalnote Eight Note
+char id=0x0393 x=12 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Γ', Greek Capital Letter Gamma
+char id=0x03c0 x=18 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'π', Greek Small Letter Pi
+char id=0x03a3 x=24 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Σ', Greek Capital Letter Sigma
+char id=0x03c3 x=30 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'σ', Greek Small Letter Sigma
+char id=0x266c x=36 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '♬', Beamed Sixteenth Notes
+char id=0x03c4 x=42 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'τ', Greek Small Letter Tau
+char id=0x1f514 x=48 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '', Bell
+char id=0x0398 x=54 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Θ', Greek Capital Letter Theta
+char id=0x03a9 x=60 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ω', Greek Capital Letter Omega
+char id=0x03b4 x=66 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'δ', Greek Small Letter Delta
+char id=0x221e x=72 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '∞', Infinity
+char id=0x2665 x=78 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '♥', Black Heart Suit
+char id=0x03b5 x=84 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ε', Greek Small Letter Epsilon
+char id=0x2229 x=90 y=72 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '∩', Intersection
+char id=0x23f8 x=0 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '⏸', Double Vertical Bar
+char id=161 x=6 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '¡', Inverted Exclamation
+char id=162 x=12 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '¢', Cent Sign
+char id=163 x=18 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '£', Pound Sign
+char id=164 x=24 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '¤', Currency
+char id=165 x=30 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '¥', Yen
+char id=166 x=36 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '¦', Broken Bar
+char id=167 x=42 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '§', Section Sign
+char id=0x0192 x=48 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ƒ', "florin" Latin Small Letter F with Hook
+char id=169 x=54 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '©', Copyright Sign
+char id=170 x=60 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ª', Feminine Ordinal Indicator
+char id=171 x=66 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '«', Left-Pointing Double Angle Quotation Mark
+char id=0x042e x=72 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ю', Cyrillic Capital Letter Yu
+char id=0x042f x=78 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Я', Cyrillic Capital Letter Ya
+char id=174 x=84 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '®', Registered Symbol
+char id=175 x=90 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '‘', Left Single Quotation Mark
+char id=176 x=0 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '°', degree sign
+char id=177 x=6 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '±', plus-minus sign
+char id=178 x=12 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '²', Superscript two
+char id=179 x=18 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '³', Superscript three
+char id=180 x=24 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '₧', Peseta Sign
+char id=181 x=30 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'µ', micro sign
+char id=182 x=36 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '¶', "paragraph" Pilcrow Sign
+char id=183 x=42 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '·', "periodcentered" Middle Dot
+#char id=184 x=48 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # Weird lower case w
+char id=185 x=54 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '¹', Superscript one
+char id=186 x=60 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'º', Masculine Ordinal Indicator
+char id=187 x=66 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '»', Right-Pointing Double Angle Quotation Mark
+char id=188 x=72 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '¼', "onequarter" Vulgar Fraction One Quarter
+char id=189 x=78 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '½', "onehalf" Vulgar Fraction One Half
+char id=190 x=84 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '¾', "threequarters", Vulgar Fraction Three Quarters
+char id=191 x=90 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '¿', "questiondown", Inverted Question Mark
+char id=192 x=0 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'À', "Agrave", Latin Capital Letter A with Grave
+char id=193 x=6 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Á', "Aacute", Latin Capital Letter A with Acute
+char id=194 x=12 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Â'
+char id=195 x=18 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ã'
+char id=196 x=24 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ä'
+char id=197 x=30 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Å'
+char id=198 x=36 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Æ'
+char id=199 x=42 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ç'
+char id=200 x=48 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'È'
+char id=201 x=54 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'É'
+char id=202 x=60 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ê'
+char id=203 x=66 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ë'
+char id=204 x=72 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ì'
+char id=205 x=78 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Í'
+char id=206 x=84 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Î'
+char id=207 x=90 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ï'
+char id=208 x=0 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ð'
+char id=209 x=6 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ñ'
+char id=210 x=12 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ò'
+char id=211 x=18 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ó'
+char id=212 x=24 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ô'
+char id=213 x=30 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Õ'
+char id=214 x=36 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ö'
+char id=215 x=42 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '×'
+char id=216 x=48 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ф', Latin Capital Letter O with Stroke
+char id=217 x=54 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ù'
+char id=218 x=60 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ú'
+char id=219 x=66 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Û'
+char id=220 x=72 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ü'
+char id=221 x=78 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ý'
+char id=222 x=84 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Þ'
+char id=223 x=90 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ß'
+char id=224 x=0 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'à',
+char id=225 x=6 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'á',
+char id=226 x=12 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'â',
+char id=227 x=18 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ã',
+char id=228 x=24 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ä',
+char id=229 x=30 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'å',
+char id=230 x=36 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'æ',
+char id=231 x=42 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ç',
+char id=232 x=48 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'è',
+char id=233 x=54 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'é',
+char id=234 x=60 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ê',
+char id=235 x=66 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ë',
+char id=236 x=72 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ì',
+char id=237 x=78 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'í',
+char id=238 x=84 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'î',
+char id=239 x=90 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ï',
+char id=240 x=0 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ð',
+char id=241 x=6 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ñ',
+char id=242 x=12 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ò',
+char id=243 x=18 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ó',
+char id=244 x=24 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ô',
+char id=245 x=30 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'õ',
+char id=246 x=36 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ö',
+char id=247 x=42 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # '÷',
+char id=248 x=48 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ø', Latin Small Letter O with Stroke
+char id=249 x=54 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ù',
+char id=250 x=60 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ú',
+char id=251 x=66 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'û',
+char id=252 x=72 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ü',
+char id=253 x=78 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ý',
+char id=254 x=84 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'þ',
+char id=255 x=90 y=120 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'ÿ',
+
+char id=0x309c x=6 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # '゜', Katakana-Hiragana Semi-Voiced Sound Mark
+char id=0x300c x=12 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # '「', Left Corner Bracket
+char id=0x300d x=18 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # '」', Right Corner Bracket
+char id=0x30fd x=24 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ヽ', Katakana Iteration Mark
+char id=0x30fb x=32 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # '・', Katakana Middle Dot
+char id=0x30f2 x=36 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ヲ', Katakana Letter WO
+char id=0x30a1 x=42 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ァ', Katakana Letter Small A
+char id=0x30a3 x=48 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ィ', Katakana Letter Small I
+char id=0x30a5 x=54 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ゥ', Katakana Letter Small U
+char id=0x30a7 x=60 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ェ', Katakana Letter Small E
+char id=0x30a9 x=66 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ォ', Katakana Letter Small O
+char id=0x30e3 x=72 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ャ', Katakana Letter Small YA
+char id=0x30e5 x=78 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ュ', Katakana Letter Small YU
+char id=0x30e7 x=84 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ョ', Katakana Letter Small YO
+char id=0x30c3 x=90 y=80 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ッ', Katakana Letter Small TU
+
+char id=0x30fc x=0 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ー', Katakana-Hiragana Prolonged Sound Mark
+char id=0x30a2 x=6 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ア', Katakana Letter A
+char id=0x30a4 x=12 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'イ', Katakana Letter I
+char id=0x30a6 x=18 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ウ', Katakana Letter U
+char id=0x30a8 x=24 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'エ', Katakana Letter E
+char id=0x30aa x=32 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'オ', Katakana Letter O
+char id=0x30ab x=36 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'カ', Katakana Letter KA
+char id=0x30ad x=42 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'キ', Katakana Letter KI
+char id=0x30af x=48 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ク', Katakana Letter KU
+char id=0x30b1 x=54 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ケ', Katakana Letter KE
+char id=0x30b3 x=60 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'コ', Katakana Letter KO
+char id=0x30b5 x=66 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'サ', Katakana Letter SA
+char id=0x30b7 x=72 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'シ', Katakana Letter SI
+char id=0x30b9 x=78 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ス', Katakana Letter SU
+char id=0x30bb x=84 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'セ', Katakana Letter SE
+char id=0x30bd x=90 y=88 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ソ', Katakana Letter SO
+
+char id=0x30bf x=0 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'タ', Katakana Letter TA
+char id=0x30c1 x=6 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'チ', Katakana Letter TI
+char id=0x30c4 x=12 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ツ', Katakana Letter TU
+char id=0x30c6 x=18 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'テ', Katakana Letter TE
+char id=0x30c8 x=24 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ト', Katakana Letter TO
+char id=0x30ca x=32 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ナ', Katakana Letter NA
+char id=0x30cb x=36 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ニ', Katakana Letter NI
+char id=0x30cc x=42 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ヌ', Katakana Letter NU
+char id=0x30cd x=48 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ネ', Katakana Letter NE
+char id=0x30ce x=54 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ノ', Katakana Letter NO
+char id=0x30cf x=60 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ハ', Katakana Letter HA
+char id=0x30d2 x=66 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ヒ', Katakana Letter HI
+char id=0x30d5 x=72 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'フ', Katakana Letter HU
+char id=0x30d8 x=78 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ヘ', Katakana Letter HE
+char id=0x30db x=84 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ホ', Katakana Letter HO
+char id=0x30de x=90 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'マ', Katakana Letter MA
+
+char id=0x30df x=0 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ミ', Katakana Letter MI
+char id=0x30e0 x=6 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ム', Katakana Letter MU
+char id=0x30e1 x=12 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'メ', Katakana Letter ME
+char id=0x30e2 x=18 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'モ', Katakana Letter MO
+char id=0x30e4 x=24 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ヤ', Katakana Letter YA
+char id=0x30e6 x=32 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ユ', Katakana Letter YU
+char id=0x30e8 x=36 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ヨ', Katakana Letter YO
+char id=0x30e9 x=42 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ラ', Katakana Letter RA
+char id=0x30ea x=48 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'リ', Katakana Letter RI
+char id=0x30eb x=54 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ル', Katakana Letter RU
+char id=0x30ec x=60 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'レ', Katakana Letter RE
+char id=0x30ed x=66 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ロ', Katakana Letter RO
+char id=0x30ef x=72 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ワ', Katakana Letter WA
+char id=0x30f3 x=78 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ン', Katakana Letter N
+#char id= x=84 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+#char id= x=90 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+
+# char id=0x3b1 x=0 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'α', Greek Small Letter Alpha
+# char id=0x228 x=6 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ä'
+# char id= x=12 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+# char id=0x03b5 x=18 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # 'ε', Greek Small Letter Epsilon
+# char id= x=24 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+# char id= x=32 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+# char id= x=36 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+# char id= x=42 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+char id=0x221a x=48 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 # '√', Square Root
+# char id= x=54 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+# char id= x=60 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+# char id= x=66 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+# char id= x=72 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+# char id= x=78 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+# char id= x=84 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+# char id= x=90 y=112 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=1 chnl=0 #
+
+# Similar replacements from HD44780 A02 fontset
+char id=0x410 x=6 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'А', Cyrillic Capital Letter A
+char id=0x412 x=12 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'В', Cyrillic Capital Letter VE
+char id=0x406 x=54 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'І', Cyrillic Capital Letter DZE
+char id=0x408 x=60 y=32 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ј', Cyrillic Capital Letter JE
+char id=0x405 x=18 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ѕ', Cyrillic Capital Letter Byelorussian-Ukranian I
+char id=0x425 x=48 y=40 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Х', Cyrillic Capital Letter Ha
+char id=0x400 x=48 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ѐ', Cyrillic Capital Letter IE with Grave
+char id=0x401 x=66 y=96 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ë', Cyrillic Capital Letter IO
+char id=0x424 x=48 y=104 width=5 height=8 xoffset=0 yoffset=0 xadvance=5 page=0 chnl=0 # 'Ф', Cyrillic Capital Letter EF

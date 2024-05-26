@@ -17,18 +17,20 @@ from tinyDisplay.render.collection import canvas, sequence
 from tinyDisplay.render.widget import text
 from tinyDisplay.utility import dataset, image2Text
 from tinyDisplay.cfg import _tdLoader, load
+from tinyDisplay.utility import animate
 from luma.core.interface.parallel import bitbang_6800
 from luma.oled.device import ws0010
 
 def sigterm_handler(_signo, _stack_frame):
     sys.exit(0)
 
+
 if __name__ == u'__main__':
     signal.signal(signal.SIGTERM, sigterm_handler)
 
     # Changing the system encoding should no longer be needed
-#    if sys.stdout.encoding != u'UTF-8':
-#            sys.stdout = codecs.getwriter(u'utf-8')(sys.stdout, u'strict')
+    #    if sys.stdout.encoding != u'UTF-8':
+    #            sys.stdout = codecs.getwriter(u'utf-8')(sys.stdout, u'strict')
 
     logging.basicConfig(format=u'%(asctime)s:%(levelname)s:%(message)s', filename="taggstaps.log", level=logging.INFO)
     logging.getLogger().addHandler(logging.StreamHandler())
@@ -62,27 +64,52 @@ if __name__ == u'__main__':
     ds.add("sys", {"tapnr": 1, "status": "start"})
     ds.add("beers", {})
     ds.add("taps", {})
-    
+
     path = Path(__file__).parent / "page.yaml"
     print ("Loading: ", path)
     main = load(path, dataset=ds)
 
-#    interface = bitbang_6800(RS=7, E=8, PINS=[25,24,23,27])
-#    winstar = ws0010(inteface)
+    interface = bitbang_6800(RS=7, E=8, PINS=[25,24,23,27])
+    screen = ws0010(interface)
 
+    def render(device, display):
+        img = display.render()
+        device.display(img)
 
-    dbRow = src.get()
-    if dbRow is not None:
-        for key, value in dbRow.items():
-            if key == 'beer':
-                for item in value:
-                    if 'idBeer' in item:
-                        ds.update("beers", { item['idBeer']: {k: v for k, v in item.items() if k != 'idBeer'}}, merge=True)
-            if key == 'taps':
-                for item in value:
-                    if 'idTap' in item:
-                           ds.update("taps", { item['idTap']: item['idBeer']}, merge=True)
+    def updateData(dbSrc, ds):
+        while true:
+            dbRow = dbSrc.get(wait=0)
+            if dbRow is not None:
+                for key, value in dbRow.items():
+                    if key == 'beer':
+                        for item in value:
+                            if 'idBeer' in item:
+                                ds.update("beers", { item['idBeer']: {k: v for k, v in item.items() if k != 'idBeer'}}, merge=True)
+                    if key == 'taps':
+                        for item in value:
+                            if 'idTap' in item:
+                                    ds.update("taps", { item['idTap']: item['idBeer']}, merge=True)
+            else:
+                break
+    
+    a = animate(render, 60, 200, screen, main)
+    a.start()
+    try:
+        while True:
+            updateData(src, main._dataset)
+            time.sleep(1)
 
-    print (ds['beers'])
-    main.render(force=True)
-    print(main)
+    except KeyboardInterrupt:
+        pass
+
+    finally:
+        print ("Shutting down threads")
+        exitapp[0] = True
+        try:
+            a.stop()
+        except:
+            pass
+ 
+ #print (ds['beers'])
+#main.render(force=True)
+#print(main)
