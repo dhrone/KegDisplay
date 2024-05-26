@@ -4,6 +4,10 @@ version = "0.1.0"
 description = "Project using tinyDisplay and pyAttention to display beer metadata on small screens for use in a kegerator"
 authors = ["dhrone <dhrone@dhrone.xyz>"]
 license = "MIT"
+packages = [{include = "KegDisplay"}]
+
+[tool.poetry.scripts]
+KegDisplay = "KegDisplay.taggstaps:start"
 
 [tool.poetry.dependencies]
 python = ">=3.9, <4"

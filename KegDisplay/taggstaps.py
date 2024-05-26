@@ -28,7 +28,7 @@ def sigterm_handler(_signo, _stack_frame):
     sys.exit(0)
 
 
-if __name__ == u'__main__':
+def start():
     signal.signal(signal.SIGTERM, sigterm_handler)
 
     # Changing the system encoding should no longer be needed
