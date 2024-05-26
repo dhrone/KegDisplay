@@ -89,6 +89,7 @@ if __name__ == u'__main__':
         while True:
             dbRow = dbSrc.get(wait=0)
             if dbRow is not None:
+                print ("Got from database: ", dbRow)
                 for key, value in dbRow.items():
                     if key == 'beer':
                         for item in value:
@@ -98,6 +99,7 @@ if __name__ == u'__main__':
                         for item in value:
                             if 'idTap' in item:
                                     ds.update("taps", { item['idTap']: item['idBeer']}, merge=True)
+                print ("beers ds after update is ...", ds.beers)
             else:
                 break
     
