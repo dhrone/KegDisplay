@@ -1,0 +1,46 @@
+Fresh bookworm install of lite 32 bit distro
+install with user beer
+
+sudo apt-get update
+sudo apt-get install git pip pipx -y
+sudo apt-get install python3-pip python3-pil libjpeg-dev zlib1g-dev libfreetype6-dev liblcms2-dev libopenjp2-7 -y
+
+# optionally install sqlite3 command line tools
+sudo apt-get install sqlite3
+
+# Make needed directories
+mkdir /home/beer/Development
+sudo mkdir /var/log/KegDisplay
+sudo chown beer /var/log/KegDisplay
+
+# Setup logging
+sudo cp logconfig /etc/logrotate.d
+
+pipx install poetry
+pipx ensurepath
+
+cd /home/beer/Development
+git clone https://github.com/dhrone/KegDisplay
+cd KegDisplay
+poetry install
+# Edit taggstaps.py to change the interface settings
+
+# Create database
+poetry shell
+cd /home/beer/Development/KegDisplay/KegDisplay
+python3 db/createDB.py
+exit
+
+# Test installation
+cd /home/beer/Development/KegDisplay
+poetry run KegDisplay
+
+# Set up systemd
+cd /home/beer/Development/KegDisplay
+poetry shell
+which KegDisplay
+# Use output to edit KegDisplay.service file changing the ExecStart to the appropriate value
+sudo cp /home/beer/Development/KegDisplay/KegDisplay.service /etc/systemd/system
+sudo systemctl daemon-reload
+sudo systemctl start KegDisplay
+sudo systemctl enable KegDisplay
