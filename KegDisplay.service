@@ -1,0 +1,10 @@
+[Unit]
+Description = KegDisplay
+
+[Service]
+WorkingDirectory=/home/beer/KegDisplay
+Restart = always
+ExecStart = poetry run /home/beer/KegDisplay/taggstaps.py
+
+[Install]
+WantedBy = multi-user.target
