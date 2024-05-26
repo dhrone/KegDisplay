@@ -109,7 +109,7 @@ if __name__ == u'__main__':
             updateData(src, main._dataset)
             if main._dataset.sys['status'] == 'start' and time.time() - startTime > 4:
                 main._dataset.update('sys', {'status': 'running'}, merge=True)
-            img = a.get()
+            img = a.get(wait=0.01)
             if img is not None:
                 screen.display(img)
     
