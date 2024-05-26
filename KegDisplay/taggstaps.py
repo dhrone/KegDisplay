@@ -81,7 +81,7 @@ if __name__ == u'__main__':
 
     def render(device, display):
         display.render()
-        device.display(display.image)
+        device.display(display.image.convert("1"))
 
     def updateData(dbSrc, ds):
         while true:
