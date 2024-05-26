@@ -111,7 +111,7 @@ if __name__ == u'__main__':
                 main._dataset.update('sys', {'status': 'running'}, merge=True)
             img = a.get()
             if img is not None:
-                screen.update(img)
+                screen.display(img)
     
 
     except KeyboardInterrupt:
