@@ -54,11 +54,5 @@ cur.execute(
       (2, 2)
     '''
 )
-
-
-
-
-cur.close()
+con.commit()
 con.close()
-
-
