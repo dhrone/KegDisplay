@@ -103,9 +103,12 @@ if __name__ == u'__main__':
     
     a = animate(render, 60, 200, screen, main)
     a.start()
+    startTime = time.time()
     try:
         while True:
             updateData(src, main._dataset)
+            if main._dataset.sys['status'] == 'start' and time.time() - startTime > 4:
+                main._dataset.update('sys', {'status': 'running'}, merge=True)
             time.sleep(1)
 
     except KeyboardInterrupt:
