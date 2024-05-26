@@ -77,7 +77,8 @@ if __name__ == u'__main__':
         raise FileNotFoundError(f"Page file {path} missing")
     main = load(path, dataset=ds)
 
-    interface = bitbang_6800(RS=7, E=8, PINS=[25,24,23,27])
+    #interface = bitbang_6800(RS=7, E=8, PINS=[25,24,23,27])
+    interface = bitbang_6800(RS=24, E=25, PINS=[16,26,20,21])
     screen = ws0010(interface)
 
     def render(device, display):
