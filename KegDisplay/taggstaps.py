@@ -80,8 +80,8 @@ if __name__ == u'__main__':
     screen = ws0010(interface)
 
     def render(device, display):
-        img = display.render()
-        device.display(img[0])
+        display.render()
+        device.display(display.image)
 
     def updateData(dbSrc, ds):
         while true:
