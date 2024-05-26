@@ -87,7 +87,7 @@ if __name__ == u'__main__':
 
     def updateData(dbSrc, ds):
         while True:
-            dbRow = dbSrc.get(0)
+            dbRow = dbSrc.get(0.0001)
             if dbRow is not None:
                 for key, value in dbRow.items():
                     if key == 'beer':
@@ -109,7 +109,7 @@ if __name__ == u'__main__':
             updateData(src, main._dataset)
             if main._dataset.sys['status'] == 'start' and time.time() - startTime > 4:
                 main._dataset.update('sys', {'status': 'running'}, merge=True)
-            img = a.get(wait=0.001)
+            img = a.get(wait=0)
             if img is not None:
                 screen.display(img)
     
