@@ -12,6 +12,7 @@ import signal
 import logging
 import sys
 import os
+import time
 from pathlib import Path
 
 from pyAttention.source import database
