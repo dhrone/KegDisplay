@@ -66,7 +66,6 @@ if __name__ == u'__main__':
     src = database(f'sqlite+aiosqlite:///{dbPath}')
     src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency = 15)
     src.add("SELECT idTap, idBeer from taps", name='taps', frequency = 15)
-    print (f"Source is {src}")
 
     ds = dataset()
     ds.add("sys", {"tapnr": 1, "status": "start"})
@@ -84,14 +83,12 @@ if __name__ == u'__main__':
 
     def render(device, display):
         display.render()
-        device.display(display.image.convert("1"))
+        return display.image.convert("1")
 
     def updateData(dbSrc, ds):
-        print (f"updateData being called if {dbSrc}")
         while True:
             dbRow = dbSrc.get()
             if dbRow is not None:
-                print ("Got from database: ", dbRow)
                 for key, value in dbRow.items():
                     if key == 'beer':
                         for item in value:
@@ -101,7 +98,6 @@ if __name__ == u'__main__':
                         for item in value:
                             if 'idTap' in item:
                                     ds.update("taps", { item['idTap']: item['idBeer']}, merge=True)
-                print ("beers ds after update is ...", ds.beers)
             else:
                 break
     
@@ -111,10 +107,12 @@ if __name__ == u'__main__':
     try:
         while True:
             updateData(src, main._dataset)
-            print ("Beers in db...", main._dataset.beers)
             if main._dataset.sys['status'] == 'start' and time.time() - startTime > 4:
                 main._dataset.update('sys', {'status': 'running'}, merge=True)
-            time.sleep(1)
+            img = a.get()
+            if img is not None:
+                screen.update(img)
+    
 
     except KeyboardInterrupt:
         pass
