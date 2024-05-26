@@ -11,7 +11,9 @@ Main class for taggstaps program
 import signal
 import logging
 import sys
+import os
 from pathlib import Path
+
 from pyAttention.source import database
 from tinyDisplay.render.collection import canvas, sequence
 from tinyDisplay.render.widget import text
@@ -56,7 +58,11 @@ if __name__ == u'__main__':
 
     sys.excepthook = handleuncaughtexceptions
 
-    src = database('sqlite+aiosqlite:///KegDisplay/beer.db')
+    dbPath = "KegDisplay/beer.db"
+    if pathlib.path(dbPath).exists() is False:
+        raise FileNotFoundError(f"Database file {dbPath} missing")
+    
+    src = database(f'sqlite+aiosqlite:///{dbPath}')
     src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency = 15)
     src.add("SELECT idTap, idBeer from taps", name='taps', frequency = 15)
 
