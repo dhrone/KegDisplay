@@ -83,9 +83,9 @@ if __name__ == u'__main__':
 
     def render(device, display):
         display.render()
-        return display.image.convert("1")
+        device.display(display.image.convert("1"))
+        return 1
 
-    time.sleep(0.5)
     def updateData(dbSrc, ds):
         while True:
             dbRow = dbSrc.get(0.001)
@@ -102,6 +102,9 @@ if __name__ == u'__main__':
             else:
                 break
     
+    updateData(src, main._dataset)
+    main.render()
+
     a = animate(render, 60, 200, screen, main)
     a.start()
     startTime = time.time()
@@ -110,10 +113,7 @@ if __name__ == u'__main__':
             updateData(src, main._dataset)
             if main._dataset.sys['status'] == 'start' and time.time() - startTime > 4:
                 main._dataset.update('sys', {'status': 'running'}, merge=True)
-            img = a.get(wait=0)
-            if img is not None:
-                screen.display(img)
-    
+            a.clear()    
 
     except KeyboardInterrupt:
         pass

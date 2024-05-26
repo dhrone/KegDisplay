@@ -15,7 +15,7 @@ DEFAULTS:
       size: [100, 8]
       wait: 'atStart'
       actions:
-        - [pause, 50]
+        - [pause, 100]
         - rtl
 
 FONTS:
