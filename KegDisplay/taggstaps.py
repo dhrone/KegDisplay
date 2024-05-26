@@ -85,9 +85,10 @@ if __name__ == u'__main__':
         display.render()
         return display.image.convert("1")
 
+    time.sleep(0.5)
     def updateData(dbSrc, ds):
         while True:
-            dbRow = dbSrc.get(0.0001)
+            dbRow = dbSrc.get(0.001)
             if dbRow is not None:
                 for key, value in dbRow.items():
                     if key == 'beer':
