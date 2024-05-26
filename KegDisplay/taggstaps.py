@@ -59,7 +59,7 @@ if __name__ == u'__main__':
     sys.excepthook = handleuncaughtexceptions
 
     dbPath = "KegDisplay/beer.db"
-    if pathlib.path(dbPath).exists() is False:
+    if Path(dbPath).exists() is False:
         raise FileNotFoundError(f"Database file {dbPath} missing")
     
     src = database(f'sqlite+aiosqlite:///{dbPath}')
@@ -72,7 +72,8 @@ if __name__ == u'__main__':
     ds.add("taps", {})
 
     path = Path(__file__).parent / "page.yaml"
-    print ("Loading: ", path)
+    if path.exists() is False:
+        raise FileNotFoundError(f"Page file {path} missing")
     main = load(path, dataset=ds)
 
     interface = bitbang_6800(RS=7, E=8, PINS=[25,24,23,27])
