@@ -86,6 +86,7 @@ if __name__ == u'__main__':
         device.display(display.image.convert("1"))
 
     def updateData(dbSrc, ds):
+        print ("updateData being called")
         while True:
             dbRow = dbSrc.get(wait=0)
             if dbRow is not None:
