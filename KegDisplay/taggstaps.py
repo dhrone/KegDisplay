@@ -35,7 +35,7 @@ if __name__ == u'__main__':
     #    if sys.stdout.encoding != u'UTF-8':
     #            sys.stdout = codecs.getwriter(u'utf-8')(sys.stdout, u'strict')
 
-    logging.basicConfig(format=u'%(asctime)s:%(levelname)s:%(message)s', filename="taggstaps.log", level=logging.INFO)
+    logging.basicConfig(format=u'%(asctime)s:%(levelname)s:%(message)s', filename="/var/log/KegDisplay/taggstaps.log", level=logging.INFO)
     logging.getLogger().addHandler(logging.StreamHandler())
     logging.getLogger(u'socketIO-client').setLevel(logging.WARNING)
 
