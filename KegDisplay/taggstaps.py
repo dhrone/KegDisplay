@@ -64,8 +64,8 @@ if __name__ == u'__main__':
         raise FileNotFoundError(f"Database file {dbPath} missing")
     
     src = database(f'sqlite+aiosqlite:///{dbPath}')
-    src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency = 15)
-    src.add("SELECT idTap, idBeer from taps", name='taps', frequency = 15)
+    src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency = 5)
+    src.add("SELECT idTap, idBeer from taps", name='taps', frequency = 5)
 
     ds = dataset()
     ds.add("sys", {"tapnr": 1, "status": "start"})
@@ -87,7 +87,7 @@ if __name__ == u'__main__':
 
     def updateData(dbSrc, ds):
         while True:
-            dbRow = dbSrc.get()
+            dbRow = dbSrc.get(0)
             if dbRow is not None:
                 for key, value in dbRow.items():
                     if key == 'beer':
@@ -109,7 +109,7 @@ if __name__ == u'__main__':
             updateData(src, main._dataset)
             if main._dataset.sys['status'] == 'start' and time.time() - startTime > 4:
                 main._dataset.update('sys', {'status': 'running'}, merge=True)
-            img = a.get(wait=0.01)
+            img = a.get(wait=0.001)
             if img is not None:
                 screen.display(img)
     

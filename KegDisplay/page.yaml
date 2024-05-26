@@ -15,7 +15,7 @@ DEFAULTS:
       size: [100, 8]
       wait: 'atStart'
       actions:
-        - [pause, 5]
+        - [pause, 50]
         - rtl
 
 FONTS:
@@ -89,6 +89,6 @@ DISPLAY:
   items:
     - name: RUN
       <<: *beerCanvas
-    - name: START
-      <<: *splashCanvas
+#    - name: START
+#      <<: *splashCanvas
 
