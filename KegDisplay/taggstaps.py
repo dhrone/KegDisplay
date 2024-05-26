@@ -111,7 +111,6 @@ if __name__ == u'__main__':
 
     finally:
         print ("Shutting down threads")
-        exitapp[0] = True
         try:
             a.stop()
         except:
