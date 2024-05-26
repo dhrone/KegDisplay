@@ -66,6 +66,7 @@ if __name__ == u'__main__':
     src = database(f'sqlite+aiosqlite:///{dbPath}')
     src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency = 15)
     src.add("SELECT idTap, idBeer from taps", name='taps', frequency = 15)
+    print (f"Source is {src}")
 
     ds = dataset()
     ds.add("sys", {"tapnr": 1, "status": "start"})
@@ -86,7 +87,7 @@ if __name__ == u'__main__':
         device.display(display.image.convert("1"))
 
     def updateData(dbSrc, ds):
-        print ("updateData being called")
+        print ("updateData being called if {dbSrc}")
         while True:
             dbRow = dbSrc.get(wait=0)
             if dbRow is not None:
