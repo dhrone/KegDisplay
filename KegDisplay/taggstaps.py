@@ -105,7 +105,7 @@ if __name__ == u'__main__':
     updateData(src, main._dataset)
     main.render()
 
-    a = animate(render, 120, 500, screen, main)
+    a = animate(render, 60, 500, screen, main)
     a.start()
     startTime = time.time()
     try:

@@ -89,6 +89,6 @@ DISPLAY:
   items:
     - name: RUN
       <<: *beerCanvas
-#    - name: START
-#      <<: *splashCanvas
+    - name: START
+      <<: *splashCanvas
 
