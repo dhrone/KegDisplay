@@ -1,0 +1,99 @@
+idBeer,Name,ABV,IBU,Color,OriginalGravity,FinalGravity,Description,Brewed,Kegged,Tapped,Notes
+1,Porter,8.1,24,30,1.072,1.01,"Low Alpha acid German and Slovenian hops make this an easy-drinking beer.  Slightly dry, this beer hosts several specialty grains that provide you with different flavors while drinking",10/22/2016 0:00,12/11/2016 0:00,12/28/2016 0:00,"This beer was specially produced to honor my good friend Sharon. It has become a great tradition to ensure I dedicate one brew per year to her simply because she’s great to drink with, and…we all love her!"
+2,Apollo/Citra IPA,7.2,73,9.8,1.061,1.006,"High Alpha acid Apollo hops gives this beer a strong bitterness, but it is compensated by the great flavors from the late-addition Citra hops.",10/17/2016 0:00,12/11/2016 0:00,12/31/2016 0:00,NULL
+3,Jalapeno Ale,6,32,7.7,1.057,1.011,"Brewed with hot Jalapeno peppers from Tagg’s garden. Tagg roasted, toasted, then froze the peppers to ensure all of the capsaicin and flavors were released. Their addition to the secondary fermentation gives this beer a nice hint of Jalapeno flavor and a slight spiciness that accumulates the more you drink.",9/27/2016 0:00,11/16/2016 0:00,12/5/2016 0:00,Made because Tagg didn’t know what to do with the over-abundance of peppers his garden produced this year.
+4,IPA,6.9,49,7.4,1.064,1.011,A great run-of-the-mill IPA with just the right amount of dryness to make it easy to drink.,5/10/2016 0:00,7/7/2016 0:00,12/24/2016 0:00,NULL
+5,Rye Pale Ale,6.4,29,4.2,1.058,1.009,"Though the cherry didn’t “pop” with this beer, the breadiness of the Rye definitely shines.  A well-balanced beer.",7/12/2016 0:00,9/14/2016 0:00,11/14/2016 0:00,"If you like Rye or Pumpernickel bread, you’ll love this beer!"
+6,American Ale,5.6,19,5.6,1.048,1.005,Slightly dry beer using Czech and New Zealand hops,11/29/2016 0:00,12/27/2016 0:00,2/1/2017 0:00,NULL
+7,Red Wheat IPA,6.2,61,13,1.057,1.01,Has slight citrus notes and is very drinkable.  2017 AHA GOLD AWARD WINNER!,NULL,NULL,NULL,NULL
+8,Golden IPA,7.1,53,14,1.061,1.007,Dry classic IPA.  Goes down smooth.,NULL,NULL,NULL,NULL
+9,Rye IPA,6.8,55,4.8,1.06,1.008,Dry IPA brewed with Calypso hops,NULL,NULL,NULL,NULL
+10,Black IPA,6.5,53,17,1.016,1.01,Roasted Barley darkened IPA with melanoidin for body.  2017 AHA BRONZE AWARD WINNER!,NULL,NULL,NULL,NULL
+11,Donna's Ale,5.1,14,7,1.048,1.011,Built because of a special request from Donna for an easy-drink'n citrusy beer.  THANKS DONNA!,3/5/2017 0:00,4/14/2017 0:00,4/18/2017 0:00,NULL
+12,Lime Hefeweis,6.4,18,4.9,1.057,1.008,Excellent limey lawnmower beer... light drinking,NULL,NULL,NULL,NULL
+13,Black Ale,5.4,45,17,1.05,1.009,Excellent drinking dark ale with crisp hop notes,NULL,NULL,NULL,NULL
+14,Session IPA,5.6,53,14,1.048,1.005,A lower alcohol IPA,NULL,NULL,NULL,NULL
+15,Hot Pilsner,6.2,18,5.1,1.053,1.006,"Like a typical pilsner, but fermented at a higher temperature to obtain special yeast esters.",NULL,NULL,NULL,NULL
+16,Kelly's Stout,6.5,25,29,1.06,1.01,My sister-in-law loves stout. I made this specail gluten-free one just for her.  A variation of dark roasted/toasted malts gives it a black color and great mouth-feel.  Its coffee flavor pushes it over the top!  THANKS KELLY!,NULL,NULL,NULL,NULL
+17,Pilsner,5.9,20,6.7,1.053,1.008,My first use of Santiam hops.  Its aroma should remind you of zebra striped gum.,NULL,NULL,NULL,NULL
+18,Czech Pilsner,5.5,17,5.7,1.046,1.004,"A very dry, yet drinkable pilsner with a Czechoslovakian twist",NULL,NULL,NULL,NULL
+19,Moon,5.1,18,5.1,1.051,1.012,"This Blue Moon-like beer was made for those who don't have a taste"" for true beer!""",NULL,NULL,NULL,NULL
+20,Grapefruit IPA,6.1,68,7.7,1.059,1.013,Excellent Grapefruit flavor in a smooth-drinking IPA,2004-01-17 0:00:00,NULL,NULL,NULL
+21,Lime Hefe,6.7,19,4.9,1.057,1.006,Excellent limey lawnmower beer... light drinking,3/18/2017 0:00,NULL,NULL,NULL
+22,Golden IPA,7.2,54,10,1.063,1.008,Tagg's classic IPA.  Smooth and refreshing.,5/13/2017 0:00,NULL,NULL,NULL
+23,Soriace IIPA,8.8,54,14,1.077,1.01,Bold bodied Double IPA with a smooth flavor.,3/30/2017 0:00,NULL,NULL,NULL
+24,Red Wheat IPA,7.1,57,14,1.063,1.009,Tagg's Gold Award Winning specialty IPA,5/17/2017 0:00,NULL,NULL,NULL
+25,Santiam Pils,5.9,20,6.7,1.053,1.008,"Nice typical American Pilsner, but with body",2/27/2017 0:00,NULL,NULL,NULL
+26,Soverign Ale,4.6,22,6.7,1.045,1.01,Low-alcohol pilsner,7/10/2017 0:00,NULL,NULL,NULL
+27,Jaryllo IPA,6.5,58,7.8,1.06,1.01,A slighly more bitter IPA than typically served here,6/28/2017 0:00,NULL,NULL,NULL
+28,Black RyePA,5.5,54,22,1.053,1.012,A slightly sweet and dark Rye IPA - quite pleasing,7/8/2017 0:00,NULL,NULL,NULL
+29,Mosaic IPA,7.3,52,10,1.067,1.011,"The Mosaic hops gives this beer a slight skunk"" taste...an acquired taste.""",5/31/2017 0:00,NULL,NULL,NULL
+30,Jalapeno Ale,6.3,28,7.7,1.057,1.009,Jalapenos fresh from Tagg's garden gives this ale a peppery flavor with just the right kick to remind you that you've swallowed it.,10/3/2017 0:00,NULL,NULL,NULL
+31,Jalapeno IPA,6.4,52,8.7,1.058,1.009,A combination of Tagg's garden-fresh Jalapenos and dried COTS Jalapenos leaves that slight burn in the throat just begging to be quenched with more.,10/5/2017 0:00,NULL,NULL,NULL
+32,Baltic Porter (AKA Sharon '17),7.1,26,30,1.068,1.014,"Slightly sweet, roasty, toasty and very well balanced Porter - try me in your glass with a dollop of vanilla ice cream for a treat that is out of this world!",10/10/2017 0:00,NULL,NULL,NULL
+33,TT's Golden IPA,6.4,57,8.7,1.058,1.009,Tagg's original Centennial IPA that is out of this world.  A must for IPA lovers,10/12/2017 0:00,NULL,NULL,NULL
+34,American Ale,5,18,2.6,1.049,1.011,This is my attempt to make a beer that is lite enough to have one on tap for Maria.  It's like sex in a canoe...F___ing close to water!,10/16/2017 0:00,NULL,NULL,NULL
+35,Soverign Pils,5.9,22,5.6,1.053,1.008,"A nice, dry, crisp pilsner",10/19/2017 0:00,NULL,NULL,NULL
+36,CranAmbHEFE,6.6,17,6.6,1.06,1.011,"The combination of Wheat and Amber malts, along with ample fresh cranberries gives this smooth-drinker its unique red color",10/24/2017 0:00,NULL,NULL,NULL
+37,Amber IPA,6.4,50,11,1.062,1.011,I've lightened up the hops on this IPA to bring out the flavors of the Amber malt.  The unique combination shines through for those with a good palate,10/27/2017 0:00,12/5/2017 0:00,NULL,NULL
+38,Lime Hefeweisen,6.9,19,4.8,1.054,1.006,Excellent limey lawnmower beer... light drinking,12/4/2017 0:00,0000-00-00 00:00:00,NULL,NULL
+39,TT's Golden IPA,6.7,54,7.6,1.058,1.008,Tagg's classic IPA.  Smooth and refreshing.,12/6/2017 0:00,NULL,NULL,NULL
+40,Red Wheat IPA,6.4,54,7.1,1.057,1.007,Tagg's 2017 Gold Award Winning specialty IPA,12/8/2017 0:00,NULL,NULL,NULL
+41,"Ginger Ale""""",5.5,16,4.3,1.053,1.009,"Excellent aroma and mild taste definitely reminds you of drinking a Gingerale soda, but this one has a slight kick",NULL,NULL,NULL,NULL
+42,New England IPA,6,52,5.5,1.056,1.009,"Citrusy, cloudy IPA"" that's made the way New Englanders like it!""",NULL,NULL,NULL,NULL
+43,Whiskey Oak Oatmeal Stout,6.2,37,42,1.06,1.013,"Soaked the secondary fermentation for one month with whiskey oak to get the aged in a cask"" taste.""",3/9/2018 0:00,NULL,NULL,NULL
+44,Donna's Citra Ale,6.8,32,6.4,1.056,1.004,"Very citrusy and dry, making it very drinkable",6/14/2018 0:00,NULL,NULL,NULL
+45,Rye IPA,6.9,65,9.2,1.06,1.007,A good dry IPA with strong Rye flavor.  Slightly heavier than typical Rye IPAs.,7/12/2018 0:00,NULL,NULL,NULL
+46,Amber NE IPA,7.3,59,14,1.062,1.006,A dry New England style IPA with a kick.  Earthy tones throughout,5/19/2018 0:00,NULL,NULL,NULL
+47,Tart Cherry Hefe,6.2,19,5.7,1.052,1.006,Slightly noticeable tart cherrys appear after swallowing,NULL,NULL,NULL,NULL
+48,Sovereign Ale,4.6,22,6.7,1.045,1.01,"A moderately bittered ale that is low in alcohol.  Made with 100% Sovereign hops to bring out that herbal, floral, and earthy characteristic",NULL,NULL,NULL,NULL
+49,Colombus/Apollo IPA,6,60,15,1.055,1.009,An earthy and spicy IPA with slight citrus undertones,10/3/2018 0:00,NULL,NULL,NULL
+50,Coffee Porter,6.2,16,35,1.056,1.009,"A tasty Porter with slight coffee overtones.  Great by itself and/or as a Porter float.  Yes, add a dollop of vanilla ice cream for a treat that's out of this world!",10/7/2018 0:00,NULL,NULL,NULL
+51,Tagg's Fall IPA,6,58,8.5,1.055,1.009,"A piney, fruity, and yet earthy IPA that's dry to the finish",10/12/2018 0:00,NULL,NULL,NULL
+52,Red Wheat IPA,6.5,59,18,1.058,1.008,A slightly earthy and moderately citrusy IPA that won a Gold certificate at the 2016 American Homebrewers Association nation-wide competition,10/16/2018 0:00,NULL,NULL,NULL
+53,Jalapeno IPA,5.7,55,9.8,1.054,1.008,A combination of Tagg's garden-fresh Jalapenos and dried COTS Jalapenos leaves that slight burn in the throat just begging to be quenched with more.,NULL,NULL,NULL,NULL
+54,Jalapeno IIPA,8.1,58,9.6,1.071,1.009,"A heaftier version of Tagg's garden-reshe Jalapeno IPA. This one packs a punch with more heat, body, and alcohol.",NULL,NULL,NULL,NULL
+55,*** Rye IPA ***,6.6,57,9.2,1.06,1.01,A good dry IPA with strong Rye flavor.  Slightly heavier than typical Rye IPAs.,NULL,NULL,NULL,NULL
+56,Chocolate Milk Stout,5.9,20,42,1.058,1.013,Full bodied with light chocolate characteristics.  Thick!,3/1/2019 0:00,NULL,NULL,NULL
+57,Peach Ale,5.3,15,5.7,1.052,1.011,"A slightly peachy, slightly dry ale - made for Maria",3/9/2019 0:00,NULL,NULL,NULL
+58,Mango Hefeweisen,5,7,8.6,1.049,1.011,A great Hefe with a Mango twist - made for Maria,3/16/2019 0:00,NULL,NULL,NULL
+59,Heavy Ale,6.2,11,13,1.055,1.008,"This ale packs all the alcohol of an IPA, but forgoes the bitterness.  Tried adding a bit of Maple syrup to dry it out... not sure if the taste is there",3/30/2019 0:00,NULL,NULL,NULL
+60,Amber IPA,7.1,59,14,1.062,1.008,"A real dry, crispy IPA made wtih an unknown yeast that I harvested from a New England IPA my daughter bought.  Love the esters!",NULL,NULL,NULL,NULL
+61,Amber Jalapeno IPA,6.3,53,12,1.056,1.008,"An amber twist"" on Tagg's traditional Jalapeno IPA.  The combination of garden-fresh Jalapenos and dried COTS Jalapenos leaves that slight burn in the throat just begging to be quenched with more.""",0000-00-00 00:00:00,NULL,NULL,NULL
+62,Sharon '19 Stout,6,16,41,1.059,1.013,A roasty stout that's sure to keep you coming back for more.  This combination of flavors will leave you with a series of flavors.,NULL,NULL,NULL,NULL
+63,Heavy Red Wheat IPA,7.7,51,8.2,1.067,1.008,"Tagg's Gold Award""-winning IPA made with a bit more kick.""",NULL,NULL,NULL,NULL
+64,*  Rye IPA  *,7.5,61,9.9,1.066,1.009,A nice dry IPA with strong hints of Rye. Slightly stonger than Tagg's traditional Rye IPA.,NULL,NULL,NULL,NULL
+65,Maple Amber Ale,5.6,13,12,1.055,1.012,"An amber ale with a slight twist given through the addition of Maple syrup.  Maple didn't shine through, but it is slightly distinguishable.",NULL,NULL,NULL,NULL
+66,Azacca IPA,6.5,55,7,1.058,1.008,"This IPA, brewed with pure Azacca hops, has intense tropical fruit aroma with notes of citrus, mango, and orchard fruit.  Truly a pleasure to drink.",NULL,NULL,NULL,NULL
+67,Renee's Graduation Ale,5.1,17,7.3,1.049,1.011,"Brewed for a special person, this low-hopped, smooth-drinking beer is sure to please everone",NULL,NULL,NULL,NULL
+68,Coffee Milk Stout,5.5,19,50,1.061,1.119,"Also known as Sharon '20"""," this milk stout has full body and hints of coffee.  Note... makes a terriffic beer float!""",1/26/2020 0:00,NULL,NULL,NULL
+69,Golden IPA,6.4,53,7.5,1.056,1.012,"Tagg's original great tasting, dry IPA, this friends favorite"" is a well rounded IPA that's sure to please.""",1/29/2020 0:00,NULL,NULL,NULL
+70,Grapefruit IPA,7.2,68,8.9,1.059,1.004,"Upon special request, this is my second creation of this citrusy drink.  Made super dry to be a summer-time thirst quencher.  Enjoy",4/12/2020 0:00,NULL,NULL,NULL
+71,Jarrylo Double IPA,8.1,61,8.8,1.072,1.01,This single-hop double IPA packs a punch while being quite drinkable.,2/6/2020 0:00,NULL,NULL,NULL
+72,Mead (Honey Champagne),12.2,0,2.1,1.101,1.008,"Made from pure, raw honey and champagne yeast, it's slightly like a brute"""," but with a kick of after-bite""",NULL,NULL,NULL,NULL
+73,Jalapeno Indian Pale Ale,5.8,51,5.1,1.051,1.007,"This Ron's Favorite"" boasts aroma and taste of jalapeno with a reminder a second or two after swallowing that it was made with fresh jalapenos""",NULL,NULL,NULL,NULL
+74,Azacca IPA,6.8,55,7,1.058,1.006,"Made back-to-back with the first batch, this single-hop IPA is one of the most accepted beers I've made.  Even people who don't like IPAs like this one.",NULL,NULL,NULL,NULL
+75,Blackberry Mead,12.4,0,1,1.015,1,"Made with champagne yeast, honey, and water, this is my first batch of Mead.  First glass gave a little off"" taste so I put in 5 ounces of Blackberry flavoring.  I think it made it more pleasant"," and it grew on me.  Enjoy!  """,8/15/2020 0:00,12/2/2020 0:00,1/22/2021 0:00,My first batch of Mead
+76,Black Indian Pale Ale,6.5,56,17,1.055,1.005,"A nice, dry IPA using a variety of dark malts to give it a unique taste which, when combined with the use of Pekko hops, will have you wanting more.",11/12/2020 0:00,NULL,NULL,NULL
+77,American Strong Ale,6.4,15,6.3,1.052,1.003,"An extremely dry, high-alcohol content American-style ale",11/2/2020 0:00,NULL,NULL,NULL
+78,Lime Hefeweizen,6.6,16,4.8,1.054,1.005,"A very refreshing, dry hefeweissen with a good twist of lime that is sure to quench your thirst on a hot day",4/8/2020 0:00,NULL,NULL,NULL
+79,Graduation Ale #2,4.8,9,6.9,1.048,1.009,A slight variation to the original graduation ale I produced for Renee's graduation party.  COVID killed the buzz and we ended up tapping it here.  We all liked it so much that I decided to repeat it with what I hope is a slight improvement,11/15/2020 0:00,NULL,NULL,NULL
+80,Amber Wheat IPA,6,53,6.6,1.054,1.008,I'm trying something a little different here and would appreciate your feedback.  This combination of malts and T90 hops leaves me curious,11/5/2020 0:00,NULL,NULL,NULL
+81,Sharon's 2020 Porter,5.4,18,43,1.055,1.014,"Keeping with tradition, making a stout or porter and dedicating it to my good friend Sharon.  Hope she'll enjoy this rich blend of dark malts and barley.  ",11/16/2020 0:00,NULL,NULL,NULL
+82,Grapefruit Indian Pale Ale,7.2,57,8.9,1.059,1.004,This citrusy drink is sure to please.  Made with lots of fresh grapefruit zest and experimental grapefruit hops one can't help but notice the citrus!,1/29/2021 0:00,NULL,NULL,NULL
+83,Jalapeno Indian Pale Ale,6.4,52,14,1.057,1.008,"A slightly darker version of previously made Jalapeno IPAs, with over four pounds of fresh Jalapenos, this one is sure to have a bite",1/25/2021 0:00,NULL,NULL,NULL
+84,Blackberry Hefeweissen,5.6,15,5.2,1.054,1.011,Lightly hopped and slightly flavored with Blackberry flavoring; a thirst-quencher that's easy to drink,NULL,NULL,NULL,NULL
+85,Citra Blaster IPA,6.3,59,13,1.056,1.008,"Blasted with lots of Citra hops, this beer is sure to bring a smile to your face.  Very easy to drink and a slightly dry thirst-quencher",2/4/2021 0:00,NULL,NULL,NULL
+86,Dark Red Wheat IPA,6,61,14,1.054,1.008,"A darkened version of Tagg's award-winning, gold certificate Red Wheat IPA",2/21/2012 0:00,NULL,NULL,NULL
+87,Alessandro's IPA,6.9,54,11,1.059,1.006,"Slightly Amber, this IPA is made from pure Azacca hops, making it have a juicy mango, tropical fruits, and citrus finish",3/13/2022 0:00,6/9/2022 0:00,NULL,NULL
+88,Dark IPA,6.8,54,15,1.058,1.006,"This dark Amber IPA, made from Chinook and Centennial hops has a pine resin characteristic with distinct spice and a hint of grapefruit",3/17/2022 0:00,6/9/2022 0:00,NULL,NULL
+89,"Lite"" IPA""",6.2,51,5.1,1.054,1.006,A lightly colored IPA made from Falconers Flight and Brewers Gold hops hosts fruity and tropical aromas,3/23/2022 0:00,6/9/2022 0:00,NULL,NULL
+90,Azacca Dark IPA,5.8,57,16,1.049,1.005,"A darker and drier IPA made witjh Azacca hops that have a bright and refreshing aroma with hints of jiuicy mango, tropical fruits, and citrus.",3/22/2023 0:00,NULL,NULL,NULL
+91,Leila Graduation Ale,5.4,20,3.8,1.049,1.008,Light with slightly lower alcohol content; a very refreshing beer,3/28/2023 0:00,NULL,NULL,NULL
+92,Ale ++,6,42,7.6,1.052,1.006,This nealry-IPA ale boasts plenty of hops and gives just the right balance of body and alcohol,4/4/2023 0:00,NULL,NULL,NULL
+93,Jalapeno IPA,6,50,8,1.054,1.008,"Made with Jalapenos from Tagg's garden, you'll enjoy the Jalapeno aroma, taste, and feel with every sip",3/14/2023 0:00,NULL,NULL,NULL
+94,Dark IPA,6,52,14,1.058,1.013,This darker IPA has always been one of my crowd-pleasers,3/17/2023 0:00,NULL,NULL,NULL
+95,Dark IPA,5.8,58,13,1.054,1.009,"Made from pure Azacca hops, this easy-drinking IPA is bursting with flavor",8/24/2023 0:00,NULL,NULL,NULL
+96,Sharon 2024,5.8,19,29,1.054,1.01,This Porter boasts a light essence of chocolate,11/26/2023 0:00,NULL,NULL,NULL
+97,Maria's Ale,5.1,17,4,1.05,1.008,Made with an attempt to make something on the lighter side so Maria would drink it... here's hoping!!!,11/29/2023 0:00,0000-00-00 00:00:00,NULL,NULL
+98,Lite Centennail Ale,5.9,28,5.8,1.049,1.004,"This dry ale was made for the IPA lover, but with much less hops, making it a very easy drinker.",12/3/2023 0:00,NULL,NULL,NULL,
