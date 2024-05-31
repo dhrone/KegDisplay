@@ -25,6 +25,9 @@ cd KegDisplay
 poetry install
 # Edit taggstaps.py to change the interface settings
 
+# Setup logging
+sudo cp logconfig /etc/logrotate.d
+
 # Create database
 poetry shell
 cd /home/beer/Development/KegDisplay/KegDisplay
