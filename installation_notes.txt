@@ -13,9 +13,6 @@ mkdir /home/beer/Development
 sudo mkdir /var/log/KegDisplay
 sudo chown beer /var/log/KegDisplay
 
-# Setup logging
-sudo cp logconfig /etc/logrotate.d
-
 pipx install poetry
 pipx ensurepath
 
