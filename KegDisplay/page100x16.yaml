@@ -1,0 +1,93 @@
+PATHS:
+  'images': './images'
+  'fonts': 'fonts/'
+
+
+DEFAULTS:
+  display:
+    dsize: &dsize [100, 16]
+    type: &dtype ws0010
+    
+  widgets:
+    scroll: &scroll
+      type: scroll
+      dgap: __self__['size'][0]/4, 0
+      size: [100, 8]
+      wait: 'atStart'
+      actions:
+        - [pause, 100]
+        - rtl
+
+FONTS:
+  tiny: upperascii_3x5.fnt
+  small: hd44780.fnt
+  large: Vintl01_10x16.fnt
+  
+
+WIDGETS:
+
+    # STARTING WIDGET
+    splash: &splash
+        type: text
+        dvalue: f"Tap {sys['tapnr']}"
+        font: large
+
+    # Beer Display
+    name: &name
+        type: text
+        dvalue: f"{beers[taps[sys['tapnr']]]['Name']}"
+        font: small
+    description: &description
+        type: text
+        font: small
+        dvalue: f"{beers[taps[sys['tapnr']]]['Description']}"
+        effect: *scroll
+    abv: &abv
+        type: text
+        font: tiny
+        just: rt
+        dvalue: f"{beers[taps[sys['tapnr']]]['ABV']}"
+
+    rectStart: &rectStart
+        type: rectangle
+        xy: [0, 0, 99, 15]
+        fill: black
+        outline: black
+
+CANVASES:
+
+  # PLAY CANVASES
+  beerCanvas: &beerCanvas
+    type: canvas
+    items:
+      - <<: *name
+        placement: [0, 0]
+      - <<: *abv
+        placement: [0, 0, rt] 
+      - <<: *description
+        placement: [0, 0, lb] 
+    size: [100, 16]
+    activeWhen: True
+
+
+  splashCanvas: &splashCanvas
+    type: canvas
+    items:
+      - <<: *splash
+        placement: [0, 0]
+        z: 10
+      - <<: *rectStart
+        placement: [0, 0]
+        z: 1
+    size: [100, 16]
+    z: 1000
+    activeWhen: sys['status']=='start'
+
+
+DISPLAY:
+  size: *dsize
+  items:
+    - name: RUN
+      <<: *beerCanvas
+    - name: START
+      <<: *splashCanvas
