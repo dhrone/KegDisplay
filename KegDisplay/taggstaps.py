@@ -22,7 +22,8 @@ from tinyDisplay.utility import dataset, image2Text
 from tinyDisplay.cfg import _tdLoader, load
 from tinyDisplay.utility import animate
 from luma.core.interface.parallel import bitbang_6800
-from luma.oled.device import ws0010
+from luma.core.interface.serial import spi
+from luma.oled.device import ws0010, ssd1322
 
 def sigterm_handler(_signo, _stack_frame):
     sys.exit(0)
@@ -78,8 +79,10 @@ def start():
     main = load(path, dataset=ds)
 
     #interface = bitbang_6800(RS=7, E=8, PINS=[25,24,23,27])
-    interface = bitbang_6800(RS=24, E=25, PINS=[16,26,20,21])
-    screen = ws0010(interface)
+    #interface = bitbang_6800(RS=24, E=25, PINS=[16,26,20,21])
+    interface = spi()
+    #screen = ws0010(interface)
+    screen = ssd1322(serial_interface=spi, mode='1')
 
     def render(device, display):
         display.render()
