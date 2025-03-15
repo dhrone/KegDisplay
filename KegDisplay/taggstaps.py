@@ -82,7 +82,7 @@ def start():
     #interface = bitbang_6800(RS=24, E=25, PINS=[16,26,20,21])
     interface = spi()
     #screen = ws0010(interface)
-    screen = ssd1322(serial_interface=spi, mode='1')
+    screen = ssd1322(serial_interface=interface, mode='1')
 
     def render(device, display):
         display.render()
