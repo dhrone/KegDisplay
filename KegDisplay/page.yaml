@@ -12,7 +12,7 @@ DEFAULTS:
     scroll: &scroll
       type: scroll
       dgap: __self__['size'][0]/4, 0
-      size: [256, 32]
+      size: [255, 32]
       wait: 'atStart'
       actions:
         - [pause, 100]
@@ -34,7 +34,7 @@ FONTS:
   large:
     type: truetype
     file: DejaVuSans.ttf
-    size: 36
+    size: 42
   
 
 WIDGETS:
@@ -49,7 +49,7 @@ WIDGETS:
     name: &name
         type: text
         dvalue: f"{beers[taps[sys['tapnr']]]['Name']}"
-        font: small
+        font: normal
     description: &description
         type: text
         font: small
