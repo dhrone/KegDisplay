@@ -1,0 +1,106 @@
+PATHS:
+  'images': './images'
+  'fonts': 'fonts/'
+
+
+DEFAULTS:
+  display:
+    dsize: &dsize [256, 64]
+    type: &dtype ssd1322
+    
+  widgets:
+    scroll: &scroll
+      type: scroll
+      dgap: __self__['size'][0]/4, 0
+      size: [256, 32]
+      wait: 'atStart'
+      actions:
+        - [pause, 100]
+        - rtl
+
+FONTS:
+  tiny:
+    type: truetype
+    file: DejaVuSans.ttf
+    size: 8
+  normal:
+    type: truetype
+    file: DejaVuSans.ttf
+    size: 16
+  small:
+    type: truetype
+    file: DejaVuSans.ttf
+    size: 12
+  large:
+    type: truetype
+    file: DejaVuSans.ttf
+    size: 36
+  
+
+WIDGETS:
+
+    # STARTING WIDGET
+    splash: &splash
+        type: text
+        dvalue: f"Tap {sys['tapnr']}"
+        font: large
+
+    # Beer Display
+    name: &name
+        type: text
+        dvalue: f"{beers[taps[sys['tapnr']]]['Name']}"
+        font: small
+    description: &description
+        type: text
+        font: small
+        dvalue: f"{beers[taps[sys['tapnr']]]['Description']}"
+        effect: *scroll
+    abv: &abv
+        type: text
+        font: tiny
+        just: rt
+        dvalue: f"{beers[taps[sys['tapnr']]]['ABV']}"
+
+    rectStart: &rectStart
+        type: rectangle
+        xy: [0, 0, 255, 63]
+        fill: black
+        outline: black
+
+CANVASES:
+
+  # PLAY CANVASES
+  beerCanvas: &beerCanvas
+    type: canvas
+    items:
+      - <<: *name
+        placement: [0, 0]
+      - <<: *abv
+        placement: [0, 0, rt] 
+      - <<: *description
+        placement: [0, 0, lb] 
+    size: [256, 64]
+    activeWhen: True
+
+
+  splashCanvas: &splashCanvas
+    type: canvas
+    items:
+      - <<: *splash
+        placement: [0, 0]
+        z: 10
+      - <<: *rectStart
+        placement: [0, 0]
+        z: 1
+    size: [256, 64]
+    z: 1000
+    activeWhen: sys['status']=='start'
+
+
+DISPLAY:
+  size: *dsize
+  items:
+    - name: RUN
+      <<: *beerCanvas
+    - name: START
+      <<: *splashCanvas
