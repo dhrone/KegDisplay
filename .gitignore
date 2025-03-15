@@ -167,4 +167,4 @@ cython_debug/
 .vscode/
 
 # Ignore fonts
-.tty
+*.tty
