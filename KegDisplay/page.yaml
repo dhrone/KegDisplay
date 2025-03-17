@@ -12,7 +12,7 @@ DEFAULTS:
     scroll: &scroll
       type: scroll
       dgap: __self__['size'][0]/4, 0
-      size: [256, 32]
+      size: [256, 22]
       distance: 2
       wait: 'atStart'
       actions:
@@ -27,11 +27,11 @@ FONTS:
   normal:
     type: truetype
     file: DejaVuSans.ttf
-    size: 16
+    size: 16 
   small:
     type: truetype
     file: DejaVuSans.ttf
-    size: 12
+    size: 14
   large:
     type: truetype
     file: DejaVuSans.ttf
@@ -75,9 +75,9 @@ CANVASES:
     type: canvas
     items:
       - <<: *name
-        placement: [0, 0]
+        placement: [0, 2]
       - <<: *abv
-        placement: [0, 0, rt] 
+        placement: [0, 2, rt] 
       - <<: *description
         placement: [0, 0, lb] 
     size: [256, 64]
@@ -88,7 +88,7 @@ CANVASES:
     type: canvas
     items:
       - <<: *splash
-        placement: [0, 0]
+        placement: [0, 0, mm]
         z: 10
       - <<: *rectStart
         placement: [0, 0]
