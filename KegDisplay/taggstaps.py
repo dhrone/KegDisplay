@@ -129,7 +129,7 @@ def start():
     updateData(src, main._dataset)
     main.render()
 
-    a = animate(render, 120, 500, screen, main)
+    a = animate(render, 30, 500, screen, main)
     a.start()
     startTime = time.time()
     try:

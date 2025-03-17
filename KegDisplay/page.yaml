@@ -13,6 +13,7 @@ DEFAULTS:
       type: scroll
       dgap: __self__['size'][0]/4, 0
       size: [256, 32]
+      distance: 2
       wait: 'atStart'
       actions:
         - [pause, 100]
