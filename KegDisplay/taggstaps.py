@@ -32,6 +32,11 @@ def sigterm_handler(_signo, _stack_frame):
 def start():
     signal.signal(signal.SIGTERM, sigterm_handler)
 
+    # Variables for tracking render frequency
+    render_count = 0
+    last_print_time = time.time()
+    start_time = time.time()
+
     # Changing the system encoding should no longer be needed
     #    if sys.stdout.encoding != u'UTF-8':
     #            sys.stdout = codecs.getwriter(u'utf-8')(sys.stdout, u'strict')
@@ -85,6 +90,22 @@ def start():
     screen = ssd1322(serial_interface=interface, mode='1')
 
     def render(device, display):
+        nonlocal render_count, last_print_time, start_time
+        
+        current_time = time.time()
+        render_count += 1
+        
+        # Every 10 seconds, print the average rate
+        if current_time - last_print_time >= 10:
+            elapsed = current_time - start_time
+            rate = render_count / elapsed
+            logging.info(f"Average render rate: {rate:.2f} renders/second over last {elapsed:.1f} seconds")
+            
+            # Reset counters
+            render_count = 0
+            start_time = current_time
+            last_print_time = current_time
+        
         display.render()
         device.display(display.image.convert("1"))
         return 1
@@ -108,7 +129,7 @@ def start():
     updateData(src, main._dataset)
     main.render()
 
-    a = animate(render, 60, 500, screen, main)
+    a = animate(render, 120, 500, screen, main)
     a.start()
     startTime = time.time()
     try:
