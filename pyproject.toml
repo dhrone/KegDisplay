@@ -14,13 +14,16 @@ python = ">=3.9, <4"
 SQLAlchemy = "^2.0.30"
 aiosqlite = "^0.20.0"
 pyattention = "^0.1.3"
-tinydisplay = "^0.1.0"
 luma-oled = "^3.13.0"
+#tinydisplay = "0.1.2"
 
 [tool.poetry.dev-dependencies]
 pytest = "^8.2.0"
 black = "^24.4.2"
 flake8 = "^7.0.0"
+
+[tool.poetry.group.dev.dependencies]
+tinydisplay = {path = "../tinyDisplay", develop = true}
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
