@@ -168,3 +168,6 @@ cython_debug/
 
 # Ignore fonts
 *.ttf
+
+# workspaces
+*-workspace

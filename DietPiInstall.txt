@@ -1,0 +1,12 @@
+sudo apt-get install python3
+sudo apt-get install git
+sudo apt-get install gcc
+sudo apt-get install vim-tiny
+sudo apt-get install sqlite3
+curl -sSL https://install.python-poetry.org | python3 -
+cd ~
+mkdir Dev
+cd Dev
+git clone https://github.com/dhrone/KegDisplay
+cd KegDisplay
+poetry install
