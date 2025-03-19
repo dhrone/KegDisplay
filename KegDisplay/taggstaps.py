@@ -90,14 +90,21 @@ async def render_loop(device, display, a):
 async def main():
     signal.signal(signal.SIGTERM, sigterm_handler)
 
-    logging.basicConfig(
-        format='%(asctime)s:%(levelname)s:%(message)s',
-        filename="/var/log/KegDisplay/taggstaps.log",
-        level=logging.INFO,
-        maxBytes=1024*1024,
+    # Set up logging with rotation
+    log_dir = "/var/log/KegDisplay"
+    os.makedirs(log_dir, exist_ok=True)
+    
+    from logging.handlers import RotatingFileHandler
+    file_handler = RotatingFileHandler(
+        f"{log_dir}/taggstaps.log",
+        maxBytes=1024*1024,  # 1MB
         backupCount=5,
         encoding='utf-8'
     )
+    file_handler.setFormatter(logging.Formatter('%(asctime)s:%(levelname)s:%(message)s'))
+    
+    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().addHandler(file_handler)
     logging.getLogger().addHandler(logging.StreamHandler())
     logging.getLogger('socketIO-client').setLevel(logging.WARNING)
 
