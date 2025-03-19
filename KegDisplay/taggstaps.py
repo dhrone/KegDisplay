@@ -33,8 +33,9 @@ async def update_data(src, ds):
     """Asynchronously update the dataset with new database information"""
     while True:
         try:
-            dbRow = src.get(0.001)  # Removed await since get() is not async
+            dbRow = await src.get(0.001)
             if dbRow is not None:
+                logging.info(f"Received data from database: {dbRow}")
                 beer_updates = {}
                 tap_updates = {}
                 
@@ -49,12 +50,15 @@ async def update_data(src, ds):
                                 tap_updates[item['idTap']] = item['idBeer']
                 
                 if beer_updates:
+                    logging.info(f"Updating beers with: {beer_updates}")
                     ds.update("beers", beer_updates, merge=True)
                 if tap_updates:
+                    logging.info(f"Updating taps with: {tap_updates}")
                     ds.update("taps", tap_updates, merge=True)
             await asyncio.sleep(0.1)  # Small delay to prevent CPU spinning
         except Exception as e:
             logging.error(f"Error in update_data: {e}")
+            logging.error(f"Exception details:", exc_info=True)
             await asyncio.sleep(1)  # Longer delay on error
 
 async def render_loop(device, display, a):
