@@ -33,7 +33,7 @@ async def update_data(src, ds):
     """Asynchronously update the dataset with new database information"""
     while True:
         try:
-            dbRow = await src.get(0.001)
+            dbRow = src.get(0.001)  # Removed await since get() is not async
             if dbRow is not None:
                 beer_updates = {}
                 tap_updates = {}
