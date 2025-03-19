@@ -151,7 +151,7 @@ async def main():
     screen = ssd1322(serial_interface=interface, mode='1')
 
     # Create tasks for concurrent operations
-    update_task = asyncio.create_task(update_data(src, main_display._dataset))
+    update_task = asyncio.create_task(update_data(src, ds))
     render_task = asyncio.create_task(render_loop(screen, main_display, None))
     
     start_time = time.time()
