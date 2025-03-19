@@ -52,9 +52,11 @@ async def update_data(src, ds):
                 if beer_updates:
                     logging.info(f"Updating beers with: {beer_updates}")
                     ds.update("beers", beer_updates, merge=True)
+                    logging.info(f"Dataset beers after update: {ds.beers}")
                 if tap_updates:
                     logging.info(f"Updating taps with: {tap_updates}")
                     ds.update("taps", tap_updates, merge=True)
+                    logging.info(f"Dataset taps after update: {ds.taps}")
             await asyncio.sleep(0.1)  # Small delay to prevent CPU spinning
         except Exception as e:
             logging.error(f"Error in update_data: {e}")
@@ -76,6 +78,7 @@ async def render_loop(device, display, a):
                 elapsed = current_time - start_time
                 rate = render_count / elapsed
                 logging.info(f"Average render rate: {rate:.2f} renders/second over last {elapsed:.1f} seconds")
+                logging.info(f"Current dataset state - beers: {display._dataset.beers}, taps: {display._dataset.taps}")
                 
                 render_count = 0
                 start_time = current_time
