@@ -130,8 +130,8 @@ async def main():
         raise FileNotFoundError(f"Database file {dbPath} missing")
     
     src = database(f'sqlite+aiosqlite:///{dbPath}')
-    await src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency=5)
-    await src.add("SELECT idTap, idBeer from taps", name='taps', frequency=5)
+    src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency=5)
+    src.add("SELECT idTap, idBeer from taps", name='taps', frequency=5)
 
     ds = dataset()
     ds.add("sys", {"tapnr": 1, "status": "start"})
