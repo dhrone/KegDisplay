@@ -84,10 +84,11 @@ def start():
     main = load(path, dataset=ds)
 
     #interface = bitbang_6800(RS=7, E=8, PINS=[25,24,23,27])
+    interface = bitbang_6800(RS=7, E=8, PINS=[25,5,6,12])
     #interface = bitbang_6800(RS=24, E=25, PINS=[16,26,20,21])
-    interface = spi()
-    #screen = ws0010(interface)
-    screen = ssd1322(serial_interface=interface, mode='1')
+    #interface = spi()
+    screen = ws0010(interface)
+    #screen = ssd1322(serial_interface=interface, mode='1')
 
     def render(device, display):
         nonlocal render_count, last_print_time, start_time
@@ -111,6 +112,7 @@ def start():
         return 1
 
     def updateData(dbSrc, ds):
+
         while True:
             dbRow = dbSrc.get(0.001)
             if dbRow is not None:
@@ -129,7 +131,7 @@ def start():
     updateData(src, main._dataset)
     main.render()
 
-    a = animate(render, 60, 500, screen, main)
+    a = animate(render, 120, 500, screen, main)
     a.start()
     startTime = time.time()
     try:
@@ -137,7 +139,8 @@ def start():
             updateData(src, main._dataset)
             if main._dataset.sys['status'] == 'start' and time.time() - startTime > 4:
                 main._dataset.update('sys', {'status': 'running'}, merge=True)
-            a.clear()    
+            a.clear() 
+            time.sleep(2.5)
 
     except KeyboardInterrupt:
         pass

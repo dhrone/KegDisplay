@@ -5,23 +5,37 @@ PATHS:
 
 DEFAULTS:
   display:
-    dsize: &dsize [100, 16]
-    type: &dtype ws0010
+    dsize: &dsize [256, 64]
+    type: &dtype ssd1322
     
   widgets:
     scroll: &scroll
       type: scroll
       dgap: __self__['size'][0]/4, 0
-      size: [100, 8]
+      size: [256, 22]
+      distance: 2
       wait: 'atStart'
       actions:
         - [pause, 100]
         - rtl
 
 FONTS:
-  tiny: upperascii_3x5.fnt
-  small: hd44780.fnt
-  large: Vintl01_10x16.fnt
+  tiny:
+    type: truetype
+    file: DejaVuSans.ttf
+    size: 10
+  normal:
+    type: truetype
+    file: DejaVuSans.ttf
+    size: 16 
+  small:
+    type: truetype
+    file: DejaVuSans.ttf
+    size: 14
+  large:
+    type: truetype
+    file: DejaVuSans.ttf
+    size: 42
   
 
 WIDGETS:
@@ -36,7 +50,7 @@ WIDGETS:
     name: &name
         type: text
         dvalue: f"{beers[taps[sys['tapnr']]]['Name']}"
-        font: small
+        font: normal
     description: &description
         type: text
         font: small
@@ -50,7 +64,7 @@ WIDGETS:
 
     rectStart: &rectStart
         type: rectangle
-        xy: [0, 0, 99, 15]
+        xy: [0, 0, 255, 63]
         fill: black
         outline: black
 
@@ -61,12 +75,12 @@ CANVASES:
     type: canvas
     items:
       - <<: *name
-        placement: [0, 0]
+        placement: [0, 2]
       - <<: *abv
-        placement: [0, 0, rt] 
+        placement: [0, 2, rt] 
       - <<: *description
         placement: [0, 0, lb] 
-    size: [100, 16]
+    size: [256, 64]
     activeWhen: True
 
 
@@ -74,12 +88,12 @@ CANVASES:
     type: canvas
     items:
       - <<: *splash
-        placement: [0, 0]
+        placement: [0, 0, mm]
         z: 10
       - <<: *rectStart
         placement: [0, 0]
         z: 1
-    size: [100, 16]
+    size: [256, 64]
     z: 1000
     activeWhen: sys['status']=='start'
 
