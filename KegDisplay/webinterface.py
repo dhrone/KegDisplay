@@ -5,6 +5,11 @@ import os
 import bcrypt
 from functools import wraps
 
+# Get the directory where this script is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, 'beer.db')
+PASSWD_PATH = os.path.join(BASE_DIR, 'passwd')
+
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Generate a random secret key
 login_manager = LoginManager()
@@ -18,7 +23,7 @@ class User(UserMixin):
 def load_users():
     users = {}
     try:
-        with open('passwd', 'r') as f:
+        with open(PASSWD_PATH, 'r') as f:
             for line in f:
                 username, password_hash = line.strip().split(':')
                 users[username] = password_hash
@@ -34,7 +39,7 @@ def load_user(username):
     return None
 
 def get_db_tables():
-    conn = sqlite3.connect('beer.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
     tables = cursor.fetchall()
@@ -42,7 +47,7 @@ def get_db_tables():
     return [table[0] for table in tables]
 
 def get_table_schema(table_name):
-    conn = sqlite3.connect('beer.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(f"PRAGMA table_info({table_name});")
     schema = cursor.fetchall()
@@ -50,7 +55,7 @@ def get_table_schema(table_name):
     return schema
 
 def get_table_data(table_name):
-    conn = sqlite3.connect('beer.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(f"SELECT * FROM {table_name};")
     data = cursor.fetchall()
@@ -106,7 +111,7 @@ def add_record(table_name):
     columns = [col[1] for col in schema]
     values = [request.form.get(col) for col in columns]
     
-    conn = sqlite3.connect('beer.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     placeholders = ','.join(['?' for _ in columns])
     cursor.execute(f"INSERT INTO {table_name} ({','.join(columns)}) VALUES ({placeholders})", values)
@@ -118,7 +123,7 @@ def add_record(table_name):
 @app.route('/delete_record/<table_name>/<int:record_id>', methods=['POST'])
 @login_required
 def delete_record(table_name, record_id):
-    conn = sqlite3.connect('beer.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute(f"DELETE FROM {table_name} WHERE rowid=?", (record_id,))
     conn.commit()
@@ -132,7 +137,7 @@ def update_record(table_name, record_id):
     columns = [col[1] for col in schema]
     values = [request.form.get(col) for col in columns]
     
-    conn = sqlite3.connect('beer.db')
+    conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     set_clause = ','.join([f"{col}=?" for col in columns])
     values.append(record_id)
@@ -143,4 +148,6 @@ def update_record(table_name, record_id):
     return redirect(url_for('index', table=table_name))
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True) 
+    # Enable debug logging
+    app.logger.setLevel('DEBUG')
+    app.run(host='0.0.0.0', port=5001, debug=True) 
