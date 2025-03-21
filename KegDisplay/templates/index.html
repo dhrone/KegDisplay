@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <form method="GET" class="d-flex">
+            <select name="table" class="form-select me-2" onchange="this.form.submit()">
+                {% for table in tables %}
+                <option value="{{ table }}" {% if table == selected_table %}selected{% endif %}>
+                    {{ table }}
+                </option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+</div>
+
+{% if selected_table %}
+<div class="row mb-4">
+    <div class="col">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Add New Record</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('add_record', table_name=selected_table) }}" method="POST">
+                    <div class="row">
+                        {% for col in schema %}
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ col[1] }}" class="form-label">{{ col[1] }}</label>
+                            <input type="text" class="form-control" id="{{ col[1] }}" name="{{ col[1] }}"
+                                   {% if col[3] == 1 %}required{% endif %}>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Record</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{{ selected_table }} Records</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                {% for column in columns %}
+                                <th>{{ column }}</th>
+                                {% endfor %}
+                                <th class="table-actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in data %}
+                            <tr>
+                                {% for cell in row %}
+                                <td>
+                                    <span class="view-mode">{{ cell }}</span>
+                                    <input type="text" class="form-control edit-mode d-none" value="{{ cell }}">
+                                </td>
+                                {% endfor %}
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary edit-btn">Edit</button>
+                                        <form action="{{ url_for('delete_record', table_name=selected_table, record_id=loop.index) }}"
+                                              method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                    onclick="return confirm('Are you sure you want to delete this record?')">
+                                                Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <div class="btn-group edit-actions d-none">
+                                        <form action="{{ url_for('update_record', table_name=selected_table, record_id=loop.index) }}"
+                                              method="POST" class="d-inline update-form">
+                                            {% for column in columns %}
+                                            <input type="hidden" name="{{ column }}">
+                                            {% endfor %}
+                                            <button type="submit" class="btn btn-sm btn-success save-btn">Save</button>
+                                        </form>
+                                        <button class="btn btn-sm btn-secondary cancel-btn">Cancel</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const row = this.closest('tr');
+            row.querySelectorAll('.view-mode').forEach(el => el.classList.add('d-none'));
+            row.querySelectorAll('.edit-mode').forEach(el => el.classList.remove('d-none'));
+            row.querySelector('.btn-group').classList.add('d-none');
+            row.querySelector('.edit-actions').classList.remove('d-none');
+        });
+    });
+
+    document.querySelectorAll('.cancel-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const row = this.closest('tr');
+            row.querySelectorAll('.view-mode').forEach(el => el.classList.remove('d-none'));
+            row.querySelectorAll('.edit-mode').forEach(el => el.classList.add('d-none'));
+            row.querySelector('.btn-group').classList.remove('d-none');
+            row.querySelector('.edit-actions').classList.add('d-none');
+        });
+    });
+
+    document.querySelectorAll('.save-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const row = this.closest('tr');
+            const form = row.querySelector('.update-form');
+            const inputs = row.querySelectorAll('.edit-mode');
+            const hiddenInputs = form.querySelectorAll('input[type="hidden"]');
+            
+            inputs.forEach((input, index) => {
+                hiddenInputs[index].value = input.value;
+            });
+        });
+    });
+});
+</script>
+{% endif %}
+{% endblock %} 
