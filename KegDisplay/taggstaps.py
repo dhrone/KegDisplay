@@ -150,8 +150,10 @@ async def main():
         raise FileNotFoundError(f"Page file {path} missing")
     main_display = load(path, dataset=ds)
 
-    interface = spi()
-    screen = ssd1322(serial_interface=interface, mode='1')
+    interface = parallel(RS=7, E=8, PINS=[25, 5, 6, 12]))
+    screen = ws0010(interface)
+    #interface = spi()
+    #screen = ssd1322(serial_interface=interface, mode='1')
 
     # Create tasks for concurrent operations
     update_task = asyncio.create_task(update_data(src, ds))

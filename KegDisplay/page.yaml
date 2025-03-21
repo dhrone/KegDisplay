@@ -94,7 +94,7 @@ CANVASES:
         placement: [0, 0]
         z: 1
     size: [256, 64]
-    z: 1000
+    z: 1
     activeWhen: sys['status']=='start'
 
 

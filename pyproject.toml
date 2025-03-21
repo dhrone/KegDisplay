@@ -7,7 +7,7 @@ license = "MIT"
 packages = [{include = "KegDisplay"}]
 
 [tool.poetry.scripts]
-KegDisplay = "KegDisplay.taggstaps:start"
+KegDisplay = "KegDisplay.taggstaps"
 
 [tool.poetry.dependencies]
 python = ">=3.9, <4"
