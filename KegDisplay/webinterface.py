@@ -96,6 +96,7 @@ def index():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     print("Entering login route")
+    print(f"Template folder: {app.template_folder}")
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
