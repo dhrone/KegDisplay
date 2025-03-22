@@ -74,7 +74,7 @@ CANVASES:
     type: canvas
     items:
       - <<: *splash
-        placement: [0, 0]
+        placement: [0, 0, mm]
         z: 10
       - <<: *rectStart
         placement: [0, 0]

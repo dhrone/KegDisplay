@@ -17,6 +17,7 @@ import math
 import json
 from pathlib import Path
 from collections import deque
+from pprint import pprint
 
 from pyAttention.source import database
 from tinyDisplay.render.collection import canvas, sequence
@@ -107,13 +108,15 @@ def start():
 
         # Calculate the average time per render
         duration = time.time() - current_time
-        print(f"Rendered {count}:{duration:.2f} {count/duration:.2f} renders/sec")
+        if count > 10:
+             print(f"Rendered {count}:{duration:.2f} {count/duration:.2f} renders/sec")
 
         return returnSet
 
-    def dict_hash(dictionary):
+    def dict_hash(dictionary, ignore_key=None):
+        filtered_dict = {k: v for k, v in dictionary.items() if k != ignore_key}
         # Convert all keys to strings before dumping to JSON
-        string_dict = {str(k): v for k, v in dictionary.items()}
+        string_dict = {str(k): v for k, v in filtered_dict.items()}
         return hash(json.dumps(string_dict, sort_keys=True))
 
     def updateData(dbSrc, ds):
@@ -134,18 +137,20 @@ def start():
                 break
     
     updateData(src, main._dataset)
-    beersHash = dict_hash(main._dataset.get('beers'))
-    tapsHash = dict_hash(main._dataset.get('taps'))
+    beersHash = dict_hash(main._dataset.get('beers'), '__timestamp__')
+    tapsHash = dict_hash(main._dataset.get('taps'), '__timestamp__')
     main.render()
 
     # = animate(render, 120, 500, screen, main)
     #a.start()
     database_update_frequency = 2.5 
     render_frequency = 30
-    renderBufferSize = render_frequency * 60
+    renderBufferSize = render_frequency * 10
     dqImages = deque([])
     
-    startTime = time.time()
+    startTime = displayStartTime = time.time()
+    displayCount = 0
+
     try:
         while True:
             updateData(src, main._dataset)
@@ -156,18 +161,29 @@ def start():
             #a.clear()
 
             # Check for changed data
-            currentBeersHash = dict_hash(main._dataset.get('beers')) 
-            currentTapsHash = dict_hash(main._dataset.get('taps'))
-            dataChanged = beersHash != currentBeersHash or tapsHash != currentTapsHash
+            dataChanged = False
+            currentBeersHash = dict_hash(main._dataset.get('beers'), '__timestamp__') 
+            currentTapsHash = dict_hash(main._dataset.get('taps'), '__timestamp__')
+            if currentBeersHash != beersHash:
+               dataChanged = True
+               print ("Beers changed")
+            if currentTapsHash != tapsHash:
+               dataChanged = True
+               print ("Taps changed")
+               pprint (main._dataset.get('taps'), indent=4)
+
             beersHash = currentBeersHash
-            tapssHash = currentTapsHash
+            tapsHash = currentTapsHash
 
-            # Generate enough images to fill display for awhile 
-            if len(dqImages) == 0:
+            if dataChanged:
+                print("New data received")
+                del dqImages
+                dqImages = deque([])
                 dqImages = deque(render(main, renderBufferSize))
+            elif len(dqImages) == 0:
+                dqImages = deque(render(main, 2))
 
-            displayStartTime = time.time()
-            displayCount = 0
+
             while len(dqImages) > 0:
                 displayStart = time.time()
                 screen.display(dqImages.popleft())
@@ -177,14 +193,11 @@ def start():
                     # If display was updated faster than render_frequency, sleep to sync
                     time.sleep( 1/render_frequency - displayDuration) 
 
-                if time.time() - displayStartTime > database_update_frequency:
-                    duration = time.time() - displayStartTime
-                    print(f"{displayCount/duration:.2f} fps")
-                    break
+                if time.time() - displayStartTime > 10:
+                    print(f"{displayCount/(time.time()-displayStartTime):.1f}")
+                    displayCount = 0
+                    displayStartTime = time.time()
 
-            if dataChanged:
-                del dqImages
-                dqImages = deque([])
 
 
     except KeyboardInterrupt:
