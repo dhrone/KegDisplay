@@ -13,7 +13,10 @@ import logging
 import sys
 import os
 import time
+import math
+import json
 from pathlib import Path
+from collections import deque
 
 from pyAttention.source import database
 from tinyDisplay.render.collection import canvas, sequence
@@ -98,14 +101,20 @@ def start():
         # Reset counters
         render_start_time = current_time
 
-        for _ in range(count):
+        for _ in range(math.ceil(count)):
             display.render()
             returnSet.append(display.image.convert("1"))
 
         # Calculate the average time per render
-        print(f"Rendered {count} times in {time.time() - current_time:.2f} seconds")
+        duration = time.time() - current_time
+        print(f"Rendered {count}:{duration:.2f} {count/duration:.2f} renders/sec")
 
         return returnSet
+
+    def dict_hash(dictionary):
+        # Convert all keys to strings before dumping to JSON
+        string_dict = {str(k): v for k, v in dictionary.items()}
+        return hash(json.dumps(string_dict, sort_keys=True))
 
     def updateData(dbSrc, ds):
 
@@ -125,38 +134,57 @@ def start():
                 break
     
     updateData(src, main._dataset)
+    beersHash = dict_hash(main._dataset.get('beers'))
+    tapsHash = dict_hash(main._dataset.get('taps'))
     main.render()
 
     # = animate(render, 120, 500, screen, main)
     #a.start()
-    database_update_frequency = 2.5
+    database_update_frequency = 2.5 
     render_frequency = 30
+    renderBufferSize = render_frequency * 60
+    dqImages = deque([])
+    
     startTime = time.time()
     try:
         while True:
             updateData(src, main._dataset)
+
  
             if main._dataset.sys['status'] == 'start' and time.time() - startTime > 4:
                 main._dataset.update('sys', {'status': 'running'}, merge=True)
             #a.clear()
 
-            # Generate enough images to fill display for the next database_update_frequency seconds
-            renderStartTime = time.time()
-            images = render(main, database_update_frequency*render_frequency)
-            print(f"Rendered {len(images)} images in {time.time() - renderStartTime:.2f} seconds")
+            # Check for changed data
+            currentBeersHash = dict_hash(main._dataset.get('beers')) 
+            currentTapsHash = dict_hash(main._dataset.get('taps'))
+            dataChanged = beersHash != currentBeersHash or tapsHash != currentTapsHash
+            beersHash = currentBeersHash
+            tapssHash = currentTapsHash
+
+            # Generate enough images to fill display for awhile 
+            if len(dqImages) == 0:
+                dqImages = deque(render(main, renderBufferSize))
 
             displayStartTime = time.time()
             displayCount = 0
-            for image in images:
-                screen.display(image)
+            while len(dqImages) > 0:
+                displayStart = time.time()
+                screen.display(dqImages.popleft())
                 displayCount += 1
-                time.sleep(1/render_frequency)
+                displayDuration = time.time() - displayStart
+                if displayDuration < 1/render_frequency:
+                    # If display was updated faster than render_frequency, sleep to sync
+                    time.sleep( 1/render_frequency - displayDuration) 
+
                 if time.time() - displayStartTime > database_update_frequency:
-                    print(f"Displayed {displayCount} images in {time.time() - displayStartTime:.2f} seconds")
-                    if displayCount < len(images):
-                        print(f"Threw away {len(images) - displayCount} images")
+                    duration = time.time() - displayStartTime
+                    print(f"{displayCount/duration:.2f} fps")
                     break
-            del images
+
+            if dataChanged:
+                del dqImages
+                dqImages = deque([])
 
 
     except KeyboardInterrupt:
