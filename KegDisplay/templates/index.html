@@ -155,6 +155,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const editModal = new bootstrap.Modal(editModalElement);
     const addModal = new bootstrap.Modal(addModalElement);
 
+    // Store column names safely
+    const columnNames = {{ columns|tojson|safe }};
+
     // Add button handler
     const addButton = document.querySelector('.btn-primary[onclick="showAddForm()"]');
     console.log('Add Button:', addButton);
@@ -180,10 +183,11 @@ document.addEventListener('DOMContentLoaded', function() {
             form.action = "{{ url_for('update_record', table_name=selected_table, record_id=0) }}".replace('/0', '/' + (index + 1));
             
             cells.forEach((cell, i) => {
-                const fieldName = "{{ columns|tojson|safe }}".slice(1,-1).split(',')[i].trim().slice(1,-1);
-                const input = form.querySelector(`[name="${fieldName}"]`);
-                if (input) {
-                    input.value = cell.textContent.trim();
+                if (columnNames[i]) {
+                    const input = form.querySelector(`[name="${columnNames[i]}"]`);
+                    if (input) {
+                        input.value = cell.textContent.trim();
+                    }
                 }
             });
             
