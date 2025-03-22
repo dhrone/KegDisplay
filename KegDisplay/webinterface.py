@@ -95,12 +95,15 @@ def index():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    print("Entering login route")
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
         print(f"Login attempt for user: {username}")
         
         users = load_users()
+        print(f"Loaded users: {list(users.keys())}")
+        
         if username in users:
             try:
                 if bcrypt.checkpw(password.encode('utf-8'), users[username].encode('utf-8')):
@@ -112,6 +115,8 @@ def login():
                     print(f"Invalid password for user: {username}")
             except Exception as e:
                 print(f"Error during password verification: {str(e)}")
+                import traceback
+                print(traceback.format_exc())
         else:
             print(f"User not found: {username}")
         
