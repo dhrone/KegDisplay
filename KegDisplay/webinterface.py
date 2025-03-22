@@ -9,7 +9,7 @@ from functools import wraps
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'beer.db')
 PASSWD_PATH = os.path.join(BASE_DIR, 'passwd')
-print (PASSWD_PATH)
+print(f"Password file path: {PASSWD_PATH}")
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Generate a random secret key
@@ -18,28 +18,35 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 
 class User(UserMixin):
-    def __init__(self, username):
+    def __init__(self, username, password_hash=None):
         self.id = username
+        self.username = username
+        self.password_hash = password_hash
+
+    @staticmethod
+    def get(user_id):
+        users = load_users()
+        if user_id in users:
+            return User(user_id, users[user_id])
+        return None
 
 def load_users():
     users = {}
-    print ("Loading Users")
+    print("Loading Users")
     try:
         with open(PASSWD_PATH, 'r') as f:
             for line in f:
                 username, password_hash = line.strip().split(':')
                 users[username] = password_hash
-                print(username)
+                print(f"Found user: {username}")
     except FileNotFoundError:
-        pass
+        print(f"Password file not found at: {PASSWD_PATH}")
     return users
 
 @login_manager.user_loader
-def load_user(username):
-    users = load_users()
-    if username in users:
-        return User(username)
-    return None
+def load_user(user_id):
+    print(f"Loading user with ID: {user_id}")
+    return User.get(user_id)
 
 def get_db_tables():
     conn = sqlite3.connect(DB_PATH)
@@ -91,13 +98,23 @@ def login():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        users = load_users()
+        print(f"Login attempt for user: {username}")
         
-        if username in users and bcrypt.checkpw(password.encode('utf-8'), 
-                                              users[username].encode('utf-8')):
-            user = User(username)
-            login_user(user)
-            return redirect(url_for('index'))
+        users = load_users()
+        if username in users:
+            try:
+                if bcrypt.checkpw(password.encode('utf-8'), users[username].encode('utf-8')):
+                    user = User(username, users[username])
+                    login_user(user)
+                    print(f"Login successful for user: {username}")
+                    return redirect(url_for('index'))
+                else:
+                    print(f"Invalid password for user: {username}")
+            except Exception as e:
+                print(f"Error during password verification: {str(e)}")
+        else:
+            print(f"User not found: {username}")
+        
         flash('Invalid username or password')
     return render_template('login.html')
 
@@ -153,4 +170,5 @@ def update_record(table_name, record_id):
 if __name__ == '__main__':
     # Enable debug logging
     app.logger.setLevel('DEBUG')
+    print("Starting web server...")
     app.run(host='0.0.0.0', port=5001, debug=True) 

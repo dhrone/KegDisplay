@@ -4,7 +4,9 @@ import bcrypt
 import os
 import sys
 
-PASSWD_FILE = 'passwd'
+# Get the directory where this script is located
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PASSWD_FILE = os.path.join(BASE_DIR, 'passwd')
 
 def load_users():
     users = {}
