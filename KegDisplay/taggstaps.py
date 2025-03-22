@@ -19,8 +19,9 @@ import argparse
 from pathlib import Path
 from collections import deque
 from pprint import pprint
-from pynput import keyboard
-from threading import Event
+import select
+import termios
+import tty
 
 from pyAttention.source import database
 from tinyDisplay.render.collection import canvas, sequence
@@ -59,55 +60,43 @@ logger.addHandler(stream_handler)
 
 # Global flag for FPS display
 show_fps = False
-# Global event for program termination
-exit_event = Event()
+exit_requested = False
 
-def on_press(key):
-    """Handle keyboard events.
-    
-    Args:
-        key: The key that was pressed
-    """
-    global show_fps
+def setup_raw_input():
+    """Set up raw input mode for keyboard detection"""
     try:
-        # Check for Ctrl+F
-        if key == keyboard.Key.f and keyboard.Key.ctrl in pressed_keys:
-            show_fps = not show_fps
-            if not show_fps:
-                # Clear the FPS display line when turning it off
-                print('\r' + ' '*40 + '\r', end='')
-        # Check for Ctrl+C
-        elif key == keyboard.KeyCode.from_char('c') and keyboard.Key.ctrl in pressed_keys:
-            logger.info("Ctrl+C pressed, initiating shutdown")
-            exit_event.set()
-    except AttributeError:
-        pass
+        fd = sys.stdin.fileno()
+        if not os.isatty(fd):
+            # No TTY available
+            return None
+        old_settings = termios.tcgetattr(fd)
+        tty.setraw(fd)
+        return old_settings
+    except (termios.error, OSError):
+        # Handle cases where terminal manipulation isn't possible
+        return None
 
-def on_press_release(key):
-    """Track pressed keys.
-    
-    Args:
-        key: The key that was pressed/released
-    """
-    pressed_keys.add(key)
+def restore_input(old_settings):
+    """Restore normal input mode"""
+    if old_settings:
+        fd = sys.stdin.fileno()
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-def on_release(key):
-    """Track released keys.
-    
-    Args:
-        key: The key that was released
-    """
+def check_keyboard():
+    """Check for keyboard input without blocking"""
     try:
-        pressed_keys.remove(key)
-    except KeyError:
+        if not sys.stdin.isatty():
+            return None
+        if select.select([sys.stdin], [], [], 0)[0]:
+            key = sys.stdin.read(1)
+            if key == '\x06':  # Ctrl+F
+                return 'fps'
+            elif key == '\x03':  # Ctrl+C
+                return 'exit'
+    except (OSError, IOError):
+        # Handle cases where input checking fails
         pass
-
-# Add before the start() function
-pressed_keys = set()
-keyboard_listener = keyboard.Listener(
-    on_press=on_press,
-    on_release=on_release
-)
+    return None
 
 def sigterm_handler(_signo, _stack_frame):
     """Handle SIGTERM signal gracefully by exiting the program.
@@ -116,13 +105,16 @@ def sigterm_handler(_signo, _stack_frame):
         _signo: Signal number
         _stack_frame: Current stack frame
     """
+    global exit_requested
     logger.info("SIGTERM received, initiating shutdown")
-    exit_event.set()
-
+    exit_requested = True
 
 def start():
-    # Start keyboard listener
-    keyboard_listener.start()
+    # Remove keyboard listener start
+    # keyboard_listener.start()
+    
+    # Add raw input setup
+    old_settings = setup_raw_input()
     
     # Add argument parsing
     parser = argparse.ArgumentParser(description='KegDisplay application')
@@ -279,6 +271,8 @@ def start():
             main_display: Main display controller
             src: Data source object
         """
+        global show_fps, exit_requested
+        
         dq_images = deque([])
         beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
         taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
@@ -287,7 +281,18 @@ def start():
         display_count = 0
 
         try:
-            while not exit_event.is_set():  # Changed while True to check exit_event
+            while not exit_requested:
+                # Check for keyboard input
+                key_event = check_keyboard()
+                if key_event == 'fps':
+                    show_fps = not show_fps
+                    if not show_fps:
+                        print('\r' + ' '*40 + '\r', end='')
+                elif key_event == 'exit':
+                    logger.info("Ctrl+C pressed, initiating shutdown")
+                    exit_requested = True
+                    break
+
                 update_data(src, main_display._dataset)
 
                 if (main_display._dataset.sys['status'] == 'start' and 
@@ -323,20 +328,19 @@ def start():
                 )
 
         except KeyboardInterrupt:
-            exit_event.set()
+            exit_requested = True
+            logger.info("KeyboardInterrupt received in main loop")
 
     try:
         main_loop(screen, main, src)
     except KeyboardInterrupt:
-        exit_event.set()
+        exit_requested = True
+        logger.info("KeyboardInterrupt received in main loop")
     finally:
-        logger.info("Shutting down threads")
-        keyboard_listener.stop()  # Stop the keyboard listener
-        try:
-            #a.stop()
-            pass
-        except:
-            pass
+        logger.info("Shutting down")
+        restore_input(old_settings)
+        # Remove keyboard listener stop
+        # keyboard_listener.stop()
  
  #print (ds['beers'])
 #main.render(force=True)
@@ -354,7 +358,7 @@ def handle_display_updates(screen, dq_images, display_count, display_start_time)
     Returns:
         tuple: Updated display_count and display_start_time
     """
-    while len(dq_images) > 0 and not exit_event.is_set():  # Add exit_event check
+    while len(dq_images) > 0 and not exit_requested:  # Changed exit_event.is_set()
         display_start = time.time()
         screen.display(dq_images.popleft())
         display_count += 1
