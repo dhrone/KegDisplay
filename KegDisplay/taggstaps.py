@@ -36,6 +36,9 @@ RENDER_FREQUENCY = 30
 RENDER_BUFFER_SIZE = RENDER_FREQUENCY * 10
 LOG_FILE = "/var/log/KegDisplay/taggstaps.log"
 
+# Add logger name constant
+LOGGER_NAME = "KegDisplay"
+
 def sigterm_handler(_signo, _stack_frame):
     """Handle SIGTERM signal gracefully by exiting the program.
 
@@ -64,17 +67,24 @@ def start():
     last_render_print_time = time.time()
     render_start_time = time.time()
 
-    # Changing the system encoding should no longer be needed
-    #    if sys.stdout.encoding != u'UTF-8':
-    #            sys.stdout = codecs.getwriter(u'utf-8')(sys.stdout, u'strict')
+    # Create and configure our application logger
+    logger = logging.getLogger(LOGGER_NAME)
+    logger.setLevel(getattr(logging, args.log_level))
+    
+    # Create handlers
+    file_handler = logging.FileHandler(LOG_FILE)
+    stream_handler = logging.StreamHandler()
+    
+    # Create formatter and add it to the handlers
+    formatter = logging.Formatter(u'%(asctime)s:%(levelname)s:%(message)s')
+    file_handler.setFormatter(formatter)
+    stream_handler.setFormatter(formatter)
+    
+    # Add the handlers to our logger
+    logger.addHandler(file_handler)
+    logger.addHandler(stream_handler)
 
-    # Update logging configuration to use the command line argument
-    logging.basicConfig(
-        format=u'%(asctime)s:%(levelname)s:%(message)s',
-        filename="/var/log/KegDisplay/taggstaps.log",
-        level=getattr(logging, args.log_level)
-    )
-    logging.getLogger().addHandler(logging.StreamHandler())
+    # Set third-party loggers to their default levels
     logging.getLogger(u'socketIO-client').setLevel(logging.WARNING)
 
     # Move unhandled exception messages to log file
@@ -83,11 +93,11 @@ def start():
             sys.__excepthook__(exc_type, exc_value, exc_traceback)
             return
 
-        logging.error(u"Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+        logger.error(u"Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
         try:
             if len(mc.musicdata) > 0:
-                logging.error(u"Status at exception")
-                logging.error(unicode(mc.musicdata))
+                logger.error(u"Status at exception")
+                logger.error(unicode(mc.musicdata))
         except NameError:
             # If this gets called before the music controller is instantiated, ignore it
             pass
@@ -231,16 +241,16 @@ def start():
                 
                 if current_beers_hash != beers_hash:
                     data_changed = True
-                    logging.info("Beers changed")
+                    logger.info("Beers changed")
                 if current_taps_hash != taps_hash:
                     data_changed = True
-                    logging.info("Taps changed")
+                    logger.info("Taps changed")
 
                 beers_hash = current_beers_hash
                 taps_hash = current_taps_hash
 
                 if data_changed:
-                    logging.info("New data received")
+                    logger.info("New data received")
                     dq_images = deque(render(main_display, RENDER_BUFFER_SIZE))
                 elif len(dq_images) == 0:
                     dq_images = deque(render(main_display, 2))
@@ -295,7 +305,7 @@ def handle_display_updates(screen, dq_images, display_count, display_start_time)
             time.sleep(1/RENDER_FREQUENCY - display_duration)
 
         if time.time() - display_start_time > 10:
-            logging.debug(f"Display updates per second: {display_count/(time.time()-display_start_time):.1f}")
+            logger.debug(f"Display updates per second: {display_count/(time.time()-display_start_time):.1f}")
             display_count = 0
             display_start_time = time.time()
 
