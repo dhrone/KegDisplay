@@ -137,32 +137,42 @@
 </div>
 
 <script>
-const editModal = new bootstrap.Modal(document.getElementById('editRecordModal'));
-const addModal = new bootstrap.Modal(document.getElementById('addRecordModal'));
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize the modals
+    const editModalElement = document.getElementById('editRecordModal');
+    const addModalElement = document.getElementById('addRecordModal');
+    const editModal = new bootstrap.Modal(editModalElement);
+    const addModal = new bootstrap.Modal(addModalElement);
 
-function showAddForm() {
-    addModal.show();
-}
+    function showAddForm() {
+        addModal.show();
+    }
 
-document.querySelectorAll('.edit-btn').forEach((btn, index) => {
-    btn.addEventListener('click', function() {
-        const row = this.closest('tr');
-        const cells = row.querySelectorAll('td:not(:last-child) .view-mode');
-        const form = document.getElementById('editForm');
-        
-        // Set the form action
-        form.action = "{{ url_for('update_record', table_name=selected_table, record_id=0) }}".replace('/0', '/' + (index + 1));
-        
-        // Fill the form fields
-        cells.forEach((cell, i) => {
-            const fieldName = "{{ columns|tojson|safe }}".slice(1,-1).split(',')[i].trim().slice(1,-1);
-            const input = form.querySelector(`[name="${fieldName}"]`);
-            if (input) {
-                input.value = cell.textContent;
-            }
+    document.querySelectorAll('.edit-btn').forEach((btn, index) => {
+        btn.addEventListener('click', function() {
+            const row = this.closest('tr');
+            const cells = row.querySelectorAll('td:not(:last-child) .view-mode');
+            const form = document.getElementById('editForm');
+            
+            // Set the form action
+            form.action = "{{ url_for('update_record', table_name=selected_table, record_id=0) }}".replace('/0', '/' + (index + 1));
+            
+            // Fill the form fields
+            cells.forEach((cell, i) => {
+                const fieldName = "{{ columns|tojson|safe }}".slice(1,-1).split(',')[i].trim().slice(1,-1);
+                const input = form.querySelector(`[name="${fieldName}"]`);
+                if (input) {
+                    input.value = cell.textContent;
+                }
+            });
+            
+            editModal.show();
         });
-        
-        editModal.show();
+    });
+
+    // Add click handler for the add button
+    document.querySelector('[onclick="showAddForm"]')?.addEventListener('click', () => {
+        addModal.show();
     });
 });
 </script>
