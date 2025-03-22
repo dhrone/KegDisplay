@@ -9,9 +9,12 @@ from functools import wraps
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'beer.db')
 PASSWD_PATH = os.path.join(BASE_DIR, 'passwd')
+TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
 print(f"Password file path: {PASSWD_PATH}")
+print(f"Template directory: {TEMPLATE_DIR}")
 
-app = Flask(__name__)
+app = Flask(__name__, 
+           template_folder=TEMPLATE_DIR)  # Specify the template folder
 app.secret_key = os.urandom(24)  # Generate a random secret key
 login_manager = LoginManager()
 login_manager.init_app(app)
