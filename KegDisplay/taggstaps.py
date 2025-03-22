@@ -34,8 +34,8 @@ def start():
 
     # Variables for tracking render frequency
     render_count = 0
-    last_print_time = time.time()
-    start_time = time.time()
+    last_render_print_time = time.time()
+    render_start_time = time.time()
 
     # Changing the system encoding should no longer be needed
     #    if sys.stdout.encoding != u'UTF-8':
@@ -90,26 +90,22 @@ def start():
     screen = ws0010(interface)
     #screen = ssd1322(serial_interface=interface, mode='1')
 
-    def render(device, display):
-        nonlocal render_count, last_print_time, start_time
+    def render(display, count):
         
         current_time = time.time()
-        render_count += 1
-        
-        # Every 10 seconds, print the average rate
-        if current_time - last_print_time >= 10:
-            elapsed = current_time - start_time
-            rate = render_count / elapsed
-            logging.info(f"Average render rate: {rate:.2f} renders/second over last {elapsed:.1f} seconds")
-            
-            # Reset counters
-            render_count = 0
-            start_time = current_time
-            last_print_time = current_time
-        
-        display.render()
-        device.display(display.image.convert("1"))
-        return 1
+        returnSet = []
+
+        # Reset counters
+        render_start_time = current_time
+
+        for _ in range(count):
+            display.render()
+            returnSet.append(display.image.convert("1"))
+
+        # Calculate the average time per render
+        print(f"Rendered {count} times in {time.time() - current_time:.2f} seconds")
+
+        return returnSet
 
     def updateData(dbSrc, ds):
 
@@ -131,16 +127,37 @@ def start():
     updateData(src, main._dataset)
     main.render()
 
-    a = animate(render, 120, 500, screen, main)
-    a.start()
+    # = animate(render, 120, 500, screen, main)
+    #a.start()
+    database_update_frequency = 2.5
+    render_frequency = 30
     startTime = time.time()
     try:
         while True:
             updateData(src, main._dataset)
+ 
             if main._dataset.sys['status'] == 'start' and time.time() - startTime > 4:
                 main._dataset.update('sys', {'status': 'running'}, merge=True)
-            a.clear() 
-            time.sleep(2.5)
+            #a.clear()
+
+            # Generate enough images to fill display for the next database_update_frequency seconds
+            renderStartTime = time.time()
+            images = render(main, database_update_frequency*render_frequency)
+            print(f"Rendered {len(images)} images in {time.time() - renderStartTime:.2f} seconds")
+
+            displayStartTime = time.time()
+            displayCount = 0
+            for image in images:
+                screen.display(image)
+                displayCount += 1
+                time.sleep(1/render_frequency)
+                if time.time() - displayStartTime > database_update_frequency:
+                    print(f"Displayed {displayCount} images in {time.time() - displayStartTime:.2f} seconds")
+                    if displayCount < len(images):
+                        print(f"Threw away {len(images) - displayCount} images")
+                    break
+            del images
+
 
     except KeyboardInterrupt:
         pass
@@ -148,7 +165,8 @@ def start():
     finally:
         print ("Shutting down threads")
         try:
-            a.stop()
+            #a.stop()
+            pass
         except:
             pass
  
