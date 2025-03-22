@@ -100,32 +100,16 @@ def index():
 def login():
     print("Entering login route")
     print(f"Template folder: {app.template_folder}")
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        print(f"Login attempt for user: {username}")
-        
-        users = load_users()
-        print(f"Loaded users: {list(users.keys())}")
-        
-        if username in users:
-            try:
-                if bcrypt.checkpw(password.encode('utf-8'), users[username].encode('utf-8')):
-                    user = User(username, users[username])
-                    login_user(user)
-                    print(f"Login successful for user: {username}")
-                    return redirect(url_for('index'))
-                else:
-                    print(f"Invalid password for user: {username}")
-            except Exception as e:
-                print(f"Error during password verification: {str(e)}")
-                import traceback
-                print(traceback.format_exc())
-        else:
-            print(f"User not found: {username}")
-        
-        flash('Invalid username or password')
-    return render_template('login.html')
+    try:
+        print("Attempting to render template")
+        result = render_template('login.html')
+        print("Template rendered successfully")
+        return result
+    except Exception as e:
+        print(f"Error rendering template: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        return "Error rendering template"
 
 @app.route('/logout')
 @login_required
