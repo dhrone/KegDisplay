@@ -287,8 +287,11 @@ def start():
                 if key_event == 'fps':
                     show_fps = not show_fps
                     if not show_fps:
-                        print('\r' + ' '*40 + '\r', end='')
+                        print('\r' + ' '*40 + '\r', end='', flush=True)
                 elif key_event == 'exit':
+                    # Clear any FPS display before logging exit message
+                    if show_fps:
+                        print('\r' + ' '*40 + '\r', end='', flush=True)
                     logger.info("Ctrl+C pressed, initiating shutdown")
                     exit_requested = True
                     break
@@ -328,19 +331,24 @@ def start():
                 )
 
         except KeyboardInterrupt:
+            # Clear any FPS display before logging exit message
+            if show_fps:
+                print('\r' + ' '*40 + '\r', end='', flush=True)
             exit_requested = True
             logger.info("KeyboardInterrupt received in main loop")
 
     try:
         main_loop(screen, main, src)
     except KeyboardInterrupt:
-        exit_requested = True
-        logger.info("KeyboardInterrupt received in main loop")
+        # Clear the line before logging
+        print('\r' + ' '*40 + '\r', end='', flush=True)
+        logger.info("KeyboardInterrupt received, initiating shutdown")
     finally:
-        logger.info("Shutting down")
+        # Restore terminal settings before final logging
         restore_input(old_settings)
-        # Remove keyboard listener stop
-        # keyboard_listener.stop()
+        # Ensure we're at the start of a clean line
+        print('\r', end='', flush=True)
+        logger.info("Shutting down")
  
  #print (ds['beers'])
 #main.render(force=True)
@@ -373,8 +381,14 @@ def handle_display_updates(screen, dq_images, display_count, display_start_time)
         if show_fps:
             print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
         elif time.time() - display_start_time > 10:
+            # Clear the line before logging
+            print('\r' + ' '*40 + '\r', end='', flush=True)
             logger.debug(f"Display updates per second: {current_fps:.1f}")
             display_count = 0
             display_start_time = time.time()
+
+    # Clear any remaining FPS display before returning
+    if show_fps:
+        print('\r' + ' '*40 + '\r', end='', flush=True)
 
     return display_count, display_start_time
