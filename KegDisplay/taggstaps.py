@@ -15,6 +15,7 @@ import os
 import time
 import math
 import json
+import argparse
 from pathlib import Path
 from collections import deque
 from pprint import pprint
@@ -46,6 +47,16 @@ def sigterm_handler(_signo, _stack_frame):
 
 
 def start():
+    # Add argument parsing
+    parser = argparse.ArgumentParser(description='KegDisplay application')
+    parser.add_argument('--log-level', 
+                       default='INFO',
+                       choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                       type=str.upper,
+                       help='Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
+
+    args = parser.parse_args()
+
     signal.signal(signal.SIGTERM, sigterm_handler)
 
     # Variables for tracking render frequency
@@ -57,7 +68,12 @@ def start():
     #    if sys.stdout.encoding != u'UTF-8':
     #            sys.stdout = codecs.getwriter(u'utf-8')(sys.stdout, u'strict')
 
-    logging.basicConfig(format=u'%(asctime)s:%(levelname)s:%(message)s', filename="/var/log/KegDisplay/taggstaps.log", level=logging.INFO)
+    # Update logging configuration to use the command line argument
+    logging.basicConfig(
+        format=u'%(asctime)s:%(levelname)s:%(message)s',
+        filename="/var/log/KegDisplay/taggstaps.log",
+        level=getattr(logging, args.log_level)
+    )
     logging.getLogger().addHandler(logging.StreamHandler())
     logging.getLogger(u'socketIO-client').setLevel(logging.WARNING)
 
