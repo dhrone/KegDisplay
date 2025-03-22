@@ -9,6 +9,7 @@ from functools import wraps
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DB_PATH = os.path.join(BASE_DIR, 'beer.db')
 PASSWD_PATH = os.path.join(BASE_DIR, 'passwd')
+print (PASSWD_PATH)
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Generate a random secret key
@@ -22,11 +23,13 @@ class User(UserMixin):
 
 def load_users():
     users = {}
+    print ("Loading Users")
     try:
         with open(PASSWD_PATH, 'r') as f:
             for line in f:
                 username, password_hash = line.strip().split(':')
                 users[username] = password_hash
+                print(username)
     except FileNotFoundError:
         pass
     return users
