@@ -35,9 +35,25 @@ DATABASE_UPDATE_FREQUENCY = 2.5
 RENDER_FREQUENCY = 30
 RENDER_BUFFER_SIZE = RENDER_FREQUENCY * 10
 LOG_FILE = "/var/log/KegDisplay/taggstaps.log"
-
-# Add logger name constant
 LOGGER_NAME = "KegDisplay"
+
+# Create and configure our application logger at module level
+logger = logging.getLogger(LOGGER_NAME)
+# Set initial default level - will be overridden by command line argument
+logger.setLevel(logging.INFO)
+
+# Create handlers
+file_handler = logging.FileHandler(LOG_FILE)
+stream_handler = logging.StreamHandler()
+
+# Create formatter and add it to the handlers
+formatter = logging.Formatter(u'%(asctime)s:%(levelname)s:%(message)s')
+file_handler.setFormatter(formatter)
+stream_handler.setFormatter(formatter)
+
+# Add the handlers to our logger
+logger.addHandler(file_handler)
+logger.addHandler(stream_handler)
 
 def sigterm_handler(_signo, _stack_frame):
     """Handle SIGTERM signal gracefully by exiting the program.
@@ -67,22 +83,8 @@ def start():
     last_render_print_time = time.time()
     render_start_time = time.time()
 
-    # Create and configure our application logger
-    logger = logging.getLogger(LOGGER_NAME)
+    # Update the log level based on command line argument
     logger.setLevel(getattr(logging, args.log_level))
-    
-    # Create handlers
-    file_handler = logging.FileHandler(LOG_FILE)
-    stream_handler = logging.StreamHandler()
-    
-    # Create formatter and add it to the handlers
-    formatter = logging.Formatter(u'%(asctime)s:%(levelname)s:%(message)s')
-    file_handler.setFormatter(formatter)
-    stream_handler.setFormatter(formatter)
-    
-    # Add the handlers to our logger
-    logger.addHandler(file_handler)
-    logger.addHandler(stream_handler)
 
     # Set third-party loggers to their default levels
     logging.getLogger(u'socketIO-client').setLevel(logging.WARNING)
