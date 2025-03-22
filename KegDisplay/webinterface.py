@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import sqlite3
 import os
@@ -142,18 +142,43 @@ def logout():
 @app.route('/add_record/<table_name>', methods=['POST'])
 @login_required
 def add_record(table_name):
-    schema = get_table_schema(table_name)
-    columns = [col[1] for col in schema]
-    values = [request.form.get(col) for col in columns]
-    
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    placeholders = ','.join(['?' for _ in columns])
-    cursor.execute(f"INSERT INTO {table_name} ({','.join(columns)}) VALUES ({placeholders})", values)
-    conn.commit()
-    conn.close()
-    
-    return redirect(url_for('index', table=table_name))
+    try:
+        schema = get_table_schema(table_name)
+        columns = [col[1] for col in schema]
+        values = [request.form.get(col) for col in columns]
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        placeholders = ','.join(['?' for _ in columns])
+        cursor.execute(f"INSERT INTO {table_name} ({','.join(columns)}) VALUES ({placeholders})", values)
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"success": True, "message": "Record added successfully"})
+        
+    except sqlite3.IntegrityError as e:
+        error_msg = str(e)
+        if "UNIQUE constraint failed" in error_msg:
+            return jsonify({
+                "error": "This record violates a unique constraint. The value already exists."
+            }), 400
+        elif "NOT NULL constraint failed" in error_msg:
+            column = error_msg.split(".")[-1]
+            return jsonify({
+                "error": f"The {column} field cannot be empty."
+            }), 400
+        else:
+            return jsonify({
+                "error": "This record violates a database constraint."
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            "error": "An unexpected error occurred while adding the record."
+        }), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 @app.route('/delete_record/<table_name>/<int:record_id>', methods=['POST'])
 @login_required
@@ -168,19 +193,51 @@ def delete_record(table_name, record_id):
 @app.route('/update_record/<table_name>/<int:record_id>', methods=['POST'])
 @login_required
 def update_record(table_name, record_id):
-    schema = get_table_schema(table_name)
-    columns = [col[1] for col in schema]
-    values = [request.form.get(col) for col in columns]
-    
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    set_clause = ','.join([f"{col}=?" for col in columns])
-    values.append(record_id)
-    cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE rowid=?", values)
-    conn.commit()
-    conn.close()
-    
-    return redirect(url_for('index', table=table_name))
+    try:
+        schema = get_table_schema(table_name)
+        columns = [col[1] for col in schema]
+        values = [request.form.get(col) for col in columns]
+        
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        set_clause = ','.join([f"{col}=?" for col in columns])
+        values.append(record_id)
+        cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE rowid=?", values)
+        conn.commit()
+        
+        if cursor.rowcount == 0:
+            return jsonify({
+                "error": "Record not found or no changes made."
+            }), 404
+            
+        return jsonify({
+            "success": True,
+            "message": "Record updated successfully"
+        })
+        
+    except sqlite3.IntegrityError as e:
+        error_msg = str(e)
+        if "UNIQUE constraint failed" in error_msg:
+            return jsonify({
+                "error": "This update violates a unique constraint. The value already exists."
+            }), 400
+        elif "NOT NULL constraint failed" in error_msg:
+            column = error_msg.split(".")[-1]
+            return jsonify({
+                "error": f"The {column} field cannot be empty."
+            }), 400
+        else:
+            return jsonify({
+                "error": "This update violates a database constraint."
+            }), 400
+            
+    except Exception as e:
+        return jsonify({
+            "error": "An unexpected error occurred while updating the record."
+        }), 500
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 if __name__ == '__main__':
     # Enable debug logging
