@@ -19,6 +19,8 @@ import argparse
 from pathlib import Path
 from collections import deque
 from pprint import pprint
+from pynput import keyboard
+from threading import Event
 
 from pyAttention.source import database
 from tinyDisplay.render.collection import canvas, sequence
@@ -55,6 +57,58 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
+# Global flag for FPS display
+show_fps = False
+# Global event for program termination
+exit_event = Event()
+
+def on_press(key):
+    """Handle keyboard events.
+    
+    Args:
+        key: The key that was pressed
+    """
+    global show_fps
+    try:
+        # Check for Ctrl+F
+        if key == keyboard.Key.f and keyboard.Key.ctrl in pressed_keys:
+            show_fps = not show_fps
+            if not show_fps:
+                # Clear the FPS display line when turning it off
+                print('\r' + ' '*40 + '\r', end='')
+        # Check for Ctrl+C
+        elif key == keyboard.KeyCode.from_char('c') and keyboard.Key.ctrl in pressed_keys:
+            logger.info("Ctrl+C pressed, initiating shutdown")
+            exit_event.set()
+    except AttributeError:
+        pass
+
+def on_press_release(key):
+    """Track pressed keys.
+    
+    Args:
+        key: The key that was pressed/released
+    """
+    pressed_keys.add(key)
+
+def on_release(key):
+    """Track released keys.
+    
+    Args:
+        key: The key that was released
+    """
+    try:
+        pressed_keys.remove(key)
+    except KeyError:
+        pass
+
+# Add before the start() function
+pressed_keys = set()
+keyboard_listener = keyboard.Listener(
+    on_press=on_press,
+    on_release=on_release
+)
+
 def sigterm_handler(_signo, _stack_frame):
     """Handle SIGTERM signal gracefully by exiting the program.
 
@@ -62,10 +116,14 @@ def sigterm_handler(_signo, _stack_frame):
         _signo: Signal number
         _stack_frame: Current stack frame
     """
-    sys.exit(0)
+    logger.info("SIGTERM received, initiating shutdown")
+    exit_event.set()
 
 
 def start():
+    # Start keyboard listener
+    keyboard_listener.start()
+    
     # Add argument parsing
     parser = argparse.ArgumentParser(description='KegDisplay application')
     parser.add_argument('--log-level', 
@@ -229,7 +287,7 @@ def start():
         display_count = 0
 
         try:
-            while True:
+            while not exit_event.is_set():  # Changed while True to check exit_event
                 update_data(src, main_display._dataset)
 
                 if (main_display._dataset.sys['status'] == 'start' and 
@@ -265,15 +323,15 @@ def start():
                 )
 
         except KeyboardInterrupt:
-            pass
+            exit_event.set()
 
     try:
         main_loop(screen, main, src)
     except KeyboardInterrupt:
-        pass
-
+        exit_event.set()
     finally:
-        print ("Shutting down threads")
+        logger.info("Shutting down threads")
+        keyboard_listener.stop()  # Stop the keyboard listener
         try:
             #a.stop()
             pass
@@ -296,7 +354,7 @@ def handle_display_updates(screen, dq_images, display_count, display_start_time)
     Returns:
         tuple: Updated display_count and display_start_time
     """
-    while len(dq_images) > 0:
+    while len(dq_images) > 0 and not exit_event.is_set():  # Add exit_event check
         display_start = time.time()
         screen.display(dq_images.popleft())
         display_count += 1
@@ -306,8 +364,12 @@ def handle_display_updates(screen, dq_images, display_count, display_start_time)
             # If display was updated faster than render_frequency, sleep to sync
             time.sleep(1/RENDER_FREQUENCY - display_duration)
 
-        if time.time() - display_start_time > 10:
-            logger.debug(f"Display updates per second: {display_count/(time.time()-display_start_time):.1f}")
+        # Show FPS every update when enabled, otherwise only log debug every 10 seconds
+        current_fps = display_count/(time.time()-display_start_time)
+        if show_fps:
+            print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
+        elif time.time() - display_start_time > 10:
+            logger.debug(f"Display updates per second: {current_fps:.1f}")
             display_count = 0
             display_start_time = time.time()
 
