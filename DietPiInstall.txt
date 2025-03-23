@@ -3,6 +3,9 @@ sudo apt-get install git
 sudo apt-get install gcc
 sudo apt-get install vim-tiny
 sudo apt-get install sqlite3
+sudo apt-get install python3-dev 
+sudo apt-get install python3-rpi.gpio 
+sudo apt-get install python3-spidev
 curl -sSL https://install.python-poetry.org | python3 -
 cd ~
 mkdir Dev
