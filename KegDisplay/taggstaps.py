@@ -43,11 +43,14 @@ LOGGER_NAME = "KegDisplay"
 
 # First, let's modify the logging setup to force clean output
 class CleanFormatter(logging.Formatter):
-    """Custom formatter that ensures clean, left-aligned output."""
+    """Custom formatter that ensures clean, left-aligned output with proper line endings in raw mode."""
     def format(self, record):
         # Clean any existing whitespace
         record.msg = record.msg.strip()
-        return super().format(record)
+        # Format the message
+        formatted = super().format(record)
+        # Ensure proper line ending in raw mode
+        return formatted + '\r\n'
 
 # Update the logging setup
 logger = logging.getLogger(LOGGER_NAME)
@@ -59,7 +62,7 @@ stream_handler = logging.StreamHandler()
 
 # Create and set formatter
 formatter = CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s')
-file_handler.setFormatter(formatter)
+file_handler.setFormatter(formatter)  # File handler gets the same formatter but file system will handle line endings
 stream_handler.setFormatter(formatter)
 
 logger.addHandler(file_handler)
@@ -340,6 +343,7 @@ def start():
             last_db_check_time = time.time()
             beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
             taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
+            sys_hash = dict_hash(main_display._dataset.get('sys'), '__timestamp__')
             
             start_time = display_start_time = time.time()
             display_count = 0
@@ -353,79 +357,87 @@ def start():
 
             try:
                 while not exit_requested:
-                    try:
-                        current_time = time.time()
+                    current_time = time.time()
 
-                        # Check for keyboard input more frequently
-                        key_event = check_keyboard()
-                        if key_event == 'fps':
-                            show_fps = not show_fps
-                            if not show_fps:
-                                print('\r' + ' '*40 + '\r', end='', flush=True)
-                        elif key_event == 'exit':
-                            logger.info("Exit requested via keyboard")
-                            break
-
-                        # Database updates
-                        if current_time - last_db_check_time >= DATABASE_UPDATE_FREQUENCY:
-                            update_data(src, main_display._dataset)
-                            last_db_check_time = current_time
-
-                            if (main_display._dataset.sys['status'] == 'start' and 
-                                current_time - start_time > 4):
-                                main_display._dataset.update('sys', {'status': 'running'}, merge=True)
-
-                            # Check for changed data
-                            current_beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
-                            current_taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
-                            
-                            if current_beers_hash != beers_hash or current_taps_hash != taps_hash:
-                                logger.info("Data changed - updating display")
-                                
-                                # Immediately render and display first frame
-                                main_display.render()
-                                screen.display(main_display.image.convert("1"))
-                                last_frame_time = current_time
-                                display_count += 1
-                                
-                                # Generate complete sequence in background
-                                logger.info("Generating complete image sequence")
-                                image_sequence = generate_complete_image_set(main_display)
-                                sequence_index = 0  # Start from beginning of new sequence
-                                beers_hash = current_beers_hash
-                                taps_hash = current_taps_hash
-
-                        # Display current frame
-                        if image_sequence:
-                            current_image, duration = image_sequence[sequence_index]
-                            if current_time - last_frame_time >= duration:
-                                logger.debug(f"Displaying frame {sequence_index}/{len(image_sequence)}")
-                                screen.display(current_image)
-                                last_frame_time = current_time
-                                sequence_index = (sequence_index + 1) % len(image_sequence)
-                                display_count += 1
-
-                                if show_fps:
-                                    current_fps = display_count/(current_time - display_start_time)
-                                    print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
-
-                        # Short sleep to prevent CPU overload
-                        time.sleep(0.01)
-
-                    except KeyboardInterrupt:
-                        logger.info("KeyboardInterrupt received")
+                    # Check for keyboard input
+                    key_event = check_keyboard()
+                    if key_event == 'fps':
+                        show_fps = not show_fps
+                        if not show_fps:
+                            clear_line()
+                    elif key_event == 'exit':
+                        if show_fps:
+                            clear_line()
+                        logger.info("Exit requested via keyboard")
                         break
 
+                    # Database updates
+                    if current_time - last_db_check_time >= DATABASE_UPDATE_FREQUENCY:
+                        update_data(src, main_display._dataset)
+                        last_db_check_time = current_time
+
+                        if (main_display._dataset.sys['status'] == 'start' and 
+                            current_time - start_time > 4):
+                            main_display._dataset.update('sys', {'status': 'running'}, merge=True)
+
+                        # Check for changed data
+                        current_beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
+                        current_taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
+                        current_sys_hash = dict_hash(main_display._dataset.get('sys'), '__timestamp__')
+                        
+                        if current_beers_hash != beers_hash or current_taps_hash != taps_hash or current_sys_hash != sys_hash:
+                            logger.info("Data changed - updating display")
+                            
+                            # Immediately render and display first frame
+                            main_display.render()
+                            screen.display(main_display.image.convert("1"))
+                            last_frame_time = current_time
+                            display_count += 1
+                            
+                            # Generate complete sequence in background
+                            logger.info("Generating complete image sequence")
+                            image_sequence = generate_complete_image_set(main_display)
+                            sequence_index = 0  # Start from beginning of new sequence
+                            beers_hash = current_beers_hash
+                            taps_hash = current_taps_hash
+
+                    # Display current frame
+                    if image_sequence:
+                        current_image, duration = image_sequence[sequence_index]
+                        if current_time - last_frame_time >= duration:
+                            logger.debug(f"Displaying frame {sequence_index}/{len(image_sequence)}")
+                            screen.display(current_image)
+                            last_frame_time = current_time
+                            sequence_index = (sequence_index + 1) % len(image_sequence)
+                            display_count += 1
+
+                            # Update FPS display
+                            if show_fps:
+                                current_fps = display_count/(current_time - display_start_time)
+                                show_fps_display(current_fps)
+                            elif current_time - display_start_time > 10:
+                                clear_line()
+                                logger.debug(f"Display updates per second: {display_count/(current_time-display_start_time):.1f}")
+                                display_count = 0
+                                display_start_time = current_time
+
+                    # Short sleep to prevent CPU overload
+                    time.sleep(0.01)
+
+            except KeyboardInterrupt:
+                if show_fps:
+                    clear_line()
+                logger.info("KeyboardInterrupt received in main loop")
             finally:
                 if show_fps:
-                    print('\r' + ' '*40 + '\r', end='', flush=True)
+                    clear_line()
                 logger.info("Main loop ending")
 
         main_loop(screen, main, src)
 
     except KeyboardInterrupt:
         # Clear the line before logging
-        print('\r' + ' '*40 + '\r', end='', flush=True)
+        clear_line()
         logger.info("KeyboardInterrupt received, initiating shutdown")
     except Exception as e:
         # Log any unhandled exceptions
@@ -467,16 +479,24 @@ def handle_display_updates(screen, dq_images, display_count, display_start_time)
         # Show FPS every update when enabled, otherwise only log debug every 10 seconds
         current_fps = display_count/(time.time()-display_start_time)
         if show_fps:
-            print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
+            show_fps_display(current_fps)
         elif time.time() - display_start_time > 10:
             # Clear the line before logging
-            print('\r' + ' '*40 + '\r', end='', flush=True)
+            clear_line()
             logger.debug(f"Display updates per second: {current_fps:.1f}")
             display_count = 0
             display_start_time = time.time()
 
     # Clear any remaining FPS display before returning
     if show_fps:
-        print('\r' + ' '*40 + '\r', end='', flush=True)
+        clear_line()
 
     return display_count, display_start_time
+
+def show_fps_display(fps):
+    """Helper function for FPS display that handles raw mode."""
+    print(f"\rCurrent FPS: {fps:.1f}\r", end='', flush=True)
+
+def clear_line():
+    """Helper function to clear the current line in raw mode."""
+    print('\r' + ' ' * 80 + '\r', end='', flush=True)
