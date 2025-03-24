@@ -48,13 +48,9 @@ class CleanFormatter(logging.Formatter):
     """Custom formatter that ensures clean, left-aligned output with proper line endings in raw mode."""
     def format(self, record):
         # Clean any existing whitespace and handle slow render messages
-        msg = record.msg.strip()
-        if msg.startswith('=== slow render'):
-            # Skip slow render messages or handle them differently
-            return ''
-        record.msg = msg
+        record.msg = record.msg.strip()
         # Format the message and ensure proper line endings
-        return super().format(record) + '\r\n'
+        return super().format(record)
 
 # Update the logging setup
 logger = logging.getLogger(LOGGER_NAME)
