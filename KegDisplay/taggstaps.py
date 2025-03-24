@@ -241,6 +241,7 @@ def start():
         def generate_complete_image_set(display):
             """Generate all possible unique images for the current data state."""
             # Initialize variables
+            global exit_requested                     # Exit requested flag
             image_sequence = []                       # Stores (image, duration) pairs
             raw_frames = []                           # Store raw frame bytes for faster comparison
             min_sequence_length = MAX_STATIC_RENDERS  # Minimum frames to collect before checking for loops
@@ -252,6 +253,10 @@ def start():
             
             # Main loop to generate frames
             for i in range(max_iterations):
+                if exit_requested:
+                    image_sequence = []
+                    break
+
                 # Generate next frame
                 display.render()
                 current_image = display.image.convert("1")
