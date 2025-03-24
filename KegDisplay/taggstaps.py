@@ -346,7 +346,7 @@ def start():
                 last_image = current_image
             
             # If we hit max iterations without finding a pattern
-            logger.warning(f"Reached maximum iterations ({max_iterations}) - using collected frames")
+            logger.warning(f"Reached maximum iterations ({max_iterations}, {len(image_sequence)}, {i}) - using collected frames")
             if static_count > 0:
                 image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
             return image_sequence
