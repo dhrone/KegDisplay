@@ -41,7 +41,15 @@ SPLASH_SCREEN_TIME = 2
 LOG_FILE = "/var/log/KegDisplay/taggstaps.log"
 LOGGER_NAME = "KegDisplay"
 
-# Create and configure our application logger at module level
+# First, let's modify the logging setup to force clean output
+class CleanFormatter(logging.Formatter):
+    """Custom formatter that ensures clean, left-aligned output."""
+    def format(self, record):
+        # Clean any existing whitespace
+        record.msg = record.msg.strip()
+        return super().format(record)
+
+# Update the logging setup
 logger = logging.getLogger(LOGGER_NAME)
 logger.setLevel(logging.INFO)
 
@@ -49,12 +57,11 @@ logger.setLevel(logging.INFO)
 file_handler = logging.FileHandler(LOG_FILE)
 stream_handler = logging.StreamHandler()
 
-# Create formatter with consistent left alignment
-formatter = logging.Formatter('%(asctime)s - %(levelname)-8s - %(message)s')
+# Create and set formatter
+formatter = CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s')
 file_handler.setFormatter(formatter)
 stream_handler.setFormatter(formatter)
 
-# Add the handlers to our logger
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
@@ -266,18 +273,17 @@ def start():
             """Generate all possible unique images for the current data state."""
             image_sequence = []
             sequence_window = []
-            window_size = 10
-            max_iterations = 200  # Increased from 100
+            window_size = 20  # Increased window size for better pattern detection
+            max_iterations = 400  # Increased for longer sequences
             last_image = None
             static_count = 0
             unchanged_frames = 0
-            min_frames = 50  # Minimum number of frames to capture before considering sequence complete
-            max_unchanged = 50  # Increased from 30
+            min_frames = 30  # Minimum frames before considering sequence complete
+            max_static_frames = 20  # Maximum consecutive static frames to consider
             
             logger.debug("Starting image sequence generation")
             
             for i in range(max_iterations):
-                start_time = time.time()
                 display.render()
                 current_image = display.image.convert("1")
                 current_bytes = current_image.tobytes()
@@ -287,42 +293,36 @@ def start():
                     if current_bytes == last_bytes:
                         static_count += 1
                         unchanged_frames += 1
-                        # Only consider static sequence if we've captured minimum frames
-                        if unchanged_frames >= max_unchanged and len(image_sequence) >= min_frames:
-                            logger.debug(f"Image static for {unchanged_frames} frames after {len(image_sequence)} frames - sequence complete")
-                            if static_count > 0:
-                                image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
-                            return image_sequence
+                        if unchanged_frames >= max_static_frames and len(image_sequence) >= min_frames:
+                            # Look back through sequence to find repeating pattern
+                            sequence_length = len(image_sequence)
+                            for pattern_size in range(10, sequence_length // 2):
+                                matches = True
+                                for j in range(pattern_size):
+                                    if j >= len(image_sequence):
+                                        matches = False
+                                        break
+                                    pattern_frame = image_sequence[j][0].tobytes()
+                                    compare_frame = image_sequence[j + pattern_size][0].tobytes()
+                                    if pattern_frame != compare_frame:
+                                        matches = False
+                                        break
+                                if matches:
+                                    logger.debug(f"Found repeating pattern of {pattern_size} frames")
+                                    return image_sequence[:pattern_size]
                     else:
-                        unchanged_frames = 0
                         if static_count > 0:
                             image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
                         static_count = 0
+                        unchanged_frames = 0
                         image_sequence.append((current_image, 1 / RENDER_FREQUENCY))
-                        logger.debug(f"New frame captured (total: {len(image_sequence)})")
+                        if len(image_sequence) % 10 == 0:
+                            logger.debug(f"Captured {len(image_sequence)} frames")
                 else:
                     image_sequence.append((current_image, 1 / RENDER_FREQUENCY))
                     logger.debug("First frame captured")
                     
                 last_image = current_image
-                
-                # Add frame info to sequence window
-                sequence_window.append((hash(current_bytes), static_count))
-                if len(sequence_window) > window_size:
-                    sequence_window.pop(0)
-                    
-                # Check for repeated sequence pattern if we have enough frames
-                if len(sequence_window) == window_size and len(image_sequence) > window_size * 2:
-                    for j in range(0, len(image_sequence) - window_size * 2, window_size):
-                        matches = True
-                        for k in range(window_size):
-                            earlier_frame = image_sequence[j + k][0].tobytes()
-                            if (hash(earlier_frame), image_sequence[j + k][1]) != sequence_window[k]:
-                                matches = False
-                                break
-                        if matches and j >= min_frames:
-                            logger.debug(f"Found repeating sequence after {len(image_sequence)} frames")
-                            return image_sequence[:j + window_size]
             
             logger.warning(f"Reached maximum iterations ({max_iterations}) - using collected frames")
             if static_count > 0:
