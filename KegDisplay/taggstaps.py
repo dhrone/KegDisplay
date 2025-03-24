@@ -104,7 +104,7 @@ def check_keyboard():
         if select.select([sys.stdin], [], [], 0)[0]:
             key = sys.stdin.read(1)
             if key == '\x06':  # Ctrl+F
-                return 'fps_once'
+                return 'fps'
             elif key == '\x03':  # Ctrl+C
                 return 'exit'
     except (OSError, IOError):
@@ -385,11 +385,13 @@ def start():
 
                     # Check for keyboard input
                     key_event = check_keyboard()
-                    if key_event == 'fps_once':
-                        # Calculate and display current FPS once, without clearing
-                        current_fps = display_count/(current_time - display_start_time)
-                        print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
+                    if key_event == 'fps':
+                        show_fps = not show_fps
+                        if not show_fps:
+                            print('\r' + ' ' * 80 + '\r', end='', flush=True)
                     elif key_event == 'exit':
+                        if show_fps:
+                            print('\r' + ' ' * 80 + '\r', end='', flush=True)
                         logger.info("Exit requested via keyboard")
                         break
 
@@ -431,6 +433,10 @@ def start():
                             sequence_index = (sequence_index + 1) % len(image_sequence)
                             display_count += 1
 
+                            if show_fps:
+                                current_fps = display_count/(current_time - display_start_time)
+                                print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
+
                     # Short sleep to prevent CPU overload
                     time.sleep(0.01)
 
@@ -442,6 +448,8 @@ def start():
                     break
 
             # Cleanup before exit
+            if show_fps:
+                print('\r' + ' ' * 80 + '\r', end='', flush=True)
             logger.info("Main loop ending")
 
         main_loop(screen, main, src)
