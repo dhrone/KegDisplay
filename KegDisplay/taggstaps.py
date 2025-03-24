@@ -319,7 +319,7 @@ def start():
                         current_taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
                         
                         if current_beers_hash != beers_hash or current_taps_hash != taps_hash:
-                            logger.info("Data changed - updating display")
+                            logger.debug("Data changed - updating display")
                             
                             # Render updating canvas
                             if first_time:
@@ -335,7 +335,6 @@ def start():
                             display_count += 1
                             
                             # Generate complete sequence in background
-                            logger.info("Generating complete image sequence")
                             image_sequence = generate_complete_image_set(main_display)
                             sequence_index = 0  # Start from beginning of new sequence
                             beers_hash = current_beers_hash
@@ -354,14 +353,10 @@ def start():
                     time.sleep(0.01)
 
                 except KeyboardInterrupt:
-                    logger.info("KeyboardInterrupt received")
                     break
                 except Exception as e:
                     logger.error(f"Unexpected error: {e}", exc_info=True)
                     break
-
-            # Cleanup before exit
-            logger.info("Main loop ending")
 
         main_loop(screen, main, src)
 
@@ -374,8 +369,6 @@ def start():
     finally:
         logger.info("Shutting down")
  
- #print (ds['beers'])
-#main.render(force=True)
-#print(main)
+
 
 
