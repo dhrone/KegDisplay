@@ -35,7 +35,7 @@ from luma.oled.device import ws0010, ssd1322
 
 DB_PATH = "KegDisplay/beer.db"
 DATABASE_UPDATE_FREQUENCY = 2.5
-RENDER_FREQUENCY = 30
+RENDER_FREQUENCY = 20
 SPLASH_SCREEN_TIME = 2
 MAX_STATIC_RENDER_TIME = 5
 MAX_STATIC_RENDERS = RENDER_FREQUENCY * MAX_STATIC_RENDER_TIME
@@ -213,7 +213,8 @@ def start():
             max_iterations = 2000                     # Safety limit to prevent infinite loops
             last_image = None                         # Previous frame for comparison
             static_count = 0                          # Counter for consecutive identical frames
-            
+
+            start_time = time.time()            
             logger.debug("Starting image sequence generation")
             
             # Main loop to generate frames
@@ -275,7 +276,7 @@ def start():
                         if matches:
                             # We found a match! Now determine the exact sequence length
                             sequence_length = len(raw_frames) - pattern_length
-                            logger.debug(f"Found repeating pattern after {sequence_length} frames")
+                            logger.debug(f"Found repeating pattern in {time.time()-start_time:.1f} seconds after searching {sequence_length} frames")
                             
                             # Add any remaining static frames
                             if static_count > 0:
@@ -292,6 +293,8 @@ def start():
 
         def main_loop(screen, main_display, src):
             """Main program loop handling display updates and data synchronization."""
+            logger.debug("Starting Main Loop")
+
             global exit_requested
             
             image_sequence = []
@@ -318,7 +321,7 @@ def start():
                         current_beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
                         current_taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
                         
-                        if current_beers_hash != beers_hash or current_taps_hash != taps_hash:
+                        if current_beers_hash != beers_hash or current_taps_hash != taps_hash or first_time:
                             logger.debug("Data changed - updating display")
                             
                             # Render updating canvas
