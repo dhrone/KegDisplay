@@ -37,6 +37,7 @@ DB_PATH = "KegDisplay/beer.db"
 DATABASE_UPDATE_FREQUENCY = 2.5
 RENDER_FREQUENCY = 30
 RENDER_BUFFER_SIZE = RENDER_FREQUENCY * 10
+SPLASH_SCREEN_TIME = 2
 LOG_FILE = "/var/log/KegDisplay/taggstaps.log"
 LOGGER_NAME = "KegDisplay"
 
@@ -110,239 +111,259 @@ def sigterm_handler(_signo, _stack_frame):
     exit_requested = True
 
 def start():
-    # Remove keyboard listener start
-    # keyboard_listener.start()
-    
-    # Add raw input setup
-    old_settings = setup_raw_input()
-    
-    # Add argument parsing
-    parser = argparse.ArgumentParser(description='KegDisplay application')
-    parser.add_argument('--log-level', 
-                       default='INFO',
-                       choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                       type=str.upper,
-                       help='Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
-
-    args = parser.parse_args()
-
-    signal.signal(signal.SIGTERM, sigterm_handler)
-
-    # Variables for tracking render frequency
-    render_count = 0
-    last_render_print_time = time.time()
-    render_start_time = time.time()
-
-    # Update the log level based on command line argument
-    logger.setLevel(getattr(logging, args.log_level))
-
-    # Set third-party loggers to their default levels
-    logging.getLogger(u'socketIO-client').setLevel(logging.WARNING)
-
-    # Move unhandled exception messages to log file
-    def handleuncaughtexceptions(exc_type, exc_value, exc_traceback):
-        if issubclass(exc_type, KeyboardInterrupt):
-            sys.__excepthook__(exc_type, exc_value, exc_traceback)
-            return
-
-        logger.error(u"Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
-        try:
-            if len(mc.musicdata) > 0:
-                logger.error(u"Status at exception")
-                logger.error(unicode(mc.musicdata))
-        except NameError:
-            # If this gets called before the music controller is instantiated, ignore it
-            pass
-
-        sys.__excepthook__(exc_type, exc_value, exc_traceback)
-
-
-    sys.excepthook = handleuncaughtexceptions
-
-    dbPath = "KegDisplay/beer.db"
-    if Path(dbPath).exists() is False:
-        raise FileNotFoundError(f"Database file {dbPath} missing")
-    
-    src = database(f'sqlite+aiosqlite:///{dbPath}')
-    src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency = 5)
-    src.add("SELECT idTap, idBeer from taps", name='taps', frequency = 5)
-
-    ds = dataset()
-    ds.add("sys", {"tapnr": 1, "status": "start"})
-    ds.add("beers", {})
-    ds.add("taps", {})
-
-    path = Path(__file__).parent / "page.yaml"
-    if path.exists() is False:
-        raise FileNotFoundError(f"Page file {path} missing")
-    main = load(path, dataset=ds)
-
-    #interface = bitbang_6800(RS=7, E=8, PINS=[25,24,23,27])
-    interface = bitbang_6800(RS=7, E=8, PINS=[25,5,6,12])
-    #interface = bitbang_6800(RS=24, E=25, PINS=[16,26,20,21])
-    #interface = spi()
-    screen = ws0010(interface)
-    #screen = ssd1322(serial_interface=interface, mode='1')
-
-    def render(display, count):
-        """Render the display for the specified number of frames.
-
-        Args:
-            display: Display object to render
-            count (int): Number of frames to render
-
-        Returns:
-            list: List of rendered images
-        """
-        current_time = time.time()
-        return_set = []
-
-        for _ in range(math.ceil(count)):
-            display.render()
-            return_set.append(display.image.convert("1"))
-
-        # Calculate the average time per render
-        duration = time.time() - current_time
-        if count > 10:
-            print(f"Rendered {count}:{duration:.2f} {count/duration:.2f} renders/sec")
-
-        return return_set
-
-    def dict_hash(dictionary, ignore_key=None):
-        """Generate a hash of a dictionary, optionally ignoring a specific key.
-
-        Args:
-            dictionary (dict): Dictionary to hash
-            ignore_key (str, optional): Key to ignore when generating hash
-
-        Returns:
-            int: Hash value of the dictionary
-        """
-        filtered_dict = {k: v for k, v in dictionary.items() if k != ignore_key}
-        # Convert all keys to strings before dumping to JSON
-        string_dict = {str(k): v for k, v in filtered_dict.items()}
-        return hash(json.dumps(string_dict, sort_keys=True))
-
-    def update_data(db_src, ds):
-        """Update dataset with latest information from database.
-
-        Args:
-            db_src: Database source object
-            ds: Dataset object to update
-        """
-        while True:
-            db_row = db_src.get(0.001)
-            if db_row is None:
-                break
-            
-            for key, value in db_row.items():
-                if key == 'beer':
-                    for item in value:
-                        if 'idBeer' in item:
-                            ds.update(
-                                "beers",
-                                {item['idBeer']: {k: v for k, v in item.items() if k != 'idBeer'}},
-                                merge=True
-                            )
-                if key == 'taps':
-                    for item in value:
-                        if 'idTap' in item:
-                            ds.update("taps", {item['idTap']: item['idBeer']}, merge=True)
-
-    update_data(src, main._dataset)
-    beersHash = dict_hash(main._dataset.get('beers'), '__timestamp__')
-    tapsHash = dict_hash(main._dataset.get('taps'), '__timestamp__')
-    main.render()
-
-    # = animate(render, 120, 500, screen, main)
-    #a.start()
-    render_frequency = 30
-    renderBufferSize = render_frequency * 10
-    dqImages = deque([])
-    
-    startTime = displayStartTime = time.time()
-    displayCount = 0
-
-    def main_loop(screen, main_display, src):
-        """Main program loop handling display updates and data synchronization.
-
-        Args:
-            screen: Display device object
-            main_display: Main display controller
-            src: Data source object
-        """
-        global show_fps, exit_requested
-        
-        dq_images = deque([])
-        beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
-        taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
-        
-        start_time = display_start_time = time.time()
-        display_count = 0
-
-        try:
-            while not exit_requested:
-                # Check for keyboard input
-                key_event = check_keyboard()
-                if key_event == 'fps':
-                    show_fps = not show_fps
-                    if not show_fps:
-                        print('\r' + ' '*40 + '\r', end='', flush=True)
-                elif key_event == 'exit':
-                    # Clear any FPS display before logging exit message
-                    if show_fps:
-                        print('\r' + ' '*40 + '\r', end='', flush=True)
-                    logger.info("Ctrl+C pressed, initiating shutdown")
-                    exit_requested = True
-                    break
-
-                update_data(src, main_display._dataset)
-
-                if (main_display._dataset.sys['status'] == 'start' and 
-                    time.time() - start_time > 4):
-                    main_display._dataset.update('sys', {'status': 'running'}, merge=True)
-
-                # Check for changed data
-                data_changed = False
-                current_beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
-                current_taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
-                
-                if current_beers_hash != beers_hash:
-                    data_changed = True
-                    logger.info("Beers changed")
-                if current_taps_hash != taps_hash:
-                    data_changed = True
-                    logger.info("Taps changed")
-
-                beers_hash = current_beers_hash
-                taps_hash = current_taps_hash
-
-                if data_changed:
-                    logger.info("New data received")
-                    dq_images = deque(render(main_display, RENDER_BUFFER_SIZE))
-                elif len(dq_images) == 0:
-                    dq_images = deque(render(main_display, 2))
-
-                display_count, display_start_time = handle_display_updates(
-                    screen, 
-                    dq_images, 
-                    display_count, 
-                    display_start_time
-                )
-
-        except KeyboardInterrupt:
-            # Clear any FPS display before logging exit message
-            if show_fps:
-                print('\r' + ' '*40 + '\r', end='', flush=True)
-            exit_requested = True
-            logger.info("KeyboardInterrupt received in main loop")
-
+    old_settings = None
     try:
+        # Add raw input setup
+        old_settings = setup_raw_input()
+        
+        # Add argument parsing
+        parser = argparse.ArgumentParser(description='KegDisplay application')
+        parser.add_argument('--log-level', 
+                           default='INFO',
+                           choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                           type=str.upper,
+                           help='Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
+
+        args = parser.parse_args()
+
+        signal.signal(signal.SIGTERM, sigterm_handler)
+
+        # Variables for tracking render frequency
+        render_count = 0
+        last_render_print_time = time.time()
+        render_start_time = time.time()
+
+        # Update the log level based on command line argument
+        logger.setLevel(getattr(logging, args.log_level))
+
+        # Set third-party loggers to their default levels
+        logging.getLogger(u'socketIO-client').setLevel(logging.WARNING)
+
+        # Move unhandled exception messages to log file
+        def handleuncaughtexceptions(exc_type, exc_value, exc_traceback):
+            if issubclass(exc_type, KeyboardInterrupt):
+                sys.__excepthook__(exc_type, exc_value, exc_traceback)
+                return
+
+            logger.error(u"Uncaught exception", exc_info=(exc_type, exc_value, exc_traceback))
+            try:
+                if len(mc.musicdata) > 0:
+                    logger.error(u"Status at exception")
+                    logger.error(unicode(mc.musicdata))
+            except NameError:
+                # If this gets called before the music controller is instantiated, ignore it
+                pass
+
+            sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+
+        sys.excepthook = handleuncaughtexceptions
+
+        dbPath = "KegDisplay/beer.db"
+        if Path(dbPath).exists() is False:
+            raise FileNotFoundError(f"Database file {dbPath} missing")
+        
+        src = database(f'sqlite+aiosqlite:///{dbPath}')
+        src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency = 5)
+        src.add("SELECT idTap, idBeer from taps", name='taps', frequency = 5)
+
+        ds = dataset()
+        ds.add("sys", {"tapnr": 1, "status": "start"})
+        ds.add("beers", {})
+        ds.add("taps", {})
+
+        path = Path(__file__).parent / "page.yaml"
+        if path.exists() is False:
+            raise FileNotFoundError(f"Page file {path} missing")
+        main = load(path, dataset=ds)
+
+        #interface = bitbang_6800(RS=7, E=8, PINS=[25,24,23,27])
+        interface = bitbang_6800(RS=7, E=8, PINS=[25,5,6,12])
+        #interface = bitbang_6800(RS=24, E=25, PINS=[16,26,20,21])
+        #interface = spi()
+        screen = ws0010(interface)
+        #screen = ssd1322(serial_interface=interface, mode='1')
+
+        def render(display, count):
+            """Render the display for the specified number of frames.
+
+            Args:
+                display: Display object to render
+                count (int): Number of frames to render
+
+            Returns:
+                list: List of rendered images
+            """
+            current_time = time.time()
+            return_set = []
+
+            for _ in range(math.ceil(count)):
+                display.render()
+                return_set.append(display.image.convert("1"))
+
+            # Calculate the average time per render
+            duration = time.time() - current_time
+            if count > 10:
+                print(f"Rendered {count}:{duration:.2f} {count/duration:.2f} renders/sec")
+
+            return return_set
+
+        def dict_hash(dictionary, ignore_key=None):
+            """Generate a hash of a dictionary, optionally ignoring a specific key.
+
+            Args:
+                dictionary (dict): Dictionary to hash
+                ignore_key (str, optional): Key to ignore when generating hash
+
+            Returns:
+                int: Hash value of the dictionary
+            """
+            filtered_dict = {k: v for k, v in dictionary.items() if k != ignore_key}
+            # Convert all keys to strings before dumping to JSON
+            string_dict = {str(k): v for k, v in filtered_dict.items()}
+            return hash(json.dumps(string_dict, sort_keys=True))
+
+        def update_data(db_src, ds):
+            """Update dataset with latest information from database.
+
+            Args:
+                db_src: Database source object
+                ds: Dataset object to update
+            """
+            while True:
+                db_row = db_src.get(0.001)
+                if db_row is None:
+                    break
+                
+                for key, value in db_row.items():
+                    if key == 'beer':
+                        for item in value:
+                            if 'idBeer' in item:
+                                ds.update(
+                                    "beers",
+                                    {item['idBeer']: {k: v for k, v in item.items() if k != 'idBeer'}},
+                                    merge=True
+                                )
+                    if key == 'taps':
+                        for item in value:
+                            if 'idTap' in item:
+                                ds.update("taps", {item['idTap']: item['idBeer']}, merge=True)
+
+        update_data(src, main._dataset)
+        beersHash = dict_hash(main._dataset.get('beers'), '__timestamp__')
+        tapsHash = dict_hash(main._dataset.get('taps'), '__timestamp__')
+        main.render()
+
+        # = animate(render, 120, 500, screen, main)
+        #a.start()
+        render_frequency = 30
+        renderBufferSize = render_frequency * 10
+        dqImages = deque([])
+        
+        startTime = displayStartTime = time.time()
+        displayCount = 0
+
+        def main_loop(screen, main_display, src):
+            """Main program loop handling display updates and data synchronization.
+
+            Args:
+                screen: Display device object
+                main_display: Main display controller
+                src: Data source object
+            """
+            global show_fps, exit_requested
+            
+            image_sequence = []
+            sequence_index = 0
+            last_frame_time = time.time()
+            last_db_check_time = time.time()
+            beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
+            taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
+            
+            start_time = display_start_time = time.time()
+            display_count = 0
+
+            try:
+                while not exit_requested:
+                    current_time = time.time()
+
+                    # Check for keyboard input
+                    key_event = check_keyboard()
+                    if key_event == 'fps':
+                        show_fps = not show_fps
+                        if not show_fps:
+                            print('\r' + ' '*40 + '\r', end='', flush=True)
+                    elif key_event == 'exit':
+                        if show_fps:
+                            print('\r' + ' '*40 + '\r', end='', flush=True)
+                        logger.info("Ctrl+C pressed, initiating shutdown")
+                        exit_requested = True
+                        break
+
+                    # Check for database updates at specified frequency
+                    if current_time - last_db_check_time >= DATABASE_UPDATE_FREQUENCY:
+                        update_data(src, main_display._dataset)
+                        last_db_check_time = current_time
+
+                        if (main_display._dataset.sys['status'] == 'start' and 
+                            current_time - start_time > SPLASH_SCREEN_TIME):
+                            main_display._dataset.update('sys', {'status': 'running'}, merge=True)
+
+                        # Check for changed data
+                        current_beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
+                        current_taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
+                        
+                        if current_beers_hash != beers_hash or current_taps_hash != taps_hash:
+                            logger.info("Data changed - regenerating complete image sequence")
+                            image_sequence = generate_complete_image_set(main_display)
+                            sequence_index = 0
+                            last_frame_time = current_time
+                            beers_hash = current_beers_hash
+                            taps_hash = current_taps_hash
+
+                    # Display current frame if we have a sequence
+                    if image_sequence:
+                        current_image, duration = image_sequence[sequence_index]
+                        if current_time - last_frame_time >= duration:
+                            screen.display(current_image)
+                            last_frame_time = current_time
+                            sequence_index = (sequence_index + 1) % len(image_sequence)
+                            display_count += 1
+
+                            if show_fps:
+                                current_fps = display_count/(current_time - display_start_time)
+                                print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
+                            elif current_time - display_start_time > 10:
+                                # Log FPS every 10 seconds if not showing continuously
+                                print('\r' + ' '*40 + '\r', end='', flush=True)
+                                logger.debug(f"Display updates per second: {display_count/(current_time-display_start_time):.1f}")
+                                display_count = 0
+                                display_start_time = current_time
+                    
+                    # Sleep to maintain target frame rate while ensuring we don't oversleep
+                    sleep_time = min(
+                        1/RENDER_FREQUENCY - (time.time() - current_time),
+                        max(0, duration - (time.time() - last_frame_time))
+                    )
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
+
+            except KeyboardInterrupt:
+                # Clear any FPS display before logging exit message
+                if show_fps:
+                    print('\r' + ' '*40 + '\r', end='', flush=True)
+                logger.info("KeyboardInterrupt received in main loop")
+
         main_loop(screen, main, src)
+
     except KeyboardInterrupt:
         # Clear the line before logging
         print('\r' + ' '*40 + '\r', end='', flush=True)
         logger.info("KeyboardInterrupt received, initiating shutdown")
+    except Exception as e:
+        # Log any unhandled exceptions
+        logger.error("Unhandled exception", exc_info=True)
+        raise  # Re-raise the exception after logging
     finally:
         # Restore terminal settings before final logging
         restore_input(old_settings)
