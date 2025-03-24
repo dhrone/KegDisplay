@@ -1,0 +1,16 @@
+[Unit]
+Description=KegDisplay Web Interface Service
+After=network.target
+
+[Service]
+Type=simple
+User=beer
+WorkingDirectory=/home/beer/Dev/KegDisplay/KegDisplay
+ExecStart=/home/beer/.local/bin/poetry run python -m KegDisplay.webinterface
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target 

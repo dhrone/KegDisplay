@@ -1,0 +1,16 @@
+[Unit]
+Description=KegDisplay Taps Service
+After=network.target
+
+[Service]
+Type=simple
+User=beer
+WorkingDirectory=/home/beer/KegDisplay
+ExecStart=/home/beer/.local/bin/poetry run python -m KegDisplay.taggstaps
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target 
