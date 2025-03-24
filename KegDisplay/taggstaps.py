@@ -36,7 +36,6 @@ from luma.oled.device import ws0010, ssd1322
 DB_PATH = "KegDisplay/beer.db"
 DATABASE_UPDATE_FREQUENCY = 2.5
 RENDER_FREQUENCY = 30
-RENDER_BUFFER_SIZE = RENDER_FREQUENCY * 10
 SPLASH_SCREEN_TIME = 2
 MAX_STATIC_RENDER_TIME = 5
 MAX_STATIC_RENDERS = RENDER_FREQUENCY * MAX_STATIC_RENDER_TIME
@@ -155,30 +154,6 @@ def start():
         screen = ws0010(interface)
         #screen = ssd1322(serial_interface=interface, mode='1')
 
-        def render(display, count):
-            """Render the display for the specified number of frames.
-
-            Args:
-                display: Display object to render
-                count (int): Number of frames to render
-
-            Returns:
-                list: List of rendered images
-            """
-            current_time = time.time()
-            return_set = []
-
-            for _ in range(math.ceil(count)):
-                display.render()
-                return_set.append(display.image.convert("1"))
-
-            # Calculate the average time per render
-            duration = time.time() - current_time
-            if count > 10:
-                print(f"Rendered {count}:{duration:.2f} {count/duration:.2f} renders/sec")
-
-            return return_set
-
         def dict_hash(dictionary, ignore_key=None):
             """Generate a hash of a dictionary, optionally ignoring a specific key.
 
@@ -224,12 +199,6 @@ def start():
         beersHash = dict_hash(main._dataset.get('beers'), '__timestamp__')
         tapsHash = dict_hash(main._dataset.get('taps'), '__timestamp__')
         main.render()
-
-        # = animate(render, 120, 500, screen, main)
-        #a.start()
-        render_frequency = 30
-        renderBufferSize = render_frequency * 10
-        dqImages = deque([])
         
         startTime = displayStartTime = time.time()
         displayCount = 0
@@ -326,21 +295,15 @@ def start():
             global exit_requested
             
             image_sequence = []
+            first_time = True
             sequence_index = 0
             last_frame_time = time.time()
-            last_db_check_time = time.time()
+            last_db_check_time = 0
             beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
             taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
             
             start_time = display_start_time = time.time()
             display_count = 0
-
-            # Generate initial sequence
-            logger.info("Generating initial image sequence")
-            image_sequence = generate_complete_image_set(main_display)
-            if image_sequence:
-                logger.debug(f"Initial sequence generated with {len(image_sequence)} frames")
-                screen.display(image_sequence[0][0])
 
             while not exit_requested:
                 try:
@@ -351,10 +314,6 @@ def start():
                         update_data(src, main_display._dataset)
                         last_db_check_time = current_time
 
-                        if (main_display._dataset.sys['status'] == 'start' and 
-                            current_time - start_time > 4):
-                            main_display._dataset.update('sys', {'status': 'running'}, merge=True)
-
                         # Check for changed data
                         current_beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
                         current_taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
@@ -363,7 +322,11 @@ def start():
                             logger.info("Data changed - updating display")
                             
                             # Render updating canvas
-                            main_display._dataset.update('sys', {'status': 'update'}, merge=True)
+                            if first_time:
+                                main_display._dataset.update('sys', {'status': 'start'}, merge=True)
+                                first_time = False
+                            else:
+                                main_display._dataset.update('sys', {'status': 'update'}, merge=True)
                             main_display.render()
                             screen.display(main_display.image.convert("1"))
                             main_display._dataset.update('sys', {'status': 'running'}, merge=True)
