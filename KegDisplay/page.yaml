@@ -48,6 +48,12 @@ WIDGETS:
         just: rt
         dvalue: f"{beers[taps[sys['tapnr']]]['ABV']}"
 
+    updb: &updb
+        type: text
+        font: small
+        just: mt
+        dvalue: f"Updating..."
+
     rectStart: &rectStart
         type: rectangle
         xy: [0, 0, 99, 15]
@@ -83,6 +89,19 @@ CANVASES:
     z: 1000
     activeWhen: sys['status']=='start'
 
+  updateCanvas: &updateCanvas
+    type: canvas
+    items:
+      - <<: *updb
+        placement: [0, 0, mm]
+        z: 10
+      - <<: *rectStart
+        placement: [0, 0]
+        z: 1
+    size: [100, 16]
+    z: 500
+    activeWhen: sys['status']=='update'
+
 
 DISPLAY:
   size: *dsize
@@ -91,3 +110,5 @@ DISPLAY:
       <<: *beerCanvas
     - name: START
       <<: *splashCanvas
+    - name: UPDATE
+      <<: *updateCanvas

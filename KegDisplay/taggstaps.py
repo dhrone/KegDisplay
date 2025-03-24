@@ -72,8 +72,7 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 logger.addHandler(stream_handler)
 
-# Global flag for FPS display
-show_fps = False
+
 exit_requested = False
 
 def setup_raw_input():
@@ -103,9 +102,7 @@ def check_keyboard():
             return None
         if select.select([sys.stdin], [], [], 0)[0]:
             key = sys.stdin.read(1)
-            if key == '\x06':  # Ctrl+F
-                return 'fps'
-            elif key == '\x03':  # Ctrl+C
+            if key == '\x03':  # Ctrl+C
                 return 'exit'
     except (OSError, IOError):
         # Handle cases where input checking fails
@@ -360,7 +357,7 @@ def start():
 
         def main_loop(screen, main_display, src):
             """Main program loop handling display updates and data synchronization."""
-            global show_fps, exit_requested
+            global exit_requested
             
             image_sequence = []
             sequence_index = 0
@@ -385,13 +382,7 @@ def start():
 
                     # Check for keyboard input
                     key_event = check_keyboard()
-                    if key_event == 'fps':
-                        show_fps = not show_fps
-                        if not show_fps:
-                            print('\r' + ' ' * 80 + '\r', end='', flush=True)
-                    elif key_event == 'exit':
-                        if show_fps:
-                            print('\r' + ' ' * 80 + '\r', end='', flush=True)
+                    if key_event == 'exit':
                         logger.info("Exit requested via keyboard")
                         break
 
@@ -433,10 +424,6 @@ def start():
                             sequence_index = (sequence_index + 1) % len(image_sequence)
                             display_count += 1
 
-                            if show_fps:
-                                current_fps = display_count/(current_time - display_start_time)
-                                print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
-
                     # Short sleep to prevent CPU overload
                     time.sleep(0.01)
 
@@ -448,15 +435,11 @@ def start():
                     break
 
             # Cleanup before exit
-            if show_fps:
-                print('\r' + ' ' * 80 + '\r', end='', flush=True)
             logger.info("Main loop ending")
 
         main_loop(screen, main, src)
 
     except KeyboardInterrupt:
-        # Clear the line before logging
-        clear_line()
         logger.info("KeyboardInterrupt received, initiating shutdown")
     except Exception as e:
         # Log any unhandled exceptions
@@ -473,49 +456,4 @@ def start():
 #main.render(force=True)
 #print(main)
 
-def handle_display_updates(screen, dq_images, display_count, display_start_time):
-    """Handle the display updates and timing synchronization.
 
-    Args:
-        screen: Display device object
-        dq_images (collections.deque): Queue of images to display
-        display_count (int): Counter for display updates
-        display_start_time (float): Start time for display statistics
-
-    Returns:
-        tuple: Updated display_count and display_start_time
-    """
-    while len(dq_images) > 0 and not exit_requested:  # Changed exit_event.is_set()
-        display_start = time.time()
-        screen.display(dq_images.popleft())
-        display_count += 1
-        display_duration = time.time() - display_start
-        
-        if display_duration < 1/RENDER_FREQUENCY:
-            # If display was updated faster than render_frequency, sleep to sync
-            time.sleep(1/RENDER_FREQUENCY - display_duration)
-
-        # Show FPS every update when enabled, otherwise only log debug every 10 seconds
-        current_fps = display_count/(time.time()-display_start_time)
-        if show_fps:
-            show_fps_display(current_fps)
-        elif time.time() - display_start_time > 10:
-            # Clear the line before logging
-            clear_line()
-            logger.debug(f"Display updates per second: {current_fps:.1f}")
-            display_count = 0
-            display_start_time = time.time()
-
-    # Clear any remaining FPS display before returning
-    if show_fps:
-        clear_line()
-
-    return display_count, display_start_time
-
-def show_fps_display(fps):
-    """Helper function for FPS display that handles raw mode."""
-    print(f"\rCurrent FPS: {fps:.1f}\r", end='', flush=True)
-
-def clear_line():
-    """Helper function to clear the current line in raw mode."""
-    print('\r' + ' ' * 80 + '\r', end='', flush=True)
