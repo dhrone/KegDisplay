@@ -38,6 +38,8 @@ DATABASE_UPDATE_FREQUENCY = 2.5
 RENDER_FREQUENCY = 30
 RENDER_BUFFER_SIZE = RENDER_FREQUENCY * 10
 SPLASH_SCREEN_TIME = 2
+MAX_STATIC_RENDER_TIME = 5
+MAX_STATIC_RENDERS = RENDER_FREQUENCY * MAX_STATIC_RENDER_TIME
 LOG_FILE = "/var/log/KegDisplay/taggstaps.log"
 LOGGER_NAME = "KegDisplay"
 
@@ -277,12 +279,12 @@ def start():
         def generate_complete_image_set(display):
             """Generate all possible unique images for the current data state."""
             # Initialize variables
-            image_sequence = []        # Stores (image, duration) pairs
-            raw_frames = []           # Store raw frame bytes for faster comparison
-            min_sequence_length = 30  # Minimum frames to collect before checking for loops
-            max_iterations = 2000     # Safety limit to prevent infinite loops
-            last_image = None         # Previous frame for comparison
-            static_count = 0          # Counter for consecutive identical frames
+            image_sequence = []                       # Stores (image, duration) pairs
+            raw_frames = []                           # Store raw frame bytes for faster comparison
+            min_sequence_length = MAX_STATIC_RENDERS  # Minimum frames to collect before checking for loops
+            max_iterations = 2000                     # Safety limit to prevent infinite loops
+            last_image = None                         # Previous frame for comparison
+            static_count = 0                          # Counter for consecutive identical frames
             
             logger.debug("Starting image sequence generation")
             
