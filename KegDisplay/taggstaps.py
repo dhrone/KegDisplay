@@ -333,13 +333,7 @@ def start():
             return image_sequence
 
         def main_loop(screen, main_display, src):
-            """Main program loop handling display updates and data synchronization.
-
-            Args:
-                screen: Display device object
-                main_display: Main display controller
-                src: Data source object
-            """
+            """Main program loop handling display updates and data synchronization."""
             global show_fps, exit_requested
             
             image_sequence = []
@@ -352,6 +346,12 @@ def start():
             start_time = display_start_time = time.time()
             display_count = 0
             default_frame_duration = 1/RENDER_FREQUENCY
+
+            # Generate initial sequence
+            logger.info("Generating initial image sequence")
+            image_sequence = generate_complete_image_set(main_display)
+            if image_sequence:
+                screen.display(image_sequence[0][0])  # Display first frame
 
             try:
                 while not exit_requested:
@@ -399,12 +399,11 @@ def start():
                             beers_hash = current_beers_hash
                             taps_hash = current_taps_hash
 
-                    # Display current frame if we have a sequence
-                    frame_duration = default_frame_duration
+                    # Display current frame from sequence
                     if image_sequence:
                         current_image, duration = image_sequence[sequence_index]
-                        frame_duration = duration
                         if current_time - last_frame_time >= duration:
+                            logger.debug(f"Displaying frame {sequence_index}/{len(image_sequence)} (duration: {duration:.3f}s)")
                             screen.display(current_image)
                             last_frame_time = current_time
                             sequence_index = (sequence_index + 1) % len(image_sequence)
@@ -414,17 +413,13 @@ def start():
                                 current_fps = display_count/(current_time - display_start_time)
                                 print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
                             elif current_time - display_start_time > 10:
-                                # Log FPS every 10 seconds if not showing continuously
                                 print('\r' + ' '*40 + '\r', end='', flush=True)
                                 logger.debug(f"Display updates per second: {display_count/(current_time-display_start_time):.1f}")
                                 display_count = 0
                                 display_start_time = current_time
-                    
-                    # Sleep to maintain target frame rate while ensuring we don't oversleep
-                    sleep_time = min(
-                        1/RENDER_FREQUENCY - (time.time() - current_time),
-                        max(0, frame_duration - (time.time() - last_frame_time))
-                    )
+
+                    # Sleep to maintain target frame rate
+                    sleep_time = 1/RENDER_FREQUENCY/2  # Short sleep to allow for responsive input
                     if sleep_time > 0:
                         time.sleep(sleep_time)
 
