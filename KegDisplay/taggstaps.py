@@ -278,14 +278,11 @@ def start():
             """Generate all possible unique images for the current data state."""
             # Initialize variables
             image_sequence = []        # Stores (image, duration) pairs
-            sequence_window = []       # Sliding window for pattern detection
-            window_size = 20          # How many frames to use for pattern matching
-            max_iterations = 400      # Safety limit to prevent infinite loops
-            last_image = None        # Previous frame for comparison
-            static_count = 0         # Counter for consecutive identical frames
-            unchanged_frames = 0     # Counter for total static frames
-            min_frames = 30         # Minimum frames before considering sequence complete
-            max_static_frames = 20  # Maximum consecutive static frames to consider
+            raw_frames = []           # Store raw frame bytes for faster comparison
+            min_sequence_length = 30  # Minimum frames to collect before checking for loops
+            max_iterations = 2000     # Safety limit to prevent infinite loops
+            last_image = None         # Previous frame for comparison
+            static_count = 0          # Counter for consecutive identical frames
             
             logger.debug("Starting image sequence generation")
             
@@ -296,6 +293,10 @@ def start():
                 current_image = display.image.convert("1")
                 current_bytes = current_image.tobytes()
                 
+                # Add to our raw frames collection for pattern matching
+                raw_frames.append(current_bytes)
+                
+                # Process the frame
                 if last_image is not None:
                     last_bytes = last_image.tobytes()
                     
@@ -303,50 +304,54 @@ def start():
                     if current_bytes == last_bytes:
                         # Frame hasn't changed
                         static_count += 1
-                        unchanged_frames += 1
-                        
-                        # If we've seen enough static frames and have minimum frames,
-                        # look for a repeating pattern
-                        if unchanged_frames >= max_static_frames and len(image_sequence) >= min_frames:
-                            # Look back through sequence to find repeating pattern
-                            sequence_length = len(image_sequence)
-                            # Try different pattern sizes
-                            for pattern_size in range(10, sequence_length // 2):
-                                matches = True
-                                # Compare frames with their potential repeats
-                                for j in range(pattern_size):
-                                    if j >= len(image_sequence):
-                                        matches = False
-                                        break
-                                    pattern_frame = image_sequence[j][0].tobytes()
-                                    compare_frame = image_sequence[j + pattern_size][0].tobytes()
-                                    if pattern_frame != compare_frame:
-                                        matches = False
-                                        break
-                                if matches:
-                                    # Found a repeating pattern!
-                                    logger.debug(f"Found repeating pattern of {pattern_size} frames")
-                                    return image_sequence[:pattern_size]
                     else:
                         # Frame has changed
                         if static_count > 0:
                             # Store the previous static frame with its duration
                             image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
                         static_count = 0
-                        unchanged_frames = 0
                         # Store the new frame
                         image_sequence.append((current_image, 1 / RENDER_FREQUENCY))
-                        if len(image_sequence) % 10 == 0:
-                            logger.debug(f"Captured {len(image_sequence)} frames")
                 else:
                     # First frame
                     image_sequence.append((current_image, 1 / RENDER_FREQUENCY))
-                    logger.debug("First frame captured")
                     
                 last_image = current_image
+                
+                # Start checking for loops after collecting enough frames
+                if len(raw_frames) > min_sequence_length:
+                    # Check if the recent frames match the beginning of the sequence
+                    # We'll look for a pattern of at least 10 frames
+                    pattern_length = 10
+                    
+                    # Only check when we have enough frames to make a meaningful comparison
+                    if len(raw_frames) >= pattern_length * 2:
+                        # Get the most recent frames
+                        recent_frames = raw_frames[-pattern_length:]
+                        # Get the same number of frames from the beginning
+                        start_frames = raw_frames[:pattern_length]
+                        
+                        # Check if recent frames match the start frames
+                        matches = True
+                        for j in range(pattern_length):
+                            if recent_frames[j] != start_frames[j]:
+                                matches = False
+                                break
+                        
+                        if matches:
+                            # We found a match! Now determine the exact sequence length
+                            sequence_length = len(raw_frames) - pattern_length
+                            logger.debug(f"Found repeating pattern after {sequence_length} frames")
+                            
+                            # Add any remaining static frames
+                            if static_count > 0:
+                                image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
+                            
+                            # Trim the sequence to just one complete cycle
+                            return image_sequence[:sequence_length]
             
             # If we hit max iterations without finding a pattern
-            logger.warning(f"Reached maximum iterations ({max_iterations}, {len(image_sequence)}, {i}) - using collected frames")
+            logger.warning(f"Reached maximum iterations ({max_iterations}) - using collected frames")
             if static_count > 0:
                 image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
             return image_sequence
