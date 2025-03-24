@@ -75,39 +75,6 @@ logger.addHandler(stream_handler)
 
 exit_requested = False
 
-def setup_raw_input():
-    """Set up raw input mode for keyboard detection"""
-    try:
-        fd = sys.stdin.fileno()
-        if not os.isatty(fd):
-            # No TTY available
-            return None
-        old_settings = termios.tcgetattr(fd)
-        tty.setraw(fd)
-        return old_settings
-    except (termios.error, OSError):
-        # Handle cases where terminal manipulation isn't possible
-        return None
-
-def restore_input(old_settings):
-    """Restore normal input mode"""
-    if old_settings:
-        fd = sys.stdin.fileno()
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-
-def check_keyboard():
-    """Check for keyboard input without blocking"""
-    try:
-        if not sys.stdin.isatty():
-            return None
-        if select.select([sys.stdin], [], [], 0)[0]:
-            key = sys.stdin.read(1)
-            if key == '\x03':  # Ctrl+C
-                return 'exit'
-    except (OSError, IOError):
-        # Handle cases where input checking fails
-        pass
-    return None
 
 def sigterm_handler(_signo, _stack_frame):
     """Handle SIGTERM signal gracefully by exiting the program.
@@ -123,8 +90,6 @@ def sigterm_handler(_signo, _stack_frame):
 def start():
     old_settings = None
     try:
-        # Add raw input setup
-        old_settings = setup_raw_input()
         
         # Add argument parsing
         parser = argparse.ArgumentParser(description='KegDisplay application')
@@ -380,12 +345,6 @@ def start():
                 try:
                     current_time = time.time()
 
-                    # Check for keyboard input
-                    key_event = check_keyboard()
-                    if key_event == 'exit':
-                        logger.info("Exit requested via keyboard")
-                        break
-
                     # Check for database updates at specified frequency
                     if current_time - last_db_check_time >= DATABASE_UPDATE_FREQUENCY:
                         update_data(src, main_display._dataset)
@@ -402,9 +361,12 @@ def start():
                         if current_beers_hash != beers_hash or current_taps_hash != taps_hash:
                             logger.info("Data changed - updating display")
                             
-                            # Immediately render and display first frame
+                            # Render updating canvas
+                            main_display._dataset.update('sys', {'status': 'update'}, merge=True)
                             main_display.render()
                             screen.display(main_display.image.convert("1"))
+                            main_display._dataset.update('sys', {'status': 'running'}, merge=True)
+
                             last_frame_time = current_time
                             display_count += 1
                             
@@ -446,10 +408,6 @@ def start():
         logger.error("Unhandled exception", exc_info=True)
         raise  # Re-raise the exception after logging
     finally:
-        # Restore terminal settings before final logging
-        restore_input(old_settings)
-        # Ensure we're at the start of a clean line
-        print('\r', end='', flush=True)
         logger.info("Shutting down")
  
  #print (ds['beers'])
