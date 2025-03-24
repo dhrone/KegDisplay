@@ -263,6 +263,75 @@ def start():
         startTime = displayStartTime = time.time()
         displayCount = 0
 
+        def generate_complete_image_set(display):
+            """Generate all possible unique images for the current data state.
+            
+            Args:
+                display: Display object to render
+                
+            Returns:
+                list: List of tuples containing (image, duration) pairs
+            """
+            image_sequence = []
+            sequence_window = []  # Store recent images to detect patterns
+            window_size = 10  # Number of frames to use for pattern detection
+            max_iterations = 2000  # Safety limit to prevent infinite loops
+            last_image = None
+            static_count = 0
+            
+            logger.debug("Starting image sequence generation")
+            
+            for i in range(max_iterations):
+                start_time = time.time()
+                display.render()
+                current_image = display.image.convert("1")
+                
+                # Convert image to bytes for comparison
+                current_bytes = current_image.tobytes()
+                
+                if last_image is not None:
+                    last_bytes = last_image.tobytes()
+                    if current_bytes == last_bytes:
+                        static_count += 1
+                    else:
+                        if static_count > 0:
+                            # Store the duration with the last static image
+                            image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
+                        static_count = 0
+                        image_sequence.append((current_image, 1 / RENDER_FREQUENCY))
+                else:
+                    image_sequence.append((current_image, 1 / RENDER_FREQUENCY))
+                    
+                last_image = current_image
+                
+                # Add frame hash and duration to sequence window
+                sequence_window.append((hash(current_bytes), static_count))
+                if len(sequence_window) > window_size:
+                    sequence_window.pop(0)
+                    
+                # Check for repeated sequence pattern if we have enough frames
+                if len(sequence_window) == window_size and len(image_sequence) > window_size * 2:
+                    # Look for this sequence in earlier parts of the animation
+                    sequence_pattern = sequence_window.copy()
+                    for j in range(0, len(image_sequence) - window_size * 2, window_size):
+                        matches = True
+                        for k in range(window_size):
+                            earlier_frame = image_sequence[j + k][0].tobytes()
+                            if (hash(earlier_frame), image_sequence[j + k][1]) != sequence_pattern[k]:
+                                matches = False
+                                break
+                        if matches:
+                            logger.debug(f"Found repeating sequence after {len(image_sequence)} frames")
+                            # Add the last static frame if it exists
+                            if static_count > 0:
+                                image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
+                            return image_sequence[:j + window_size]
+            
+            logger.warning(f"Reached maximum iterations ({max_iterations}) without finding complete sequence")
+            if static_count > 0:
+                image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
+            return image_sequence
+
         def main_loop(screen, main_display, src):
             """Main program loop handling display updates and data synchronization.
 
