@@ -264,20 +264,15 @@ def start():
         displayCount = 0
 
         def generate_complete_image_set(display):
-            """Generate all possible unique images for the current data state.
-            
-            Args:
-                display: Display object to render
-                
-            Returns:
-                list: List of tuples containing (image, duration) pairs
-            """
+            """Generate all possible unique images for the current data state."""
             image_sequence = []
-            sequence_window = []  # Store recent images to detect patterns
-            window_size = 10  # Number of frames to use for pattern detection
-            max_iterations = 2000  # Safety limit to prevent infinite loops
+            sequence_window = []
+            window_size = 10
+            max_iterations = 250  # Reduced from 2000 to be more reasonable
             last_image = None
             static_count = 0
+            unchanged_frames = 0
+            max_unchanged = 30  # Consider sequence complete if image stays static for this many frames
             
             logger.debug("Starting image sequence generation")
             
@@ -285,17 +280,21 @@ def start():
                 start_time = time.time()
                 display.render()
                 current_image = display.image.convert("1")
-                
-                # Convert image to bytes for comparison
                 current_bytes = current_image.tobytes()
                 
                 if last_image is not None:
                     last_bytes = last_image.tobytes()
                     if current_bytes == last_bytes:
                         static_count += 1
+                        unchanged_frames += 1
+                        if unchanged_frames >= max_unchanged:
+                            logger.debug(f"Image static for {unchanged_frames} frames - sequence complete")
+                            if static_count > 0:
+                                image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
+                            return image_sequence
                     else:
+                        unchanged_frames = 0
                         if static_count > 0:
-                            # Store the duration with the last static image
                             image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
                         static_count = 0
                         image_sequence.append((current_image, 1 / RENDER_FREQUENCY))
@@ -304,30 +303,25 @@ def start():
                     
                 last_image = current_image
                 
-                # Add frame hash and duration to sequence window
+                # Add frame info to sequence window
                 sequence_window.append((hash(current_bytes), static_count))
                 if len(sequence_window) > window_size:
                     sequence_window.pop(0)
                     
-                # Check for repeated sequence pattern if we have enough frames
+                # Check for repeated sequence pattern
                 if len(sequence_window) == window_size and len(image_sequence) > window_size * 2:
-                    # Look for this sequence in earlier parts of the animation
-                    sequence_pattern = sequence_window.copy()
                     for j in range(0, len(image_sequence) - window_size * 2, window_size):
                         matches = True
                         for k in range(window_size):
                             earlier_frame = image_sequence[j + k][0].tobytes()
-                            if (hash(earlier_frame), image_sequence[j + k][1]) != sequence_pattern[k]:
+                            if (hash(earlier_frame), image_sequence[j + k][1]) != sequence_window[k]:
                                 matches = False
                                 break
                         if matches:
                             logger.debug(f"Found repeating sequence after {len(image_sequence)} frames")
-                            # Add the last static frame if it exists
-                            if static_count > 0:
-                                image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
                             return image_sequence[:j + window_size]
             
-            logger.warning(f"Reached maximum iterations ({max_iterations}) without finding complete sequence")
+            logger.warning(f"Reached maximum iterations ({max_iterations}) - using collected frames")
             if static_count > 0:
                 image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
             return image_sequence
@@ -345,88 +339,83 @@ def start():
             
             start_time = display_start_time = time.time()
             display_count = 0
-            default_frame_duration = 1/RENDER_FREQUENCY
 
             # Generate initial sequence
             logger.info("Generating initial image sequence")
             image_sequence = generate_complete_image_set(main_display)
             if image_sequence:
-                screen.display(image_sequence[0][0])  # Display first frame
+                logger.debug(f"Initial sequence generated with {len(image_sequence)} frames")
+                screen.display(image_sequence[0][0])
 
             try:
                 while not exit_requested:
-                    current_time = time.time()
+                    try:
+                        current_time = time.time()
 
-                    # Check for keyboard input
-                    key_event = check_keyboard()
-                    if key_event == 'fps':
-                        show_fps = not show_fps
-                        if not show_fps:
-                            print('\r' + ' '*40 + '\r', end='', flush=True)
-                    elif key_event == 'exit':
-                        if show_fps:
-                            print('\r' + ' '*40 + '\r', end='', flush=True)
-                        logger.info("Ctrl+C pressed, initiating shutdown")
-                        exit_requested = True
+                        # Check for keyboard input more frequently
+                        key_event = check_keyboard()
+                        if key_event == 'fps':
+                            show_fps = not show_fps
+                            if not show_fps:
+                                print('\r' + ' '*40 + '\r', end='', flush=True)
+                        elif key_event == 'exit':
+                            logger.info("Exit requested via keyboard")
+                            break
+
+                        # Database updates
+                        if current_time - last_db_check_time >= DATABASE_UPDATE_FREQUENCY:
+                            update_data(src, main_display._dataset)
+                            last_db_check_time = current_time
+
+                            if (main_display._dataset.sys['status'] == 'start' and 
+                                current_time - start_time > 4):
+                                main_display._dataset.update('sys', {'status': 'running'}, merge=True)
+
+                            # Check for changed data
+                            current_beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
+                            current_taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
+                            
+                            if current_beers_hash != beers_hash or current_taps_hash != taps_hash:
+                                logger.info("Data changed - updating display")
+                                
+                                # Immediately render and display first frame
+                                main_display.render()
+                                screen.display(main_display.image.convert("1"))
+                                last_frame_time = current_time
+                                display_count += 1
+                                
+                                # Generate complete sequence in background
+                                logger.info("Generating complete image sequence")
+                                image_sequence = generate_complete_image_set(main_display)
+                                sequence_index = 0  # Start from beginning of new sequence
+                                beers_hash = current_beers_hash
+                                taps_hash = current_taps_hash
+
+                        # Display current frame
+                        if image_sequence:
+                            current_image, duration = image_sequence[sequence_index]
+                            if current_time - last_frame_time >= duration:
+                                logger.debug(f"Displaying frame {sequence_index}/{len(image_sequence)}")
+                                screen.display(current_image)
+                                last_frame_time = current_time
+                                sequence_index = (sequence_index + 1) % len(image_sequence)
+                                display_count += 1
+
+                                if show_fps:
+                                    current_fps = display_count/(current_time - display_start_time)
+                                    print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
+
+                        # Short sleep to prevent CPU overload
+                        time.sleep(0.01)
+
+                    except KeyboardInterrupt:
+                        logger.info("KeyboardInterrupt received")
                         break
 
-                    # Check for database updates at specified frequency
-                    if current_time - last_db_check_time >= DATABASE_UPDATE_FREQUENCY:
-                        update_data(src, main_display._dataset)
-                        last_db_check_time = current_time
-
-                        if (main_display._dataset.sys['status'] == 'start' and 
-                            current_time - start_time > 4):
-                            main_display._dataset.update('sys', {'status': 'running'}, merge=True)
-
-                        # Check for changed data
-                        current_beers_hash = dict_hash(main_display._dataset.get('beers'), '__timestamp__')
-                        current_taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
-                        
-                        if current_beers_hash != beers_hash or current_taps_hash != taps_hash:
-                            logger.info("Data changed - updating display")
-                            
-                            # Immediately render and display first frame
-                            main_display.render()
-                            screen.display(main_display.image.convert("1"))
-                            last_frame_time = current_time
-                            display_count += 1
-                            
-                            # Generate complete sequence in background
-                            logger.info("Generating complete image sequence")
-                            image_sequence = generate_complete_image_set(main_display)
-                            sequence_index = 0  # Start from beginning of new sequence
-                            beers_hash = current_beers_hash
-                            taps_hash = current_taps_hash
-
-                    # Display current frame from sequence
-                    if image_sequence:
-                        current_image, duration = image_sequence[sequence_index]
-                        if current_time - last_frame_time >= duration:
-                            logger.debug(f"Displaying frame {sequence_index}/{len(image_sequence)} (duration: {duration:.3f}s)")
-                            screen.display(current_image)
-                            last_frame_time = current_time
-                            sequence_index = (sequence_index + 1) % len(image_sequence)
-                            display_count += 1
-
-                            if show_fps:
-                                current_fps = display_count/(current_time - display_start_time)
-                                print(f"\rCurrent FPS: {current_fps:.1f}", end='', flush=True)
-                            elif current_time - display_start_time > 10:
-                                print('\r' + ' '*40 + '\r', end='', flush=True)
-                                logger.debug(f"Display updates per second: {display_count/(current_time-display_start_time):.1f}")
-                                display_count = 0
-                                display_start_time = current_time
-
-                    # Sleep to maintain target frame rate
-                    sleep_time = 1/RENDER_FREQUENCY/2  # Short sleep to allow for responsive input
-                    if sleep_time > 0:
-                        time.sleep(sleep_time)
-
-            except KeyboardInterrupt:
+            finally:
                 if show_fps:
                     print('\r' + ' '*40 + '\r', end='', flush=True)
-                logger.info("KeyboardInterrupt received in main loop")
+                logger.info("Main loop ending")
 
         main_loop(screen, main, src)
 
