@@ -282,6 +282,7 @@ def start():
             
             start_time = display_start_time = time.time()
             display_count = 0
+            default_frame_duration = 1/RENDER_FREQUENCY
 
             try:
                 while not exit_requested:
@@ -306,7 +307,7 @@ def start():
                         last_db_check_time = current_time
 
                         if (main_display._dataset.sys['status'] == 'start' and 
-                            current_time - start_time > SPLASH_SCREEN_TIME):
+                            current_time - start_time > 4):
                             main_display._dataset.update('sys', {'status': 'running'}, merge=True)
 
                         # Check for changed data
@@ -314,16 +315,26 @@ def start():
                         current_taps_hash = dict_hash(main_display._dataset.get('taps'), '__timestamp__')
                         
                         if current_beers_hash != beers_hash or current_taps_hash != taps_hash:
-                            logger.info("Data changed - regenerating complete image sequence")
-                            image_sequence = generate_complete_image_set(main_display)
-                            sequence_index = 0
+                            logger.info("Data changed - updating display")
+                            
+                            # Immediately render and display first frame
+                            main_display.render()
+                            screen.display(main_display.image.convert("1"))
                             last_frame_time = current_time
+                            display_count += 1
+                            
+                            # Generate complete sequence in background
+                            logger.info("Generating complete image sequence")
+                            image_sequence = generate_complete_image_set(main_display)
+                            sequence_index = 0  # Start from beginning of new sequence
                             beers_hash = current_beers_hash
                             taps_hash = current_taps_hash
 
                     # Display current frame if we have a sequence
+                    frame_duration = default_frame_duration
                     if image_sequence:
                         current_image, duration = image_sequence[sequence_index]
+                        frame_duration = duration
                         if current_time - last_frame_time >= duration:
                             screen.display(current_image)
                             last_frame_time = current_time
@@ -343,13 +354,12 @@ def start():
                     # Sleep to maintain target frame rate while ensuring we don't oversleep
                     sleep_time = min(
                         1/RENDER_FREQUENCY - (time.time() - current_time),
-                        max(0, duration - (time.time() - last_frame_time))
+                        max(0, frame_duration - (time.time() - last_frame_time))
                     )
                     if sleep_time > 0:
                         time.sleep(sleep_time)
 
             except KeyboardInterrupt:
-                # Clear any FPS display before logging exit message
                 if show_fps:
                     print('\r' + ' '*40 + '\r', end='', flush=True)
                 logger.info("KeyboardInterrupt received in main loop")
