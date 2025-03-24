@@ -43,15 +43,14 @@ LOGGER_NAME = "KegDisplay"
 
 # Create and configure our application logger at module level
 logger = logging.getLogger(LOGGER_NAME)
-# Set initial default level - will be overridden by command line argument
 logger.setLevel(logging.INFO)
 
 # Create handlers
 file_handler = logging.FileHandler(LOG_FILE)
 stream_handler = logging.StreamHandler()
 
-# Create formatter and add it to the handlers
-formatter = logging.Formatter(u'%(asctime)s:%(levelname)s:%(message)s')
+# Create formatter with consistent left alignment
+formatter = logging.Formatter('%(asctime)s - %(levelname)-8s - %(message)s')
 file_handler.setFormatter(formatter)
 stream_handler.setFormatter(formatter)
 
@@ -268,11 +267,12 @@ def start():
             image_sequence = []
             sequence_window = []
             window_size = 10
-            max_iterations = 250  # Reduced from 2000 to be more reasonable
+            max_iterations = 200  # Increased from 100
             last_image = None
             static_count = 0
             unchanged_frames = 0
-            max_unchanged = 30  # Consider sequence complete if image stays static for this many frames
+            min_frames = 50  # Minimum number of frames to capture before considering sequence complete
+            max_unchanged = 50  # Increased from 30
             
             logger.debug("Starting image sequence generation")
             
@@ -287,8 +287,9 @@ def start():
                     if current_bytes == last_bytes:
                         static_count += 1
                         unchanged_frames += 1
-                        if unchanged_frames >= max_unchanged:
-                            logger.debug(f"Image static for {unchanged_frames} frames - sequence complete")
+                        # Only consider static sequence if we've captured minimum frames
+                        if unchanged_frames >= max_unchanged and len(image_sequence) >= min_frames:
+                            logger.debug(f"Image static for {unchanged_frames} frames after {len(image_sequence)} frames - sequence complete")
                             if static_count > 0:
                                 image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
                             return image_sequence
@@ -298,8 +299,10 @@ def start():
                             image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
                         static_count = 0
                         image_sequence.append((current_image, 1 / RENDER_FREQUENCY))
+                        logger.debug(f"New frame captured (total: {len(image_sequence)})")
                 else:
                     image_sequence.append((current_image, 1 / RENDER_FREQUENCY))
+                    logger.debug("First frame captured")
                     
                 last_image = current_image
                 
@@ -308,7 +311,7 @@ def start():
                 if len(sequence_window) > window_size:
                     sequence_window.pop(0)
                     
-                # Check for repeated sequence pattern
+                # Check for repeated sequence pattern if we have enough frames
                 if len(sequence_window) == window_size and len(image_sequence) > window_size * 2:
                     for j in range(0, len(image_sequence) - window_size * 2, window_size):
                         matches = True
@@ -317,13 +320,14 @@ def start():
                             if (hash(earlier_frame), image_sequence[j + k][1]) != sequence_window[k]:
                                 matches = False
                                 break
-                        if matches:
+                        if matches and j >= min_frames:
                             logger.debug(f"Found repeating sequence after {len(image_sequence)} frames")
                             return image_sequence[:j + window_size]
             
             logger.warning(f"Reached maximum iterations ({max_iterations}) - using collected frames")
             if static_count > 0:
                 image_sequence.append((last_image, static_count / RENDER_FREQUENCY))
+            logger.debug(f"Final sequence length: {len(image_sequence)} frames")
             return image_sequence
 
         def main_loop(screen, main_display, src):
