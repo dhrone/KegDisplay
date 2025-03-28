@@ -13,6 +13,7 @@ import random
 import json
 import socket
 import glob
+import signal
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -618,16 +619,75 @@ class NetworkTest:
             logger.error(f"Error testing broadcast: {e}")
     
     def cleanup(self):
-        """Clean up resources"""
+        """Clean up resources before exit"""
+        logger.info("Cleaning up resources...")
+        
+        # Stop the DatabaseSync instance
+        if hasattr(self, 'instance') and self.instance:
+            logger.info("Stopping DatabaseSync instance...")
+            try:
+                # Stop broadcasting thread
+                if hasattr(self.instance, 'broadcast_thread') and self.instance.broadcast_thread:
+                    self.instance.broadcast_thread_running = False
+                    logger.info("Stopped broadcast thread")
+                
+                # Stop listener thread
+                if hasattr(self.instance, 'listener_thread') and self.instance.listener_thread:
+                    self.instance.listener_thread_running = False
+                    logger.info("Stopped listener thread")
+                
+                # Close sockets
+                if hasattr(self.instance, 'broadcast_socket') and self.instance.broadcast_socket:
+                    try:
+                        self.instance.broadcast_socket.close()
+                        logger.info("Closed broadcast socket")
+                    except Exception as e:
+                        logger.error(f"Error closing broadcast socket: {e}")
+                
+                if hasattr(self.instance, 'listener_socket') and self.instance.listener_socket:
+                    try:
+                        self.instance.listener_socket.close()
+                        logger.info("Closed listener socket")
+                    except Exception as e:
+                        logger.error(f"Error closing listener socket: {e}")
+                
+                if hasattr(self.instance, 'sync_socket') and self.instance.sync_socket:
+                    try:
+                        self.instance.sync_socket.close()
+                        logger.info("Closed sync socket")
+                    except Exception as e:
+                        logger.error(f"Error closing sync socket: {e}")
+                
+                # Stop sync server thread
+                if hasattr(self.instance, 'sync_server_thread') and self.instance.sync_server_thread:
+                    self.instance.sync_server_running = False
+                    logger.info("Stopped sync server thread")
+                
+            except Exception as e:
+                logger.error(f"Error stopping DatabaseSync instance: {e}")
+        
+        # Close the database connection
         try:
-            # Stop the database sync instance
-            self.instance.stop()
-            
-            # Don't remove the temp dir yet so we can inspect it
-            logger.info(f"Database remains at {self.db_path} for inspection")
-            logger.info(f"Remember to clean up temporary directory: {self.temp_dir}")
+            if hasattr(self, 'instance') and hasattr(self.instance, 'conn') and self.instance.conn:
+                self.instance.conn.close()
+                logger.info("Closed database connection")
         except Exception as e:
-            logger.error(f"Error during cleanup: {e}")
+            logger.error(f"Error closing database connection: {e}")
+        
+        # Remove temporary directory
+        try:
+            if hasattr(self, 'temp_dir') and self.temp_dir and os.path.exists(self.temp_dir):
+                # On Windows, there might be permission issues with removing temp dir immediately
+                try:
+                    shutil.rmtree(self.temp_dir)
+                    logger.info(f"Removed temporary directory: {self.temp_dir}")
+                except Exception as e:
+                    logger.warning(f"Could not remove temp directory {self.temp_dir} immediately: {e}")
+                    logger.info("It will be cleaned up by the cleanup_temp.py script later")
+        except Exception as e:
+            logger.error(f"Error removing temporary directory: {e}")
+        
+        logger.info("Cleanup complete")
 
     def _add_manual_peers(self):
         """Manually add peers from the provided IP addresses"""
@@ -861,21 +921,41 @@ if __name__ == "__main__":
         logger.info(f"Verification complete. Log file: {log_file}")
         sys.exit(0 if result else 1)
     
-    elif args.role == "primary":
-        test = NetworkTest("primary", args.ips, broadcast_port=args.port)
-        result = test.run_primary_test()
-        # Keep running to allow inspection
-        while True:
-            time.sleep(1)
-    
-    elif args.role == "secondary":
-        # For secondary, if primary-ip is specified, add it to ips
-        ips = args.ips or []
-        if args.primary_ip and args.primary_ip not in ips:
-            ips.append(args.primary_ip)
-            
-        test = NetworkTest("secondary", ips, broadcast_port=args.port)
-        result = test.run_secondary_test()
-        # Keep running to allow inspection
-        while True:
-            time.sleep(1) 
+    elif args.role in ["primary", "secondary"]:
+        # Set up a test instance
+        if args.role == "primary":
+            test = NetworkTest("primary", args.ips, broadcast_port=args.port)
+            result = test.run_primary_test()
+        else:  # secondary
+            # For secondary, if primary-ip is specified, add it to ips
+            ips = args.ips or []
+            if args.primary_ip and args.primary_ip not in ips:
+                ips.append(args.primary_ip)
+                
+            test = NetworkTest("secondary", ips, broadcast_port=args.port)
+            result = test.run_secondary_test()
+        
+        # Set up signal handler for graceful shutdown
+        def signal_handler(sig, frame):
+            logger.info("\nReceived interrupt signal. Cleaning up and shutting down gracefully...")
+            test.cleanup()
+            logger.info(f"Cleanup complete. Log file: {test.log_file}")
+            # Remove the signal handler to allow a second Ctrl+C to force exit if needed
+            signal.signal(signal.SIGINT, signal.SIG_DFL)
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+            sys.exit(0)
+        
+        # Register the signal handler for SIGINT (Ctrl+C) and SIGTERM
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+        
+        logger.info(f"Network test running. Press Ctrl+C to stop and clean up resources.")
+        
+        # Keep running to allow inspection (and catch interrupts)
+        try:
+            while True:
+                time.sleep(1)
+        except Exception as e:
+            logger.error(f"Error in main loop: {e}")
+            test.cleanup()
+            sys.exit(1) 

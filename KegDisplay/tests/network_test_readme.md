@@ -59,13 +59,14 @@ After the primary makes a change, you can verify if the change was received on a
 # Use the beer name displayed by the primary
 poetry run python -m KegDisplay.tests.network_test verify --beer-name "New Beer 123"
 
-# If broadcast discovery isn't working, specify the primary IP:
-poetry run python -m KegDisplay.tests.network_test verify --beer-name "New Beer 123" --primary-ip 192.168.1.100
+# If needed, specify the database path directly:
+poetry run python -m KegDisplay.tests.network_test verify --beer-name "New Beer 123" --db-path /path/to/database.db
 ```
 
 The verify command will:
-1. Check if the specified beer exists in the secondary's database
-2. Display a success or failure message
+1. Automatically find the most recent secondary database
+2. Check if the specified beer exists in the database
+3. Display a success or failure message
 
 ## Network Diagnostics
 
@@ -135,6 +136,41 @@ The log files are extremely useful when troubleshooting failed synchronization, 
 - Database state before and after changes
 - All broadcast and sync operations
 - Timestamps for all operations
+
+## Cleanup
+
+After running tests, temporary files are created in your system's temp directory. To clean these up:
+
+```bash
+# Show what would be removed without actually removing anything
+poetry run python -m KegDisplay.tests.cleanup_temp --dry-run
+
+# Remove all temporary directories and database files
+poetry run python -m KegDisplay.tests.cleanup_temp
+
+# Also remove log files
+poetry run python -m KegDisplay.tests.cleanup_temp --remove-logs
+```
+
+The cleanup script will:
+1. Find all database files created by network tests
+2. Find temporary directories containing test databases
+3. Find log files from network tests (if --remove-logs is specified)
+4. Remove all these files to clean up after testing
+
+## Graceful Shutdown
+
+The network test now supports graceful shutdown on Ctrl+C (SIGINT):
+
+- Pressing Ctrl+C will safely terminate all running threads and connections
+- All resources will be properly cleaned up, including:
+  - Network sockets (broadcast, listener, and sync)
+  - Database connections
+  - Temporary directories (when possible)
+- A cleanup confirmation message will be displayed with the path to the log file
+- If needed, a second Ctrl+C will force immediate termination
+
+This ensures that no zombie processes or orphaned network connections remain after testing.
 
 ## Troubleshooting
 
