@@ -12,6 +12,7 @@ import logging
 import random
 import json
 import socket
+import glob
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -748,6 +749,81 @@ class NetworkTest:
             logger.error(f"Error making change: {e}")
             return False
 
+def verify_beer_in_database(db_path, beer_name):
+    """Standalone function to verify a beer exists in a database
+    
+    Args:
+        db_path: Path to the SQLite database
+        beer_name: Name of the beer to verify
+        
+    Returns:
+        True if the beer is found, False otherwise
+    """
+    logger.info(f"Verifying beer '{beer_name}' in database at {db_path}")
+    
+    if not os.path.exists(db_path):
+        logger.error(f"Database file not found: {db_path}")
+        return False
+        
+    try:
+        with sqlite3.connect(db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Log database version
+            cursor.execute("SELECT last_modified FROM version")
+            version = cursor.fetchone()
+            logger.info(f"Database version timestamp: {version[0] if version else 'Unknown'}")
+            
+            # Log all beers in database
+            cursor.execute("SELECT rowid, * FROM beers")
+            beers = cursor.fetchall()
+            logger.info(f"All beers in database:")
+            for beer in beers:
+                logger.info(f"  {beer}")
+            
+            # Check for the specific beer
+            cursor.execute("SELECT Name, ABV FROM beers WHERE Name = ?", (beer_name,))
+            result = cursor.fetchone()
+        
+        if result:
+            logger.info(f"✅ VERIFICATION SUCCESSFUL: Beer '{result[0]}' with ABV {result[1]} found")
+            return True
+        else:
+            logger.error(f"❌ VERIFICATION FAILED: Beer '{beer_name}' not found in database")
+            return False
+            
+    except Exception as e:
+        logger.error(f"Error verifying change: {e}")
+        return False
+
+def find_secondary_database():
+    """Find the most recent secondary database in temporary directories"""
+    logger.info("Searching for existing secondary database...")
+    
+    # Search for databases in /tmp (Linux) and TEMP (Windows) directories
+    temp_dirs = ['/tmp', '/var/tmp', tempfile.gettempdir()]
+    
+    # Search patterns to find test databases
+    patterns = ['*/test_db_secondary.db', '*/tmp*/test_db_secondary.db']
+    
+    all_matches = []
+    for temp_dir in temp_dirs:
+        if os.path.exists(temp_dir):
+            for pattern in patterns:
+                search_path = os.path.join(temp_dir, pattern)
+                matches = glob.glob(search_path, recursive=True)
+                all_matches.extend(matches)
+    
+    # Sort by modification time, newest first
+    all_matches.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+    
+    if all_matches:
+        logger.info(f"Found {len(all_matches)} potential secondary databases")
+        logger.info(f"Using the most recently modified: {all_matches[0]}")
+        return all_matches[0]
+    else:
+        logger.error("No secondary database found")
+        return None
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run database sync tests over a real network")
@@ -759,6 +835,7 @@ if __name__ == "__main__":
                        help="Broadcast port to use (default: 5002)")
     parser.add_argument("--beer-name", help="Beer name to verify (for verify command)")
     parser.add_argument("--primary-ip", help="Directly specify primary IP for secondary instance")
+    parser.add_argument("--db-path", help="Directly specify the database path for verification")
     
     args = parser.parse_args()
     
@@ -766,14 +843,22 @@ if __name__ == "__main__":
         if not args.beer_name:
             logger.error("Must specify --beer-name for verify command")
             sys.exit(1)
+        
+        # Setup file logging for verify command
+        log_file = setup_file_logging("verify")
+        
+        # Use specified database path or find the most recent secondary database
+        db_path = args.db_path
+        if not db_path:
+            db_path = find_secondary_database()
             
-        # For verify, if primary-ip is specified, add it to ips
-        ips = args.ips or []
-        if args.primary_ip and args.primary_ip not in ips:
-            ips.append(args.primary_ip)
+        if not db_path:
+            logger.error("No database found for verification. Please specify --db-path or ensure a secondary instance is running")
+            sys.exit(1)
             
-        test = NetworkTest("secondary", ips, broadcast_port=args.port)
-        result = test.verify_specific_beer(args.beer_name)
+        # Directly verify beer in database without creating new instance
+        result = verify_beer_in_database(db_path, args.beer_name)
+        logger.info(f"Verification complete. Log file: {log_file}")
         sys.exit(0 if result else 1)
     
     elif args.role == "primary":
