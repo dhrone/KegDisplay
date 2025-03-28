@@ -421,9 +421,16 @@ class NetworkTest:
             
             if peer_count > 0:
                 logger.info("Peers:")
-                for ip, (version, last_seen) in self.instance.peers.items():
-                    time_diff = time.time() - last_seen
-                    logger.info(f"  {ip}: version={version}, last_seen={time_diff:.1f}s ago")
+                for ip, peer_data in self.instance.peers.items():
+                    if len(peer_data) >= 3:
+                        version, last_seen, sync_port = peer_data
+                        time_diff = time.time() - last_seen
+                        logger.info(f"  {ip}: version={version}, sync_port={sync_port}, last_seen={time_diff:.1f}s ago")
+                    else:
+                        # Handle legacy format just in case
+                        version, last_seen = peer_data[0], peer_data[1]
+                        time_diff = time.time() - last_seen
+                        logger.info(f"  {ip}: version={version}, last_seen={time_diff:.1f}s ago")
         except Exception as e:
             logger.error(f"Error logging peers: {e}")
     
@@ -524,7 +531,8 @@ class NetworkTest:
             # Try sending a discovery message again
             msg = json.dumps({
                 'type': 'discovery',
-                'version': self.instance.version
+                'version': self.instance.version,
+                'sync_port': self.instance.sync_port  # Include our sync port
             }).encode()
             
             logger.info(f"Broadcasting discovery message on port {self.instance.broadcast_port}")
@@ -542,9 +550,10 @@ class NetworkTest:
                     data, addr = self.instance.broadcast_socket.recvfrom(1024)
                     msg = json.loads(data.decode())
                     
-                    local_ip = self.instance._get_local_ip()
-                    if addr[0] != local_ip:
-                        logger.info(f"✅ Discovered peer at {addr[0]} with version {msg.get('version', 'unknown')}")
+                    # Use the list of local IPs rather than just the main one
+                    if addr[0] not in self.instance.local_ips:
+                        peer_sync_port = msg.get('sync_port', self.instance.sync_port)
+                        logger.info(f"✅ Discovered peer at {addr[0]} with version {msg.get('version', 'unknown')} (sync port: {peer_sync_port})")
                         discovered = True
                 except socket.timeout:
                     continue
