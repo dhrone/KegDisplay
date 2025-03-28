@@ -305,8 +305,12 @@ class NetworkTest:
             
             # Log initial database state
             self._log_database_state()
-            initial_beer_count = len(self.instance.get_all_beers())
-            logger.info(f"Initial beer count: {initial_beer_count}")
+            
+            # Track initial beers by ID
+            initial_beers = self.instance.get_all_beers()
+            initial_beer_ids = {beer['idBeer'] for beer in initial_beers}
+            logger.info(f"Initial beer count: {len(initial_beer_ids)}")
+            logger.info(f"Initial beer IDs: {initial_beer_ids}")
             
             # Log peers
             self._log_peers()
@@ -320,19 +324,23 @@ class NetworkTest:
                 # Log peers
                 self._log_peers()
                 
-                # Check for new beers
+                # Check for new beers by comparing IDs
                 current_beers = self.instance.get_all_beers()
-                current_beer_count = len(current_beers)
+                current_beer_ids = {beer['idBeer'] for beer in current_beers}
                 
-                if current_beer_count > initial_beer_count:
-                    logger.info(f"✅ DETECTED CHANGE: Beer count increased from {initial_beer_count} to {current_beer_count}")
+                # Find new beer IDs by set difference
+                new_beer_ids = current_beer_ids - initial_beer_ids
+                
+                if new_beer_ids:
+                    logger.info(f"✅ DETECTED CHANGE: Found {len(new_beer_ids)} new beers")
+                    logger.info(f"New beer IDs: {new_beer_ids}")
                     
-                    # Log the new beers
-                    new_beers = current_beers[initial_beer_count:]
-                    for beer in new_beers:
-                        logger.info(f"New beer detected: {beer['idBeer']}: {beer['Name']} (ABV: {beer['ABV']})")
+                    # Log the details of new beers
+                    for beer in current_beers:
+                        if beer['idBeer'] in new_beer_ids:
+                            logger.info(f"New beer detected: ID={beer['idBeer']}, Name='{beer['Name']}', ABV={beer['ABV']}")
                     
-                    # Log database state after change
+                    # Log full database state after change
                     self._log_database_state()
                     
                     logger.info("Test completed successfully - detected changes from primary")
