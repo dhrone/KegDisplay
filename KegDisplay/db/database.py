@@ -461,13 +461,25 @@ class DatabaseManager:
                 main_conn.execute("BEGIN TRANSACTION")
                 
                 for change in changes:
-                    table = change.get("table")
-                    operation = change.get("operation")
-                    record_id = change.get("record_id")
+                    # Handle the tuple format from change_tracker: (table_name, operation, row_id, timestamp, content_hash)
+                    if isinstance(change, (list, tuple)) and len(change) >= 3:
+                        table = change[0]
+                        operation = change[1]
+                        record_id = change[2]
+                    elif isinstance(change, dict):
+                        table = change.get("table")
+                        operation = change.get("operation")
+                        record_id = change.get("record_id")
+                    else:
+                        logger.warning(f"Skipping invalid change record format: {change}")
+                        continue
                     
                     if not all([table, operation, record_id]):
                         logger.warning(f"Skipping invalid change record: {change}")
                         continue
+                    
+                    # Log the change being processed
+                    logger.debug(f"Processing change: {table} {operation} {record_id}")
                     
                     if table == "beers":
                         if operation == "INSERT" or operation == "UPDATE":
@@ -488,18 +500,21 @@ class DatabaseManager:
                                 columns = [d[0] for d in temp_cursor.description]
                                 update_sql = f"UPDATE beers SET {', '.join(f'{col} = ?' for col in columns[1:])} WHERE idBeer = ?"
                                 main_cursor.execute(update_sql, beer_data[1:] + (record_id,))
+                                logger.debug(f"Updated beer {record_id}")
                             elif not exists and operation == "INSERT":
                                 # Insert new record, preserving ID
                                 columns = [d[0] for d in temp_cursor.description]
                                 placeholders = ", ".join(["?"] * len(columns))
                                 insert_sql = f"INSERT INTO beers ({', '.join(columns)}) VALUES ({placeholders})"
                                 main_cursor.execute(insert_sql, beer_data)
+                                logger.debug(f"Inserted beer {record_id}")
                             else:
                                 logger.warning(f"Operation {operation} doesn't match beer record state")
                                 
                         elif operation == "DELETE":
                             # Delete the beer
                             main_cursor.execute("DELETE FROM beers WHERE idBeer = ?", (record_id,))
+                            logger.debug(f"Deleted beer {record_id}")
                             
                     elif table == "taps":
                         if operation == "INSERT" or operation == "UPDATE":
@@ -519,18 +534,21 @@ class DatabaseManager:
                                 # Update existing record
                                 beer_id = tap_data[1]  # idBeer is the second column
                                 main_cursor.execute("UPDATE taps SET idBeer = ? WHERE idTap = ?", (beer_id, record_id))
+                                logger.debug(f"Updated tap {record_id}")
                             elif not exists and operation == "INSERT":
                                 # Insert new record, preserving ID
                                 columns = [d[0] for d in temp_cursor.description]
                                 placeholders = ", ".join(["?"] * len(columns))
                                 insert_sql = f"INSERT INTO taps ({', '.join(columns)}) VALUES ({placeholders})"
                                 main_cursor.execute(insert_sql, tap_data)
+                                logger.debug(f"Inserted tap {record_id}")
                             else:
                                 logger.warning(f"Operation {operation} doesn't match tap record state")
                                 
                         elif operation == "DELETE":
                             # Delete the tap
                             main_cursor.execute("DELETE FROM taps WHERE idTap = ?", (record_id,))
+                            logger.debug(f"Deleted tap {record_id}")
                     
                     else:
                         logger.warning(f"Unknown table in change record: {table}")
