@@ -14,6 +14,7 @@ import json
 import socket
 import glob
 import signal
+import threading
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -40,16 +41,20 @@ class NetworkTest:
     """Run database sync tests over a real network"""
     
     def __init__(self, role, other_ips=None, broadcast_port=5002):
-        """Initialize the network test
+        """Initialize the test instance
         
         Args:
-            role: Either 'primary' or 'secondary'
-            other_ips: List of IP addresses of other instances (for primary only)
-            broadcast_port: Port for broadcast communication
+            role: 'primary' or 'secondary'
+            other_ips: List of known peer IPs (optional)
+            broadcast_port: Port to use for discovery broadcasts
         """
         self.role = role
         self.other_ips = other_ips or []
         self.broadcast_port = broadcast_port
+        self.instance = None
+        
+        # Setup signal handlers for graceful shutdown
+        self._setup_signal_handlers()
         
         # Setup logging to file
         self.log_file = setup_file_logging(role)
@@ -59,30 +64,137 @@ class NetworkTest:
         self.db_path = os.path.join(self.temp_dir, f'test_db_{role}.db')
         
         # Base port for sync operations
-        self.sync_port = 5003 if role == 'primary' else 5004
+        self.sync_port = 5003
         
         # Create initial database
         self._create_initial_db()
         
-        # Create database sync instance
-        logger.info(f"Creating DatabaseSync instance with broadcast_port={broadcast_port}, sync_port={self.sync_port}, test_mode=False")
-        self.instance = DatabaseSync(
-            db_path=self.db_path,
-            broadcast_port=self.broadcast_port,
-            sync_port=self.sync_port,
-            test_mode=False  # Use real network operations
-        )
+        try:
+            # Initialize the database sync system
+            self._initialize_db_sync()
+            
+            # Log network information
+            self._log_network_info()
+            
+            # If we have explicit other_ips, add them directly
+            if self.other_ips:
+                self._add_manual_peers()
+                
+        except KeyboardInterrupt:
+            logger.info("Initialization interrupted by user")
+            self.cleanup()
+            sys.exit(0)
+        except Exception as e:
+            logger.error(f"Error during initialization: {e}")
+            self.cleanup()
+            sys.exit(1)
+            
+    def _setup_signal_handlers(self):
+        """Set up signal handlers for graceful shutdown"""
+        # Store original handlers to restore them later if needed
+        self.original_sigint = signal.getsignal(signal.SIGINT)
+        self.original_sigterm = signal.getsignal(signal.SIGTERM)
         
-        logger.info(f"Initialized {role} instance with sync port {self.sync_port}")
-        logger.info(f"Database path: {self.db_path}")
+        # Set up handler for graceful shutdown
+        def signal_handler(sig, frame):
+            logger.info("\nReceived interrupt signal. Cleaning up and shutting down gracefully...")
+            self.cleanup()
+            logger.info(f"Cleanup complete. Log file: {self.log_file}")
+            sys.exit(0)
+            
+        # Register the signal handlers
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+    
+    def _initialize_db_sync(self):
+        """Initialize the database sync system"""
+        # Create database sync instance with timeout for initial peer discovery
+        logger.info(f"Creating DatabaseSync instance with broadcast_port={self.broadcast_port}, sync_port={self.sync_port}, test_mode=False")
         
-        # Log network information
-        self._log_network_info()
+        # Override the default initial peer discovery to use a shorter timeout
+        original_discovery = DatabaseSync._initial_peer_discovery
         
-        # If we have explicit other_ips, add them directly
-        if self.other_ips:
-            self._add_manual_peers()
+        def shorter_discovery(instance):
+            """Modified discovery method with shorter timeout and interrupt handling"""
+            logger.info("Starting initial peer discovery")
+            try:
+                logger.info(f"Broadcasting discovery message on port {instance.broadcast_port}")
+                message = json.dumps({
+                    'version': instance._get_db_version(),
+                    'sync_port': instance.sync_port
+                }).encode('utf-8')
+                instance.broadcast_socket.sendto(message, ('255.255.255.255', instance.broadcast_port))
+                
+                # Set a shorter timeout for test purposes
+                instance.broadcast_socket.settimeout(1.0)
+                
+                logger.info("Waiting 1 second for peer responses...")
+                start_time = time.time()
+                while time.time() - start_time < 1.0:
+                    try:
+                        data, addr = instance.broadcast_socket.recvfrom(1024)
+                        ip = addr[0]
+                        
+                        # Skip messages from ourselves
+                        if ip in instance.local_ips:
+                            logger.debug(f"Ignoring message from self ({ip})")
+                            continue
+                            
+                        # Process peer data (same as original method)
+                        try:
+                            # Try to parse as JSON (new format with sync_port)
+                            peer_data = json.loads(data.decode('utf-8'))
+                            peer_version = peer_data['version']
+                            peer_sync_port = peer_data.get('sync_port', instance.default_sync_port)
+                            instance.add_peer(ip, peer_version, peer_sync_port)
+                        except (json.JSONDecodeError, KeyError):
+                            # Fall back to old format (just version string)
+                            peer_version = data.decode('utf-8')
+                            instance.add_peer(ip, peer_version, instance.default_sync_port)
+                        
+                    except socket.timeout:
+                        # Expected when no peer responses within timeout
+                        break
+                    except KeyboardInterrupt:
+                        logger.info("Peer discovery interrupted")
+                        raise
+                    except Exception as e:
+                        logger.error(f"Error during peer discovery: {e}")
+                
+                # Reset socket timeout
+                instance.broadcast_socket.settimeout(None)
+                
+                # Start the regular listener threads - simplified implementation
+                if hasattr(instance, 'threads') and instance.threads:
+                    for thread in instance.threads:
+                        if not thread.is_alive():
+                            thread.start()
+                
+            except KeyboardInterrupt:
+                raise
+            except Exception as e:
+                logger.error(f"Error in initial peer discovery: {e}")
+                
         
+        # Temporarily replace the discovery method
+        DatabaseSync._initial_peer_discovery = shorter_discovery
+        
+        try:
+            # Create the instance with our modified discovery method
+            self.instance = DatabaseSync(
+                db_path=self.db_path,
+                broadcast_port=self.broadcast_port,
+                sync_port=self.sync_port,
+                test_mode=False  # Use real network operations
+            )
+            
+            logger.info(f"Initialized {self.role} instance with sync port {self.sync_port}")
+            logger.info(f"Database path: {self.db_path}")
+            
+        finally:
+            # Restore the original discovery method
+            DatabaseSync._initial_peer_discovery = original_discovery
+    
     def _create_initial_db(self):
         """Create an initial database with some test data"""
         conn = sqlite3.connect(self.db_path)
@@ -626,42 +738,9 @@ class NetworkTest:
         if hasattr(self, 'instance') and self.instance:
             logger.info("Stopping DatabaseSync instance...")
             try:
-                # Stop broadcasting thread
-                if hasattr(self.instance, 'broadcast_thread') and self.instance.broadcast_thread:
-                    self.instance.broadcast_thread_running = False
-                    logger.info("Stopped broadcast thread")
-                
-                # Stop listener thread
-                if hasattr(self.instance, 'listener_thread') and self.instance.listener_thread:
-                    self.instance.listener_thread_running = False
-                    logger.info("Stopped listener thread")
-                
-                # Close sockets
-                if hasattr(self.instance, 'broadcast_socket') and self.instance.broadcast_socket:
-                    try:
-                        self.instance.broadcast_socket.close()
-                        logger.info("Closed broadcast socket")
-                    except Exception as e:
-                        logger.error(f"Error closing broadcast socket: {e}")
-                
-                if hasattr(self.instance, 'listener_socket') and self.instance.listener_socket:
-                    try:
-                        self.instance.listener_socket.close()
-                        logger.info("Closed listener socket")
-                    except Exception as e:
-                        logger.error(f"Error closing listener socket: {e}")
-                
-                if hasattr(self.instance, 'sync_socket') and self.instance.sync_socket:
-                    try:
-                        self.instance.sync_socket.close()
-                        logger.info("Closed sync socket")
-                    except Exception as e:
-                        logger.error(f"Error closing sync socket: {e}")
-                
-                # Stop sync server thread
-                if hasattr(self.instance, 'sync_server_thread') and self.instance.sync_server_thread:
-                    self.instance.sync_server_running = False
-                    logger.info("Stopped sync server thread")
+                # Stop the DatabaseSync instance properly
+                self.instance.stop()
+                logger.info("DatabaseSync instance stopped")
                 
             except Exception as e:
                 logger.error(f"Error stopping DatabaseSync instance: {e}")
@@ -670,6 +749,8 @@ class NetworkTest:
         try:
             if hasattr(self, 'instance') and hasattr(self.instance, 'conn') and self.instance.conn:
                 self.instance.conn.close()
+                # Set to None to prevent further use
+                self.instance.conn = None
                 logger.info("Closed database connection")
         except Exception as e:
             logger.error(f"Error closing database connection: {e}")
@@ -809,6 +890,141 @@ class NetworkTest:
             logger.error(f"Error making change: {e}")
             return False
 
+    def _run_broadcast_thread(self):
+        """Thread for broadcasting the database version periodically"""
+        logger.debug("Broadcast thread starting")
+        self.broadcast_thread_running = True
+        
+        try:
+            while self.broadcast_thread_running:
+                try:
+                    # Broadcast the current version and sync port
+                    if self.broadcast_socket:
+                        with self.db_lock:
+                            version = self._get_version()
+                        
+                        # Include the sync port in the broadcast message
+                        message = json.dumps({
+                            'version': version,
+                            'sync_port': self.sync_port
+                        }).encode('utf-8')
+                        
+                        if self.broadcast_socket:  # Check again in case it was closed during sleep
+                            try:
+                                self.broadcast_socket.sendto(message, ('255.255.255.255', self.broadcast_port))
+                                logger.debug(f"Broadcast version: {version}, sync_port: {self.sync_port}")
+                            except (socket.error, OSError) as e:
+                                if not self.broadcast_thread_running:  # Ignore errors during shutdown
+                                    break
+                                logger.error(f"Broadcast error: {e}")
+                
+                    # Wait before the next broadcast
+                    for i in range(5):  # Check for shutdown signal more frequently
+                        if not self.broadcast_thread_running:
+                            break
+                        time.sleep(0.2)
+                
+                except Exception as e:
+                    if not self.broadcast_thread_running:  # Ignore errors during shutdown
+                        break
+                    logger.error(f"Broadcast error: {e}")
+                    time.sleep(1)  # Wait a bit before retrying
+        except Exception as e:
+            logger.error(f"Broadcast thread error: {e}")
+        
+        logger.debug("Broadcast thread exiting")
+
+    def _run_listener_thread(self):
+        """Thread for listening for broadcasts from peers"""
+        logger.debug("Listener thread starting")
+        self.listener_thread_running = True
+        
+        try:
+            while self.listener_thread_running:
+                try:
+                    # Listen for broadcasts
+                    if self.listener_socket:
+                        try:
+                            # Use a timeout to allow thread to check termination flag
+                            self.listener_socket.settimeout(0.5)
+                            data, addr = self.listener_socket.recvfrom(1024)
+                            
+                            # Process peer data - handle both old and new format
+                            try:
+                                # Try to parse as JSON (new format with sync_port)
+                                peer_data = json.loads(data.decode('utf-8'))
+                                peer_version = peer_data['version']
+                                peer_sync_port = peer_data.get('sync_port', self.default_sync_port)
+                                self.add_peer(addr[0], peer_version, peer_sync_port)
+                            except (json.JSONDecodeError, KeyError):
+                                # Fall back to old format (just version string)
+                                peer_version = data.decode('utf-8')
+                                self.add_peer(addr[0], peer_version, self.default_sync_port)
+                            
+                        except socket.timeout:
+                            # This is expected - allows checking the thread_running flag
+                            pass
+                        except (socket.error, OSError) as e:
+                            if not self.listener_thread_running:  # Ignore errors during shutdown
+                                break
+                            logger.error(f"Broadcast listener error: {e}")
+                    else:
+                        # No socket available, sleep briefly
+                        time.sleep(0.5)
+                    
+                except Exception as e:
+                    if not self.listener_thread_running:  # Ignore errors during shutdown
+                        break
+                    logger.error(f"Broadcast listener error: {e}")
+                    time.sleep(1)  # Wait a bit before retrying
+        except Exception as e:
+            logger.error(f"Listener thread error: {e}")
+        
+        logger.debug("Listener thread exiting")
+
+    def _run_sync_server(self):
+        """Thread for serving database sync requests"""
+        logger.debug("Sync server thread starting")
+        self.sync_server_running = True
+        
+        try:
+            while self.sync_server_running:
+                try:
+                    # Accept connections
+                    if self.sync_socket:
+                        try:
+                            # Set a timeout to allow checking the thread_running flag
+                            self.sync_socket.settimeout(0.5)
+                            client_socket, addr = self.sync_socket.accept()
+                            
+                            # Handle client in a new thread
+                            threading.Thread(
+                                target=self._handle_sync_client,
+                                args=(client_socket, addr),
+                                daemon=True
+                            ).start()
+                            
+                        except socket.timeout:
+                            # This is expected - allows checking the thread_running flag
+                            pass
+                        except (socket.error, OSError) as e:
+                            if not self.sync_server_running:  # Ignore errors during shutdown
+                                break
+                            logger.error(f"Sync listener error: {e}")
+                    else:
+                        # No socket available, sleep briefly
+                        time.sleep(0.5)
+                    
+                except Exception as e:
+                    if not self.sync_server_running:  # Ignore errors during shutdown
+                        break
+                    logger.error(f"Sync listener error: {e}")
+                    time.sleep(1)  # Wait a bit before retrying
+        except Exception as e:
+            logger.error(f"Sync server thread error: {e}")
+        
+        logger.debug("Sync server thread exiting")
+
 def verify_beer_in_database(db_path, beer_name):
     """Standalone function to verify a beer exists in a database
     
@@ -935,19 +1151,7 @@ if __name__ == "__main__":
             test = NetworkTest("secondary", ips, broadcast_port=args.port)
             result = test.run_secondary_test()
         
-        # Set up signal handler for graceful shutdown
-        def signal_handler(sig, frame):
-            logger.info("\nReceived interrupt signal. Cleaning up and shutting down gracefully...")
-            test.cleanup()
-            logger.info(f"Cleanup complete. Log file: {test.log_file}")
-            # Remove the signal handler to allow a second Ctrl+C to force exit if needed
-            signal.signal(signal.SIGINT, signal.SIG_DFL)
-            signal.signal(signal.SIGTERM, signal.SIG_DFL)
-            sys.exit(0)
-        
-        # Register the signal handler for SIGINT (Ctrl+C) and SIGTERM
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
+        # Note: Signal handlers are now set up in the NetworkTest __init__ method
         
         logger.info(f"Network test running. Press Ctrl+C to stop and clean up resources.")
         
@@ -955,6 +1159,9 @@ if __name__ == "__main__":
         try:
             while True:
                 time.sleep(1)
+        except KeyboardInterrupt:
+            # Will be caught by our signal handler
+            pass
         except Exception as e:
             logger.error(f"Error in main loop: {e}")
             test.cleanup()
