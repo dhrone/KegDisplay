@@ -26,10 +26,14 @@ class DatabaseSync:
         self.broadcast_port = broadcast_port
         self.sync_port = sync_port
         self.version = self._get_db_version()
-        self.peers = {}  # {ip: (version, last_seen)}
+        self.peers = {}  # {ip: (version, last_seen, sync_port)}
         self.lock = threading.Lock()
         self.test_mode = test_mode
         self.test_peers = []  # List of peer instances for test mode
+        
+        # Store a list of all our local IP addresses
+        self.local_ips = self._get_all_local_ips()
+        logger.info(f"Identified local IP addresses: {', '.join(self.local_ips)}")
         
         # Setup network sockets
         if not test_mode:
@@ -303,7 +307,8 @@ class DatabaseSync:
         # Send discovery message
         msg = json.dumps({
             'type': 'discovery',
-            'version': self.version
+            'version': self.version,
+            'sync_port': self.sync_port  # Include our sync port in the message
         }).encode()
         
         logger.info(f"Broadcasting discovery message on port {self.broadcast_port}")
@@ -321,11 +326,15 @@ class DatabaseSync:
                 data, addr = self.broadcast_socket.recvfrom(1024)
                 msg = json.loads(data.decode())
                 
-                if addr[0] != self._get_local_ip():
+                # Check if the message is from our own IP
+                if addr[0] not in self.local_ips:
                     logger.info(f"Received response from peer {addr[0]}")
+                    peer_sync_port = msg.get('sync_port', self.sync_port)  # Default to our port if not provided
                     with self.lock:
-                        self.peers[addr[0]] = (msg['version'], time.time())
-                        logger.info(f"Added peer {addr[0]} with version {msg['version']}")
+                        self.peers[addr[0]] = (msg['version'], time.time(), peer_sync_port)
+                        logger.info(f"Added peer {addr[0]} with version {msg['version']} (sync port: {peer_sync_port})")
+                else:
+                    logger.debug(f"Ignoring message from self ({addr[0]})")
             except socket.timeout:
                 continue
             except Exception as e:
@@ -340,7 +349,7 @@ class DatabaseSync:
         
         with self.lock:
             logger.info(f"Found {len(self.peers)} peers during discovery")
-            for ip, (version, _) in self.peers.items():
+            for ip, (version, _, _) in self.peers.items():
                 # Check if this peer's version is different from ours
                 if version.get("hash") != self.version.get("hash"):
                     logger.info(f"Peer {ip} has different version: {version}")
@@ -408,12 +417,21 @@ class DatabaseSync:
         logger.info(f"Requesting full database from peer {peer_ip}")
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                logger.info(f"Connecting to {peer_ip}:{self.sync_port}")
-                s.connect((peer_ip, self.sync_port))
+                # Get the peer's sync port from our peers dictionary
+                peer_sync_port = self.sync_port  # Default
+                with self.lock:
+                    if peer_ip in self.peers:
+                        peer_data = self.peers[peer_ip]
+                        if len(peer_data) >= 3:  # Make sure we have the sync port
+                            peer_sync_port = peer_data[2]
+                
+                logger.info(f"Connecting to {peer_ip}:{peer_sync_port}")
+                s.connect((peer_ip, peer_sync_port))
                 
                 s.send(json.dumps({
                     'type': 'full_db_request',
-                    'version': self.version
+                    'version': self.version,
+                    'sync_port': self.sync_port  # Include our sync port
                 }).encode())
                 logger.info(f"Sent full database request to {peer_ip}")
                 
@@ -501,18 +519,26 @@ class DatabaseSync:
                 data, addr = self.broadcast_socket.recvfrom(1024)
                 msg = json.loads(data.decode())
                 
-                if addr[0] != self._get_local_ip():
+                # Check if the message is from our own IP
+                if addr[0] not in self.local_ips:
                     logger.info(f"Received broadcast from {addr[0]}: {msg['type']}")
+                    peer_sync_port = msg.get('sync_port', self.sync_port)  # Default to our port if not provided
                     with self.lock:
-                        old_version = self.peers.get(addr[0], (None, 0))[0] if addr[0] in self.peers else None
-                        self.peers[addr[0]] = (msg['version'], time.time())
+                        old_version = None
+                        if addr[0] in self.peers:
+                            old_version = self.peers[addr[0]][0]
+                        
+                        # Update peer info including sync port
+                        self.peers[addr[0]] = (msg['version'], time.time(), peer_sync_port)
                         
                         if old_version != msg['version']:
-                            logger.info(f"Peer {addr[0]} updated version to {msg['version']}")
+                            logger.info(f"Peer {addr[0]} updated version to {msg['version']} (sync port: {peer_sync_port})")
                             
                     if msg['type'] == 'update' and msg['version'] != self.version:
                         logger.info(f"Detected version change from {addr[0]}, requesting sync")
                         self._request_sync(addr[0])
+                else:
+                    logger.debug(f"Ignoring broadcast from self ({addr[0]})")
                         
             except socket.timeout:
                 continue
@@ -632,8 +658,16 @@ class DatabaseSync:
         logger.info(f"Requesting sync from peer {peer_ip}")
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                logger.info(f"Connecting to {peer_ip}:{self.sync_port}")
-                s.connect((peer_ip, self.sync_port))
+                # Get the peer's sync port from our peers dictionary
+                peer_sync_port = self.sync_port  # Default
+                with self.lock:
+                    if peer_ip in self.peers:
+                        peer_data = self.peers[peer_ip]
+                        if len(peer_data) >= 3:  # Make sure we have the sync port
+                            peer_sync_port = peer_data[2]
+                
+                logger.info(f"Connecting to {peer_ip}:{peer_sync_port}")
+                s.connect((peer_ip, peer_sync_port))
                 
                 # Get our last known timestamp
                 with sqlite3.connect(self.db_path) as conn:
@@ -645,7 +679,8 @@ class DatabaseSync:
                 s.send(json.dumps({
                     'type': 'sync_request',
                     'version': self.version,
-                    'last_timestamp': last_timestamp
+                    'last_timestamp': last_timestamp,
+                    'sync_port': self.sync_port  # Include our sync port in case the peer needs to contact us back
                 }).encode())
                 logger.info(f"Sent sync request to {peer_ip}")
                 
@@ -709,7 +744,8 @@ class DatabaseSync:
             try:
                 msg = json.dumps({
                     'type': 'heartbeat',
-                    'version': self.version
+                    'version': self.version,
+                    'sync_port': self.sync_port  # Include our sync port in heartbeat messages
                 }).encode()
                 
                 self.broadcast_socket.sendto(msg, 
@@ -724,9 +760,9 @@ class DatabaseSync:
             try:
                 with self.lock:
                     current_time = time.time()
-                    self.peers = {ip: (version, last_seen) 
-                                for ip, (version, last_seen) in self.peers.items()
-                                if current_time - last_seen < 15}
+                    self.peers = {ip: peer_data
+                                for ip, peer_data in self.peers.items()
+                                if current_time - peer_data[1] < 15}  # peer_data[1] is last_seen timestamp
                 time.sleep(5)
             except Exception as e:
                 logger.error(f"Peer cleanup error: {e}")
@@ -737,14 +773,64 @@ class DatabaseSync:
             try:
                 msg = json.dumps({
                     'type': 'update',
-                    'version': self.version
+                    'version': self.version,
+                    'sync_port': self.sync_port  # Include our sync port in update messages
                 }).encode()
                 
+                # Try to send to each peer individually
+                sent_count = 0
                 for ip in self.peers:
-                    self.broadcast_socket.sendto(msg, (ip, self.broadcast_port))
-                logger.info(f"Broadcasted version {self.version} to all peers")
+                    try:
+                        logger.info(f"Sending update notification to peer {ip}")
+                        self.broadcast_socket.sendto(msg, (ip, self.broadcast_port))
+                        sent_count += 1
+                    except Exception as e:
+                        logger.error(f"Error sending to peer {ip}: {e}")
+                
+                # Also send general broadcast
+                try:
+                    logger.info("Sending general broadcast update notification")
+                    self.broadcast_socket.sendto(msg, ('<broadcast>', self.broadcast_port))
+                    logger.info(f"Broadcasted version {self.version} to all peers ({sent_count} direct, 1 broadcast)")
+                except Exception as e:
+                    logger.error(f"Error sending broadcast: {e}")
+                    
+                # If we couldn't send to any peers directly, but we have peers, try sync directly
+                if sent_count == 0 and len(self.peers) > 0:
+                    logger.warning("Could not broadcast to any peers directly. Attempting direct sync...")
+                    self._force_sync_with_peers()
+                    
             except Exception as e:
                 logger.error(f"Broadcast version error: {e}")
+
+    def _force_sync_with_peers(self):
+        """Force sync with all known peers when broadcast fails"""
+        logger.info("Forcing direct sync with all known peers")
+        for ip in self.peers:
+            try:
+                logger.info(f"Requesting sync from peer {ip}")
+                self._request_sync(ip)
+            except Exception as e:
+                logger.error(f"Error forcing sync with peer {ip}: {e}")
+
+    def add_peer(self, peer_ip):
+        """Manually add a peer by IP address"""
+        # First check if this is our own IP
+        if peer_ip in self.local_ips:
+            logger.warning(f"Ignoring attempt to add self as peer: {peer_ip}")
+            return
+            
+        if peer_ip and peer_ip not in self.peers:
+            logger.info(f"Manually adding peer: {peer_ip}")
+            # Default to standard primary port 5003 for manually added peers
+            self.peers[peer_ip] = ({"hash": "unknown", "timestamp": "1970-01-01T00:00:00Z"}, time.time(), 5003)
+            
+            # Try to sync with this peer
+            try:
+                logger.info(f"Requesting initial sync from new peer {peer_ip}")
+                self._request_full_database(peer_ip)
+            except Exception as e:
+                logger.error(f"Error syncing with new peer {peer_ip}: {e}")
 
     def _handle_sync_response(self, client, addr):
         """Handle incoming sync responses"""
@@ -835,20 +921,207 @@ class DatabaseSync:
     def _get_local_ip(self):
         """Get the local IP address"""
         try:
+            # First try: using a socket connection to external server
+            logger.info("Getting local IP address...")
             s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(('8.8.8.8', 80))
-            ip = s.getsockname()[0]
-            s.close()
-            return ip
-        except Exception:
+            
+            # This doesn't actually establish a connection,
+            # but tells the OS to pick an interface that could reach this address
+            try:
+                s.connect(('8.8.8.8', 80))
+                ip = s.getsockname()[0]
+                s.close()
+                
+                if ip != '127.0.0.1' and ip != '127.0.1.1':
+                    logger.info(f"Found local IP using external connection method: {ip}")
+                    return ip
+            except Exception as e:
+                logger.error(f"Error getting IP via socket: {e}")
+            
+            # Second try: using hostname
+            try:
+                hostname = socket.gethostname()
+                ip = socket.gethostbyname(hostname)
+                
+                if ip != '127.0.0.1' and ip != '127.0.1.1':
+                    logger.info(f"Found local IP using hostname method: {ip}")
+                    return ip
+            except Exception as e:
+                logger.error(f"Error getting IP via hostname: {e}")
+            
+            # Third try: using network interfaces
+            try:
+                import netifaces
+                for interface in netifaces.interfaces():
+                    try:
+                        addresses = netifaces.ifaddresses(interface)
+                        if netifaces.AF_INET in addresses:
+                            for address in addresses[netifaces.AF_INET]:
+                                if 'addr' in address and address['addr'] != '127.0.0.1' and address['addr'] != '127.0.1.1':
+                                    logger.info(f"Found local IP using netifaces method: {address['addr']}")
+                                    return address['addr']
+                    except Exception as e:
+                        logger.error(f"Error checking interface {interface}: {e}")
+            except ImportError:
+                logger.warning("netifaces module not available, falling back to other methods")
+                
+                # Fourth try: try various commands
+                try:
+                    import subprocess
+                    
+                    # Try ip command
+                    try:
+                        result = subprocess.check_output(['ip', '-4', 'addr', 'show', 'scope', 'global']).decode('utf-8')
+                        for line in result.split('\n'):
+                            if 'inet ' in line:
+                                ip = line.strip().split()[1].split('/')[0]
+                                if ip != '127.0.0.1' and ip != '127.0.1.1':
+                                    logger.info(f"Found local IP using ip command: {ip}")
+                                    return ip
+                    except:
+                        pass
+                    
+                    # Try ifconfig command
+                    try:
+                        result = subprocess.check_output(['ifconfig']).decode('utf-8')
+                        for line in result.split('\n'):
+                            if 'inet ' in line and '127.0.0.1' not in line and '127.0.1.1' not in line:
+                                parts = line.strip().split()
+                                for i, part in enumerate(parts):
+                                    if part == 'inet' and i+1 < len(parts):
+                                        ip = parts[i+1].split(':')[-1]
+                                        logger.info(f"Found local IP using ifconfig command: {ip}")
+                                        return ip
+                    except:
+                        pass
+                    
+                    # Try hostname -I command (Linux)
+                    try:
+                        result = subprocess.check_output(['hostname', '-I']).decode('utf-8').strip()
+                        if result:
+                            ip = result.split()[0]
+                            if ip != '127.0.0.1' and ip != '127.0.1.1':
+                                logger.info(f"Found local IP using hostname -I command: {ip}")
+                                return ip
+                    except:
+                        pass
+                        
+                except Exception as e:
+                    logger.error(f"Error using subprocess for network interfaces: {e}")
+            
+            # Fallback
+            logger.warning("Could not find a suitable local IP, falling back to 127.0.0.1")
             return '127.0.0.1'
+        except Exception as e:
+            logger.error(f"Error getting local IP: {e}")
+            return '127.0.0.1'
+
+    def _get_all_local_ips(self):
+        """Get a list of all local IP addresses to avoid self-connections"""
+        local_ips = ['127.0.0.1', '127.0.1.1']  # Always include localhost
+        
+        try:
+            # Get the "main" IP first
+            main_ip = self._get_local_ip()
+            if main_ip not in local_ips:
+                local_ips.append(main_ip)
+                
+            # Try to get additional IPs using various methods
+            try:
+                import netifaces
+                for interface in netifaces.interfaces():
+                    try:
+                        addresses = netifaces.ifaddresses(interface)
+                        if netifaces.AF_INET in addresses:
+                            for address in addresses[netifaces.AF_INET]:
+                                if 'addr' in address and address['addr'] not in local_ips:
+                                    local_ips.append(address['addr'])
+                    except Exception:
+                        pass
+            except ImportError:
+                # Fallback methods if netifaces is not available
+                try:
+                    import subprocess
+                    try:
+                        result = subprocess.check_output(['hostname', '-I']).decode('utf-8').strip()
+                        if result:
+                            for ip in result.split():
+                                if ip.strip() and ip.strip() not in local_ips:
+                                    local_ips.append(ip.strip())
+                    except:
+                        pass
+                        
+                    try:
+                        result = subprocess.check_output(['ifconfig']).decode('utf-8')
+                        for line in result.split('\n'):
+                            if 'inet ' in line and '127.0.0.1' not in line and '127.0.1.1' not in line:
+                                parts = line.strip().split()
+                                for i, part in enumerate(parts):
+                                    if part == 'inet' and i+1 < len(parts):
+                                        ip = parts[i+1].split(':')[-1]
+                                        if ip not in local_ips:
+                                            local_ips.append(ip)
+                    except:
+                        pass
+                except Exception:
+                    pass
+                    
+            # Try socket connection to different addresses to find all interfaces
+            try:
+                for test_addr in ['8.8.8.8', '1.1.1.1', '192.168.1.1']:
+                    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                    try:
+                        s.connect((test_addr, 80))
+                        ip = s.getsockname()[0]
+                        if ip not in local_ips:
+                            local_ips.append(ip)
+                    except:
+                        pass
+                    finally:
+                        s.close()
+            except:
+                pass
+                
+        except Exception as e:
+            logger.error(f"Error getting all local IPs: {e}")
+            
+        return local_ips
 
     def stop(self):
         """Stop the sync service"""
+        logger.info("Stopping database sync service")
         self.running = False
+        
         if not self.test_mode:
-            self.broadcast_socket.close()
-            self.sync_socket.close()
+            try:
+                # Close broadcast socket safely
+                try:
+                    logger.info("Closing broadcast socket")
+                    self.broadcast_socket.shutdown(socket.SHUT_RDWR)
+                    self.broadcast_socket.close()
+                    logger.info("Broadcast socket closed")
+                except Exception as e:
+                    logger.warning(f"Error closing broadcast socket: {e}")
+                
+                # Close sync socket safely
+                try:
+                    logger.info("Closing sync socket")
+                    self.sync_socket.shutdown(socket.SHUT_RDWR)
+                    self.sync_socket.close()
+                    logger.info("Sync socket closed")
+                except Exception as e:
+                    logger.warning(f"Error closing sync socket: {e}")
+                
+                # Wait for threads to finish
+                logger.info("Waiting for threads to complete")
+                if hasattr(self, 'threads'):
+                    for thread in self.threads:
+                        if thread.is_alive():
+                            thread.join(1.0)  # Wait up to 1 second for each thread
+                
+                logger.info("Database sync service stopped")
+            except Exception as e:
+                logger.error(f"Error during shutdown: {e}")
 
     def _ensure_valid_session(self):
         """Ensure we have a valid tracking session"""

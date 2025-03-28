@@ -10,6 +10,8 @@ import hashlib
 import argparse
 import logging
 import random
+import json
+import socket
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -75,6 +77,10 @@ class NetworkTest:
         # Log network information
         self._log_network_info()
         
+        # If we have explicit other_ips, add them directly
+        if self.other_ips:
+            self._add_manual_peers()
+        
     def _create_initial_db(self):
         """Create an initial database with some test data"""
         conn = sqlite3.connect(self.db_path)
@@ -117,21 +123,53 @@ class NetworkTest:
     
     def _log_network_info(self):
         """Log network interface information to help with debugging"""
-        import socket
-        
         try:
             # Get hostname
             hostname = socket.gethostname()
             logger.info(f"Hostname: {hostname}")
             
             # Get IP addresses
-            host_ip = socket.gethostbyname(hostname)
-            logger.info(f"Host IP: {host_ip}")
+            try:
+                host_ip = socket.gethostbyname(hostname)
+                logger.info(f"Host IP: {host_ip}")
+            except Exception as e:
+                logger.error(f"Error getting host IP: {e}")
             
-            # Get all network interfaces
+            # Get all network interfaces more safely
             logger.info("Network interfaces:")
-            for interface, addrs in socket.getaddrinfo(socket.gethostname(), None):
-                logger.info(f"  {addrs[0]} - {addrs[4][0]}")
+            try:
+                import netifaces
+                for interface in netifaces.interfaces():
+                    try:
+                        addresses = netifaces.ifaddresses(interface)
+                        if netifaces.AF_INET in addresses:
+                            for address in addresses[netifaces.AF_INET]:
+                                logger.info(f"  {interface}: {address['addr']}")
+                    except Exception as e:
+                        logger.error(f"Error getting info for interface {interface}: {e}")
+            except ImportError:
+                # Fallback if netifaces is not available
+                try:
+                    import subprocess
+                    # Try to get interfaces using ifconfig command
+                    try:
+                        result = subprocess.check_output(['ifconfig']).decode('utf-8')
+                        logger.info("Network interfaces from ifconfig:")
+                        for line in result.split('\n'):
+                            if 'inet ' in line:
+                                logger.info(f"  {line.strip()}")
+                    except:
+                        # Try using ip addr command
+                        try:
+                            result = subprocess.check_output(['ip', 'addr']).decode('utf-8')
+                            logger.info("Network interfaces from ip addr:")
+                            for line in result.split('\n'):
+                                if 'inet ' in line:
+                                    logger.info(f"  {line.strip()}")
+                        except:
+                            logger.error("Could not get network interfaces with subprocess commands")
+                except Exception as e:
+                    logger.error(f"Error using subprocess for network interfaces: {e}")
                 
             # Test local broadcast
             logger.info(f"Testing broadcast on port {self.broadcast_port}...")
@@ -258,33 +296,44 @@ class NetworkTest:
         """Run the test as the primary instance"""
         try:
             logger.info("=== STARTING PRIMARY TEST SEQUENCE ===")
-            logger.info(f"Waiting for secondary instances to connect ({len(self.other_ips)} expected)...")
+            
+            # Generate the beer name first
+            beer_name = f"New Beer {random.randint(100, 999)}"
+            abv = round(random.uniform(4.0, 10.0), 1)
+            
+            # Print instructions for secondary BEFORE making changes
+            logger.info("\n=== INSTRUCTIONS FOR SECONDARY INSTANCES ===")
+            logger.info("Please start the secondary instance now with:")
+            logger.info(f"poetry run python -m KegDisplay.tests.network_test secondary --primary-ip <THIS_MACHINE_IP>")
+            logger.info("\nAfter secondary is running, the primary will make a test change.")
+            logger.info("You can verify the change was received with:")
+            logger.info(f"poetry run python -m KegDisplay.tests.network_test verify --beer-name \"{beer_name}\" --primary-ip <THIS_MACHINE_IP>")
+            logger.info("=======================================\n")
             
             # Log peers before the test
             self._log_peers()
             
+            
+            logger.info(f"Waiting for secondary instances to connect ({len(self.other_ips)} expected)...")
             time.sleep(10)  # Give time for secondary instances to start
             
             # Log peers after wait
             self._log_peers()
             
-            # Make a test change
+            # Make the test change with the pre-generated name
             logger.info("Creating a test change")
-            beer_name = self.make_change()
-            if not beer_name:
-                return False
-            
-            # Print instructions for secondary
-            logger.info("\n=== INSTRUCTIONS FOR SECONDARY INSTANCES ===")
-            logger.info(f"Please verify the beer '{beer_name}' has been synchronized")
-            logger.info(f"Run with: poetry run python -m KegDisplay.tests.network_test verify --beer-name \"{beer_name}\"")
-            logger.info("=======================================\n")
+            self._make_change(beer_name, abv)
             
             # Give time for changes to propagate and log peers again
             time.sleep(5)
             self._log_peers()
             
-            # Wait for verification
+            # Display reminder of verification command
+            logger.info("\n=== VERIFICATION INSTRUCTIONS ===")
+            logger.info(f"Verify the change was received with:")
+            logger.info(f"poetry run python -m KegDisplay.tests.network_test verify --beer-name \"{beer_name}\" --primary-ip <THIS_MACHINE_IP>")
+            logger.info("================================\n")
+            
             logger.info("Test complete. Check secondary instances for successful sync.")
             logger.info(f"Log file: {self.log_file}")
             return True
@@ -380,7 +429,183 @@ class NetworkTest:
     
     def verify_specific_beer(self, beer_name):
         """Verify a specific beer name has been synchronized"""
+        # First check if we have any peers
+        self._check_network_connectivity()
         return self.verify_change(beer_name)
+    
+    def _check_network_connectivity(self):
+        """Check and troubleshoot network connectivity issues"""
+        logger.info("Checking network connectivity...")
+        
+        # Check if we have any peers
+        peer_count = len(self.instance.peers)
+        logger.info(f"Current peer count: {peer_count}")
+        
+        if peer_count == 0:
+            logger.warning("⚠️ NO PEERS DETECTED - Network connectivity issues detected")
+            
+            # 1. Try to get local IP addresses
+            local_ips = self._get_local_ips()
+            logger.info(f"Local IP addresses: {local_ips}")
+            
+            # 2. Try manual ping to discover potential peers
+            self._try_manual_discovery()
+            
+            # 3. Check firewall status
+            self._check_firewall()
+            
+            # 4. Check if broadcast is working
+            self._test_broadcast()
+            
+            # 5. Provide troubleshooting suggestions
+            logger.warning("\n===== TROUBLESHOOTING SUGGESTIONS =====")
+            logger.warning("1. Ensure primary instance is running")
+            logger.warning("2. Check that both machines are on the same network")
+            logger.warning("3. Verify firewall settings allow UDP port 5002 (broadcast) and TCP ports 5003/5004 (sync)")
+            logger.warning("4. Try specifying the primary IP directly:")
+            for ip in local_ips:
+                parts = ip.split('.')
+                if len(parts) == 4:
+                    network_prefix = '.'.join(parts[0:3])
+                    logger.warning(f"   - Check for devices on network {network_prefix}.*")
+            logger.warning("=====================================\n")
+        else:
+            logger.info(f"✅ Connected to {peer_count} peers")
+            self._log_peers()
+
+    def _get_local_ips(self):
+        """Get a list of all local IP addresses"""
+        ips = []
+        try:
+            # First try: using hostname
+            try:
+                hostname = socket.gethostname()
+                ip = socket.gethostbyname(hostname)
+                
+                if ip != '127.0.0.1' and ip != '127.0.1.1':
+                    logger.info(f"Found local IP using hostname method: {ip}")
+                    ips.append(ip)
+            except Exception as e:
+                logger.error(f"Error getting IP via hostname: {e}")
+            
+            # Try secondary method
+            try:
+                import netifaces
+                for interface in netifaces.interfaces():
+                    try:
+                        addresses = netifaces.ifaddresses(interface)
+                        if netifaces.AF_INET in addresses:
+                            for address in addresses[netifaces.AF_INET]:
+                                if 'addr' in address and address['addr'] != '127.0.0.1' and address['addr'] != '127.0.1.1':
+                                    ips.append(address['addr'])
+                    except:
+                        pass
+            except ImportError:
+                # Fallback if netifaces is not available
+                try:
+                    import subprocess
+                    try:
+                        result = subprocess.check_output(['hostname', '-I']).decode('utf-8').strip()
+                        if result:
+                            ips.extend([ip.strip() for ip in result.split(' ') if ip.strip()])
+                    except:
+                        pass
+                except:
+                    pass
+        except Exception as e:
+            logger.error(f"Error getting local IPs: {e}")
+        
+        return ips
+
+    def _try_manual_discovery(self):
+        """Try to manually discover peers on the network"""
+        logger.info("Attempting manual peer discovery...")
+        try:
+            # Try sending a discovery message again
+            msg = json.dumps({
+                'type': 'discovery',
+                'version': self.instance.version
+            }).encode()
+            
+            logger.info(f"Broadcasting discovery message on port {self.instance.broadcast_port}")
+            self.instance.broadcast_socket.sendto(msg, ('<broadcast>', self.instance.broadcast_port))
+            
+            # Wait for responses
+            discovery_time = 10  # seconds
+            start_time = time.time()
+            logger.info(f"Waiting {discovery_time} seconds for peer responses...")
+            
+            discovered = False
+            while time.time() - start_time < discovery_time:
+                try:
+                    self.instance.broadcast_socket.settimeout(0.5)
+                    data, addr = self.instance.broadcast_socket.recvfrom(1024)
+                    msg = json.loads(data.decode())
+                    
+                    local_ip = self.instance._get_local_ip()
+                    if addr[0] != local_ip:
+                        logger.info(f"✅ Discovered peer at {addr[0]} with version {msg.get('version', 'unknown')}")
+                        discovered = True
+                except socket.timeout:
+                    continue
+                except Exception as e:
+                    logger.error(f"Discovery error: {e}")
+            
+            if not discovered:
+                logger.warning("❌ No peers discovered during manual discovery")
+            
+        except Exception as e:
+            logger.error(f"Error during manual discovery: {e}")
+
+    def _check_firewall(self):
+        """Check firewall status"""
+        logger.info("Checking firewall status...")
+        try:
+            import subprocess
+            
+            # Try different commands based on OS
+            try:
+                # Linux - iptables
+                result = subprocess.check_output(['iptables', '-L'], stderr=subprocess.STDOUT).decode('utf-8')
+                logger.info("Firewall info (iptables):")
+                for line in result.split('\n')[:10]:  # Show first 10 lines
+                    if line.strip():
+                        logger.info(f"  {line.strip()}")
+            except:
+                try:
+                    # Linux - ufw
+                    result = subprocess.check_output(['ufw', 'status'], stderr=subprocess.STDOUT).decode('utf-8')
+                    logger.info("Firewall info (ufw):")
+                    for line in result.split('\n'):
+                        if line.strip():
+                            logger.info(f"  {line.strip()}")
+                except:
+                    logger.info("Could not determine firewall status")
+        except Exception as e:
+            logger.error(f"Error checking firewall: {e}")
+
+    def _test_broadcast(self):
+        """Test if broadcast is working"""
+        logger.info("Testing broadcast capability...")
+        try:
+            # Try sending a broadcast on a different test port
+            test_port = self.instance.broadcast_port + 1000  # Use a different port
+            test_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            test_socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+            
+            # Don't bind, just send
+            msg = "broadcast_test".encode()
+            logger.info(f"Sending test broadcast on port {test_port}")
+            
+            try:
+                test_socket.sendto(msg, ('<broadcast>', test_port))
+                logger.info("✅ Test broadcast sent successfully")
+            except Exception as e:
+                logger.error(f"❌ Error sending test broadcast: {e}")
+            
+            test_socket.close()
+        except Exception as e:
+            logger.error(f"Error testing broadcast: {e}")
     
     def cleanup(self):
         """Clean up resources"""
@@ -394,16 +619,137 @@ class NetworkTest:
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
 
+    def _add_manual_peers(self):
+        """Manually add peers from the provided IP addresses"""
+        if self.other_ips:
+            logger.info(f"Adding manual peers from command line: {self.other_ips}")
+            for ip in self.other_ips:
+                logger.info(f"Adding manual peer: {ip}")
+                # Use the new add_peer method
+                self.instance.add_peer(ip)
+                
+                # Also try direct connection
+                self._try_direct_connection(ip)
+
+    def _try_direct_connection(self, peer_ip):
+        """Try to directly connect to a peer"""
+        logger.info(f"Attempting direct connection to {peer_ip}")
+        try:
+            # First try requesting full database
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(5)  # 5 second timeout
+                port = 5003  # Primary uses 5003
+                
+                logger.info(f"Connecting to {peer_ip}:{port}")
+                try:
+                    s.connect((peer_ip, port))
+                    logger.info(f"✅ Successfully connected to {peer_ip}:{port}")
+                    
+                    # Try sending a request
+                    try:
+                        s.send(json.dumps({
+                            'type': 'full_db_request',
+                            'version': self.instance.version
+                        }).encode())
+                        logger.info(f"Sent full database request to {peer_ip}")
+                        
+                        # Wait for response
+                        try:
+                            response = s.recv(1024).decode()
+                            logger.info(f"✅ Received response from {peer_ip}: {response[:100]}")
+                            return True
+                        except socket.timeout:
+                            logger.error(f"Timeout waiting for response from {peer_ip}")
+                    except Exception as e:
+                        logger.error(f"Error sending request to {peer_ip}: {e}")
+                except ConnectionRefusedError:
+                    logger.error(f"Connection refused by {peer_ip}:{port}")
+                except socket.timeout:
+                    logger.error(f"Connection to {peer_ip}:{port} timed out")
+                except Exception as e:
+                    logger.error(f"Error connecting to {peer_ip}:{port}: {e}")
+            
+            return False
+        except Exception as e:
+            logger.error(f"Error in direct connection attempt: {e}")
+            return False
+
+    def _make_change(self, beer_name, abv):
+        """Make a change to the database with a specific beer name and ABV"""
+        if self.role != 'primary':
+            logger.error("Only primary instance should make changes")
+            return False
+        
+        try:
+            logger.info(f"Making database change: Adding beer '{beer_name}' with ABV {abv}")
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Insert the new beer
+                cursor.execute('''
+                    INSERT INTO beers (Name, ABV, Description)
+                    VALUES (?, ?, ?)
+                ''', (beer_name, abv, f'Test beer {beer_name}'))
+                
+                # Get the rowid of the inserted record
+                row_id = cursor.lastrowid
+                logger.info(f"Inserted new beer with rowid {row_id}")
+                
+                # Log the change manually to see it in our test logs
+                timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+                cursor.execute(f"SELECT * FROM beers WHERE rowid = ?", (row_id,))
+                row = cursor.fetchone()
+                content_hash = hashlib.md5(str(row).encode()).hexdigest()
+                
+                logger.info(f"Adding to change_log: table=beers, operation=INSERT, row_id={row_id}, timestamp={timestamp}")
+                cursor.execute('''
+                    INSERT INTO change_log (table_name, operation, row_id, timestamp, content_hash)
+                    VALUES (?, ?, ?, ?, ?)
+                ''', ('beers', 'INSERT', row_id, timestamp, content_hash))
+                
+                # Update version timestamp
+                cursor.execute("UPDATE version SET last_modified = ?", (timestamp,))
+                
+                conn.commit()
+            
+            # Notify the database sync system of the change
+            logger.info("Calling notify_update() to broadcast change to peers")
+            self.instance.notify_update()
+            
+            logger.info(f"Made change: Added beer '{beer_name}' with ABV {abv}")
+            
+            # Log database version
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT last_modified FROM version")
+                version = cursor.fetchone()[0]
+                logger.info(f"Current database version timestamp: {version}")
+                
+                # Log change log entries
+                cursor.execute("SELECT * FROM change_log ORDER BY id DESC LIMIT 5")
+                changes = cursor.fetchall()
+                logger.info(f"Recent change log entries:")
+                for change in changes:
+                    logger.info(f"  {change}")
+                
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error making change: {e}")
+            return False
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run database sync tests over a real network")
     parser.add_argument("role", choices=["primary", "secondary", "verify"], 
                        help="Role of this instance (primary, secondary, or verify)")
     parser.add_argument("--ip", action="append", dest="ips",
-                       help="IP address of other instances (for primary only, can specify multiple)")
+                       help="IP address of other instances (can specify multiple)")
     parser.add_argument("--port", type=int, default=5002,
                        help="Broadcast port to use (default: 5002)")
     parser.add_argument("--beer-name", help="Beer name to verify (for verify command)")
+    parser.add_argument("--primary-ip", help="Directly specify primary IP for secondary instance")
     
     args = parser.parse_args()
     
@@ -412,7 +758,12 @@ if __name__ == "__main__":
             logger.error("Must specify --beer-name for verify command")
             sys.exit(1)
             
-        test = NetworkTest("secondary", broadcast_port=args.port)
+        # For verify, if primary-ip is specified, add it to ips
+        ips = args.ips or []
+        if args.primary_ip and args.primary_ip not in ips:
+            ips.append(args.primary_ip)
+            
+        test = NetworkTest("secondary", ips, broadcast_port=args.port)
         result = test.verify_specific_beer(args.beer_name)
         sys.exit(0 if result else 1)
     
@@ -424,7 +775,12 @@ if __name__ == "__main__":
             time.sleep(1)
     
     elif args.role == "secondary":
-        test = NetworkTest("secondary", broadcast_port=args.port)
+        # For secondary, if primary-ip is specified, add it to ips
+        ips = args.ips or []
+        if args.primary_ip and args.primary_ip not in ips:
+            ips.append(args.primary_ip)
+            
+        test = NetworkTest("secondary", ips, broadcast_port=args.port)
         result = test.run_secondary_test()
         # Keep running to allow inspection
         while True:

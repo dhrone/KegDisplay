@@ -7,6 +7,7 @@ This script allows you to test the DatabaseSync functionality over a real networ
 - Two or more computers on the same network
 - Each computer must have KegDisplay installed
 - Ports 5002 (broadcast) and 5003/5004 (sync) must be open in firewalls
+- Optional: For network diagnostics, install: `pip install netifaces`
 
 ## Usage
 
@@ -37,8 +38,11 @@ The primary will:
 On each secondary machine:
 
 ```bash
-# Start the secondary instance
+# Start the secondary instance (uses UDP broadcast discovery)
 poetry run python -m KegDisplay.tests.network_test secondary
+
+# If broadcast discovery doesn't work, specify the primary IP directly:
+poetry run python -m KegDisplay.tests.network_test secondary --primary-ip 192.168.1.100
 ```
 
 The secondary will:
@@ -54,11 +58,40 @@ After the primary makes a change, you can verify if the change was received on a
 ```bash
 # Use the beer name displayed by the primary
 poetry run python -m KegDisplay.tests.network_test verify --beer-name "New Beer 123"
+
+# If broadcast discovery isn't working, specify the primary IP:
+poetry run python -m KegDisplay.tests.network_test verify --beer-name "New Beer 123" --primary-ip 192.168.1.100
 ```
 
 The verify command will:
 1. Check if the specified beer exists in the secondary's database
 2. Display a success or failure message
+
+## Network Diagnostics
+
+If the secondary cannot connect to the primary, the test script now includes enhanced diagnostics:
+
+1. **Automatic IP detection**: Tries to identify all local network interfaces
+2. **Connectivity checking**: Performs multiple tests to diagnose network issues
+3. **Firewall diagnosis**: Checks firewall settings that might block communications
+4. **Broadcast testing**: Verifies that UDP broadcasts are being sent correctly
+
+When connectivity issues are detected, the script will:
+1. Display warning messages with troubleshooting suggestions
+2. Show network interface details to help identify the correct IP addresses
+3. Log detailed diagnostic information to the log file
+
+### Troubleshooting Network Issues
+
+If the secondary can't discover the primary:
+
+1. Check the log file for detailed diagnostics
+2. Use the `--primary-ip` option to directly specify the primary's IP address:
+   ```bash
+   poetry run python -m KegDisplay.tests.network_test secondary --primary-ip 192.168.1.100
+   ```
+3. Verify that UDP port 5002 and TCP ports 5003/5004 are open in firewalls
+4. Ensure both machines are on the same network/subnet
 
 ## Custom Configuration
 
