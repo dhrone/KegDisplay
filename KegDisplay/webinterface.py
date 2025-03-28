@@ -5,6 +5,10 @@ import os
 import bcrypt
 from functools import wraps
 from datetime import datetime, UTC
+import logging
+
+# Import the SyncedDatabase
+from KegDisplay.db import SyncedDatabase
 
 # Get the directory where this script is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -13,6 +17,16 @@ PASSWD_PATH = os.path.join(BASE_DIR, 'passwd')
 TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
 print(f"Password file path: {PASSWD_PATH}")
 print(f"Template directory: {TEMPLATE_DIR}")
+
+# Initialize the SyncedDatabase
+synced_db = SyncedDatabase(
+    db_path=DB_PATH,
+    broadcast_port=5002,
+    sync_port=5003,
+    test_mode=False
+)
+logger = logging.getLogger("KegDisplay")
+logger.info("Initialized SyncedDatabase for web interface")
 
 app = Flask(__name__, 
            template_folder=TEMPLATE_DIR)  # Specify the template folder
@@ -140,8 +154,10 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+# This function is now used by the web interface to log changes
+# The SyncedDatabase handles the synchronization
 def log_change(conn, table_name, operation, row_id):
-    """Log a database change"""
+    """Log a database change and trigger synchronization"""
     cursor = conn.cursor()
     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     
@@ -161,6 +177,26 @@ def log_change(conn, table_name, operation, row_id):
     # Update version timestamp
     cursor.execute("UPDATE version SET last_modified = ?", (timestamp,))
     conn.commit()
+    
+    # Notify peers about the change
+    if table_name == 'beers':
+        logger.info(f"Database change in 'beers': {operation} on row {row_id}")
+        if operation == 'INSERT':
+            # Let SyncedDatabase handle the notification
+            synced_db.notify_update()
+        elif operation == 'UPDATE':
+            synced_db.notify_update()
+        elif operation == 'DELETE':
+            synced_db.notify_update()
+    
+    elif table_name == 'taps':
+        logger.info(f"Database change in 'taps': {operation} on row {row_id}")
+        if operation == 'INSERT':
+            synced_db.notify_update()
+        elif operation == 'UPDATE':
+            synced_db.notify_update()
+        elif operation == 'DELETE':
+            synced_db.notify_update()
 
 @app.route('/add_record/<table_name>', methods=['POST'])
 @login_required
@@ -246,6 +282,8 @@ def update_record(table_name, record_id):
         # Log the change
         log_change(conn, table_name, 'UPDATE', record_id)
         
+        conn.commit()
+        
         return jsonify({
             "success": True,
             "message": "Record updated successfully"
@@ -255,28 +293,70 @@ def update_record(table_name, record_id):
         error_msg = str(e)
         if "UNIQUE constraint failed" in error_msg:
             return jsonify({
-                "error": "This update violates a unique constraint. The value already exists."
-            }), 400
-        elif "NOT NULL constraint failed" in error_msg:
-            column = error_msg.split(".")[-1]
-            return jsonify({
-                "error": f"The {column} field cannot be empty."
+                "error": "This record violates a unique constraint. The value already exists."
             }), 400
         else:
             return jsonify({
-                "error": "This update violates a database constraint."
+                "error": "This record violates a database constraint."
             }), 400
-            
+    
     except Exception as e:
         return jsonify({
-            "error": "An unexpected error occurred while updating the record."
+            "error": f"An unexpected error occurred while updating the record: {str(e)}"
         }), 500
+    
     finally:
         if 'conn' in locals():
             conn.close()
 
+def start():
+    """Start the web interface"""
+    
+    import argparse
+    parser = argparse.ArgumentParser(description='KegDisplay Web Interface')
+    parser.add_argument('--host', default='0.0.0.0', help='Host to listen on')
+    parser.add_argument('--port', type=int, default=8080, help='Port to listen on')
+    args = parser.parse_args()
+    
+    # Make sure all required tables exist
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Create change_log table if it doesn't exist
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS change_log (
+        id INTEGER PRIMARY KEY,
+        table_name TEXT,
+        operation TEXT,
+        row_id INTEGER,
+        timestamp TEXT,
+        content_hash TEXT
+    )
+    ''')
+    
+    # Create version table if it doesn't exist
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS version (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        last_modified TEXT
+    )
+    ''')
+    
+    # Make sure there's an entry in the version table
+    cursor.execute('SELECT COUNT(*) FROM version')
+    if cursor.fetchone()[0] == 0:
+        cursor.execute('''
+        INSERT INTO version (id, last_modified) VALUES (1, datetime('now'))
+        ''')
+    
+    conn.commit()
+    conn.close()
+    
+    # Start the Flask application
+    app.run(host=args.host, port=args.port, debug=True)
+    
+    # When shutting down, stop the synced_db gracefully
+    synced_db.stop()
+
 if __name__ == '__main__':
-    # Enable debug logging
-    app.logger.setLevel('DEBUG')
-    print("Starting web server...")
-    app.run(host='0.0.0.0', port=5001, debug=True) 
+    start() 
