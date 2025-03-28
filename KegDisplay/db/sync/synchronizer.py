@@ -408,23 +408,22 @@ class DatabaseSynchronizer:
                 # Send acknowledgment
                 s.send(self.protocol.create_ack_message())
                 
-                # Receive full database content
-                temp_db_path = f"{self.db_manager.db_path}.new"
+                # Receive full database content to temporary file for validation
+                temp_db_path = f"{self.db_manager.db_path}.temp"
                 self._receive_database_file(s, temp_db_path)
                 
-                # Apply the changes
+                # Apply the changes through database manager API
                 logger.info(f"Applying {len(changes)} changes to our database")
-                self.change_tracker.apply_changes(changes)
+                self.db_manager.apply_sync_changes(changes, temp_db_path)
                 
-                # Backup the old database
-                if os.path.exists(self.db_manager.db_path):
-                    backup_path = f"{self.db_manager.db_path}.bak"
-                    shutil.copy2(self.db_manager.db_path, backup_path)
-                    logger.info(f"Backed up old database to {backup_path}")
+                # Now we can safely remove the temporary file
+                if os.path.exists(temp_db_path):
+                    try:
+                        os.remove(temp_db_path)
+                    except Exception as e:
+                        logger.warning(f"Failed to remove temporary database file: {e}")
                 
-                # Replace the database
-                shutil.move(temp_db_path, self.db_manager.db_path)
-                logger.info(f"Replaced database with new version")
+                logger.info(f"Database updated with changes from peer")
             else:
                 logger.info(f"Peer {peer_ip} has no changes for us")
             
@@ -502,26 +501,32 @@ class DatabaseSynchronizer:
                 s.send(self.protocol.create_ack_message())
                 
                 # Prepare temporary file to receive database
-                temp_db_path = f"{self.db_manager.db_path}.new"
+                temp_db_path = f"{self.db_manager.db_path}.temp"
                 
                 # Receive the database file
                 bytes_received = self._receive_database_file(s, temp_db_path)
                 
                 if bytes_received > 0:
-                    # Backup the old database
-                    if os.path.exists(self.db_manager.db_path):
-                        backup_path = f"{self.db_manager.db_path}.bak"
-                        shutil.copy2(self.db_manager.db_path, backup_path)
-                        logger.info(f"Backed up old database to {backup_path}")
+                    # Import the database content through the database manager API
+                    success = self.db_manager.import_from_file(temp_db_path)
                     
-                    # Replace the database
-                    shutil.move(temp_db_path, self.db_manager.db_path)
-                    logger.info(f"Replaced database with new version")
+                    # Remove the temporary file
+                    if os.path.exists(temp_db_path):
+                        try:
+                            os.remove(temp_db_path)
+                        except Exception as e:
+                            logger.warning(f"Failed to remove temporary database file: {e}")
                     
-                    # Need to re-initialize the change tracking
-                    self.change_tracker.initialize_tracking()
-                    
-                    return True
+                    if success:
+                        logger.info(f"Successfully imported database from peer")
+                        
+                        # Need to re-initialize the change tracking
+                        self.change_tracker.initialize_tracking()
+                        
+                        return True
+                    else:
+                        logger.error(f"Failed to import database from peer")
+                        return False
                 else:
                     logger.error(f"No data received from peer {peer_ip}")
                     return False
