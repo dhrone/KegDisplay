@@ -195,7 +195,7 @@ def start():
                                     )
                     if key == 'taps':
                         if isinstance(value, dict):
-                            ds.update("taps", value, merge=True)
+                            ds.update("taps", {value['idTap']: value['idBeer']}, merge=True)
                         else:
                             for item in value:
                                 if 'idTap' in item:
