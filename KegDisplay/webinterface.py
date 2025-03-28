@@ -4,6 +4,7 @@ import sqlite3
 import os
 import bcrypt
 from functools import wraps
+from datetime import datetime, UTC
 
 # Get the directory where this script is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -139,6 +140,28 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+def log_change(conn, table_name, operation, row_id):
+    """Log a database change"""
+    cursor = conn.cursor()
+    timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    
+    # Calculate content hash for the table
+    cursor.execute(f"SELECT * FROM {table_name} WHERE rowid = ?", (row_id,))
+    row = cursor.fetchone()
+    if row:
+        content_hash = str(row)
+    else:
+        content_hash = "0"
+    
+    cursor.execute('''
+        INSERT INTO change_log (table_name, operation, row_id, timestamp, content_hash)
+        VALUES (?, ?, ?, ?, ?)
+    ''', (table_name, operation, row_id, timestamp, content_hash))
+    
+    # Update version timestamp
+    cursor.execute("UPDATE version SET last_modified = ?", (timestamp,))
+    conn.commit()
+
 @app.route('/add_record/<table_name>', methods=['POST'])
 @login_required
 def add_record(table_name):
@@ -151,6 +174,13 @@ def add_record(table_name):
         cursor = conn.cursor()
         placeholders = ','.join(['?' for _ in columns])
         cursor.execute(f"INSERT INTO {table_name} ({','.join(columns)}) VALUES ({placeholders})", values)
+        
+        # Get the rowid of the inserted record
+        row_id = cursor.lastrowid
+        
+        # Log the change
+        log_change(conn, table_name, 'INSERT', row_id)
+        
         conn.commit()
         conn.close()
         
@@ -185,6 +215,10 @@ def add_record(table_name):
 def delete_record(table_name, record_id):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    
+    # Log the change before deleting
+    log_change(conn, table_name, 'DELETE', record_id)
+    
     cursor.execute(f"DELETE FROM {table_name} WHERE rowid=?", (record_id,))
     conn.commit()
     conn.close()
@@ -203,13 +237,15 @@ def update_record(table_name, record_id):
         set_clause = ','.join([f"{col}=?" for col in columns])
         values.append(record_id)
         cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE rowid=?", values)
-        conn.commit()
         
         if cursor.rowcount == 0:
             return jsonify({
                 "error": "Record not found or no changes made."
             }), 404
-            
+        
+        # Log the change
+        log_change(conn, table_name, 'UPDATE', record_id)
+        
         return jsonify({
             "success": True,
             "message": "Record updated successfully"
