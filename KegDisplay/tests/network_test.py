@@ -137,7 +137,6 @@ class NetworkTest:
                         
                         # Skip messages from ourselves
                         if ip in instance.local_ips:
-                            logger.debug(f"Ignoring message from self ({ip})")
                             continue
                             
                         # Process peer data (same as original method)
@@ -145,12 +144,12 @@ class NetworkTest:
                             # Try to parse as JSON (new format with sync_port)
                             peer_data = json.loads(data.decode('utf-8'))
                             peer_version = peer_data['version']
-                            peer_sync_port = peer_data.get('sync_port', instance.default_sync_port)
+                            peer_sync_port = peer_data.get('sync_port', instance.sync_port)
                             instance.add_peer(ip, peer_version, peer_sync_port)
                         except (json.JSONDecodeError, KeyError):
                             # Fall back to old format (just version string)
                             peer_version = data.decode('utf-8')
-                            instance.add_peer(ip, peer_version, instance.default_sync_port)
+                            instance.add_peer(ip, peer_version, instance.sync_port)
                         
                     except socket.timeout:
                         # Expected when no peer responses within timeout
@@ -954,12 +953,12 @@ class NetworkTest:
                                 # Try to parse as JSON (new format with sync_port)
                                 peer_data = json.loads(data.decode('utf-8'))
                                 peer_version = peer_data['version']
-                                peer_sync_port = peer_data.get('sync_port', self.default_sync_port)
+                                peer_sync_port = peer_data.get('sync_port', self.sync_port)
                                 self.add_peer(addr[0], peer_version, peer_sync_port)
                             except (json.JSONDecodeError, KeyError):
                                 # Fall back to old format (just version string)
                                 peer_version = data.decode('utf-8')
-                                self.add_peer(addr[0], peer_version, self.default_sync_port)
+                                self.add_peer(addr[0], peer_version, self.sync_port)
                             
                         except socket.timeout:
                             # This is expected - allows checking the thread_running flag
