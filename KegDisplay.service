@@ -2,9 +2,9 @@
 Description = KegDisplay
 
 [Service]
-WorkingDirectory=/home/beer/Development/KegDisplay
+WorkingDirectory=/root/Dev/KegDisplay
 Restart = always
-ExecStart = poetry run #replace with local path to KegDisplay service
+ExecStart = /root/.local/bin/poetry run -m KegDisplay
 
 [Install]
 WantedBy = multi-user.target

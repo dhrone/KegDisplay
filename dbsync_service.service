@@ -3,19 +3,13 @@ Description=KegDisplay Database Synchronization Service
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/poetry run python -m KegDisplay.dbsync_service --mode client
-WorkingDirectory=/opt/KegDisplay
+ExecStart=/root/.local/bin/poetry run python -m KegDisplay.dbsync_service --mode client
+WorkingDirectory=/root/Dev/KegDisplay
 StandardOutput=journal
 StandardError=journal
 Restart=always
-User=pi
+User=root
 
-# Uncomment and modify for the primary server
-#ExecStart=/usr/bin/poetry run python -m KegDisplay.dbsync_service --mode primary
-
-# Uncomment and modify to specify the primary server IP (for client mode)
-#Environment="PRIMARY_IP=192.168.1.100"
-#ExecStart=/usr/bin/poetry run python -m KegDisplay.dbsync_service --mode client --primary-ip ${PRIMARY_IP}
 
 [Install]
 WantedBy=multi-user.target 
