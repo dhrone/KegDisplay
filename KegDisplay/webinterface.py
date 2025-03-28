@@ -6,6 +6,8 @@ import bcrypt
 from functools import wraps
 from datetime import datetime, UTC
 import logging
+import argparse
+import sys
 
 # Import the SyncedDatabase
 from KegDisplay.db import SyncedDatabase
@@ -18,15 +20,49 @@ TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
 print(f"Password file path: {PASSWD_PATH}")
 print(f"Template directory: {TEMPLATE_DIR}")
 
-# Initialize the SyncedDatabase
-synced_db = SyncedDatabase(
-    db_path=DB_PATH,
-    broadcast_port=5002,
-    sync_port=5003,
-    test_mode=False
-)
-logger = logging.getLogger("KegDisplay")
-logger.info("Initialized SyncedDatabase for web interface")
+# Parse all command line arguments at the beginning
+def parse_args():
+    parser = argparse.ArgumentParser(description='KegDisplay Web Interface')
+    parser.add_argument('--host', default='0.0.0.0', help='Host to listen on')
+    parser.add_argument('--port', type=int, default=8080, help='Port to listen on')
+    parser.add_argument('--broadcast-port', type=int, default=5002, 
+                       help='UDP port for synchronization broadcasts (default: 5002)')
+    parser.add_argument('--sync-port', type=int, default=5003,
+                       help='TCP port for synchronization connections (default: 5003)')
+    parser.add_argument('--no-sync', action='store_true',
+                       help='Disable database synchronization')
+    parser.add_argument('--debug', action='store_true',
+                       help='Run Flask in debug mode')
+    return parser.parse_args()
+
+# Parse arguments once at module level
+args = parse_args()
+print(f"Web interface configuration:")
+print(f"  Host: {args.host}")
+print(f"  Web port: {args.port}")
+print(f"  Broadcast port: {args.broadcast_port}")
+print(f"  Sync port: {args.sync_port}")
+print(f"  Synchronization: {'Disabled' if args.no_sync else 'Enabled'}")
+print(f"  Debug mode: {'Enabled' if args.debug else 'Disabled'}")
+
+# Initialize the SyncedDatabase unless disabled
+synced_db = None
+if not args.no_sync:
+    try:
+        print(f"Initializing SyncedDatabase with broadcast_port={args.broadcast_port}, sync_port={args.sync_port}")
+        synced_db = SyncedDatabase(
+            db_path=DB_PATH,
+            broadcast_port=args.broadcast_port,
+            sync_port=args.sync_port,
+            test_mode=False
+        )
+        logger = logging.getLogger("KegDisplay")
+        logger.info("Initialized SyncedDatabase for web interface")
+    except OSError as e:
+        print(f"Error initializing SyncedDatabase: {e}")
+        print("If another instance is already running, use --broadcast-port and --sync-port to set different ports")
+        print("or use --no-sync to disable synchronization for this instance.")
+        sys.exit(1)
 
 app = Flask(__name__, 
            template_folder=TEMPLATE_DIR)  # Specify the template folder
@@ -178,24 +214,16 @@ def log_change(conn, table_name, operation, row_id):
     cursor.execute("UPDATE version SET last_modified = ?", (timestamp,))
     conn.commit()
     
-    # Notify peers about the change
-    if table_name == 'beers':
-        logger.info(f"Database change in 'beers': {operation} on row {row_id}")
-        if operation == 'INSERT':
-            # Let SyncedDatabase handle the notification
+    # Notify peers about the change if sync is enabled
+    if synced_db:
+        logger = logging.getLogger("KegDisplay")
+        
+        if table_name == 'beers':
+            logger.info(f"Database change in 'beers': {operation} on row {row_id}")
             synced_db.notify_update()
-        elif operation == 'UPDATE':
-            synced_db.notify_update()
-        elif operation == 'DELETE':
-            synced_db.notify_update()
-    
-    elif table_name == 'taps':
-        logger.info(f"Database change in 'taps': {operation} on row {row_id}")
-        if operation == 'INSERT':
-            synced_db.notify_update()
-        elif operation == 'UPDATE':
-            synced_db.notify_update()
-        elif operation == 'DELETE':
+        
+        elif table_name == 'taps':
+            logger.info(f"Database change in 'taps': {operation} on row {row_id}")
             synced_db.notify_update()
 
 @app.route('/add_record/<table_name>', methods=['POST'])
@@ -312,12 +340,6 @@ def update_record(table_name, record_id):
 def start():
     """Start the web interface"""
     
-    import argparse
-    parser = argparse.ArgumentParser(description='KegDisplay Web Interface')
-    parser.add_argument('--host', default='0.0.0.0', help='Host to listen on')
-    parser.add_argument('--port', type=int, default=8080, help='Port to listen on')
-    args = parser.parse_args()
-    
     # Make sure all required tables exist
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
@@ -353,10 +375,11 @@ def start():
     conn.close()
     
     # Start the Flask application
-    app.run(host=args.host, port=args.port, debug=True)
+    app.run(host=args.host, port=args.port, debug=args.debug)
     
     # When shutting down, stop the synced_db gracefully
-    synced_db.stop()
+    if synced_db:
+        synced_db.stop()
 
 if __name__ == '__main__':
     start() 

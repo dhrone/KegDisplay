@@ -183,17 +183,23 @@ def start():
                 
                 for key, value in db_row.items():
                     if key == 'beer':
-                        for item in value:
-                            if 'idBeer' in item:
-                                ds.update(
-                                    "beers",
-                                    {item['idBeer']: {k: v for k, v in item.items() if k != 'idBeer'}},
-                                    merge=True
-                                )
+                        if isinstance(value, dict):
+                            ds.update("beers", value, merge=True)
+                        else:
+                            for item in value:
+                                if 'idBeer' in item:
+                                    ds.update(
+                                        "beers",
+                                        {item['idBeer']: {k: v for k, v in item.items() if k != 'idBeer'}},
+                                        merge=True
+                                    )
                     if key == 'taps':
-                        for item in value:
-                            if 'idTap' in item:
-                                ds.update("taps", {item['idTap']: item['idBeer']}, merge=True)
+                        if isinstance(value, dict):
+                            ds.update("taps", value, merge=True)
+                        else:
+                            for item in value:
+                                if 'idTap' in item:
+                                    ds.update("taps", {item['idTap']: item['idBeer']}, merge=True)
 
         update_data(src, main._dataset)
         beersHash = dict_hash(main._dataset.get('beers'), '__timestamp__')
