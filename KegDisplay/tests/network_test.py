@@ -441,13 +441,6 @@ class NetworkTest:
             time.sleep(5)
             self._log_peers()
             
-            # Display reminder of verification command
-            logger.info("\n=== VERIFICATION INSTRUCTIONS ===")
-            logger.info(f"Verify the change was received with:")
-            logger.info(f"poetry run python -m KegDisplay.tests.network_test verify --beer-name \"{beer_name}\" --primary-ip <THIS_MACHINE_IP>")
-            logger.info("================================\n")
-            
-            logger.info("Test complete. Check secondary instances for successful sync.")
             logger.info(f"Log file: {self.log_file}")
             return True
             

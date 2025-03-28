@@ -25,15 +25,19 @@ class DatabaseSync:
         self.db_path = db_path
         self.broadcast_port = broadcast_port
         self.sync_port = sync_port
+        self.test_mode = test_mode
+        
+        # Initialize database tables if they don't exist
+        self._init_database_tables()
+        
         self.version = self._get_db_version()
         self.peers = {}  # {ip: (version, last_seen, sync_port)}
         self.lock = threading.Lock()
-        self.test_mode = test_mode
         self.test_peers = []  # List of peer instances for test mode
         
         # Store a list of all our local IP addresses
         self.local_ips = self._get_all_local_ips()
-        logger.info(f"Identified local IP addresses: {', '.join(self.local_ips)}")
+        logger.debug(f"Identified local IP addresses: {', '.join(self.local_ips)}")
         
         # Setup network sockets
         if not test_mode:
@@ -328,13 +332,14 @@ class DatabaseSync:
                 
                 # Check if the message is from our own IP
                 if addr[0] not in self.local_ips:
-                    logger.info(f"Received response from peer {addr[0]}")
-                    peer_sync_port = msg.get('sync_port', self.sync_port)  # Default to our port if not provided
-                    with self.lock:
-                        self.peers[addr[0]] = (msg['version'], time.time(), peer_sync_port)
+                    # Check if the peer is already in our peers list
+                    if addr[0] not in self.peers:
                         logger.info(f"Added peer {addr[0]} with version {msg['version']} (sync port: {peer_sync_port})")
-                else:
-                    logger.debug(f"Ignoring message from self ({addr[0]})")
+                        peer_sync_port = msg.get('sync_port', self.sync_port)  # Default to our port if not provided
+                        with self.lock:
+                            self.peers[addr[0]] = (msg['version'], time.time(), peer_sync_port)
+                        
+
             except socket.timeout:
                 continue
             except Exception as e:
@@ -537,8 +542,7 @@ class DatabaseSync:
                     if msg['type'] == 'update' and msg['version'] != self.version:
                         logger.info(f"Detected version change from {addr[0]}, requesting sync")
                         self._request_sync(addr[0])
-                else:
-                    logger.debug(f"Ignoring broadcast from self ({addr[0]})")
+
                         
             except socket.timeout:
                 continue
@@ -817,7 +821,6 @@ class DatabaseSync:
         """Manually add a peer by IP address"""
         # First check if this is our own IP
         if peer_ip in self.local_ips:
-            logger.warning(f"Ignoring attempt to add self as peer: {peer_ip}")
             return
             
         if peer_ip and peer_ip not in self.peers:
@@ -1132,4 +1135,445 @@ class DatabaseSync:
             except sqlite3.Error:
                 # If session is invalid, create a new one
                 logger.warning("Session invalid, creating new session")
-                self._init_change_tracking() 
+                self._init_change_tracking()
+
+    def _init_database_tables(self):
+        """Initialize the database with required tables if they don't exist"""
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Create beers table if it doesn't exist
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS beers (
+                    idBeer INTEGER PRIMARY KEY,
+                    Name tinytext NOT NULL,
+                    ABV float,
+                    IBU float,
+                    Color float,
+                    OriginalGravity float,
+                    FinalGravity float,
+                    Description TEXT,
+                    Brewed datetime,
+                    Kegged datetime,
+                    Tapped datetime,
+                    Notes TEXT
+                )
+            ''')
+            
+            # Create taps table if it doesn't exist
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS taps (
+                    idTap INTEGER PRIMARY KEY,
+                    idBeer INTEGER
+                )
+            ''')
+            
+            conn.commit()
+            logger.info("Database tables initialized")
+
+    # ---- Beer Management Functions ----
+
+    def add_beer(self, name, abv=None, ibu=None, color=None, og=None, fg=None, 
+                description=None, brewed=None, kegged=None, tapped=None, notes=None):
+        """Add a new beer to the database
+        
+        Args:
+            name: Name of the beer (required)
+            abv: Alcohol by volume percentage
+            ibu: International Bitterness Units
+            color: Beer color (SRM)
+            og: Original gravity
+            fg: Final gravity
+            description: Beer description
+            brewed: Date brewed (ISO format string or datetime object)
+            kegged: Date kegged (ISO format string or datetime object)
+            tapped: Date tapped (ISO format string or datetime object)
+            notes: Additional notes
+            
+        Returns:
+            id: The ID of the newly added beer
+        """
+        # Convert datetime objects to strings if needed
+        if isinstance(brewed, datetime):
+            brewed = brewed.strftime("%Y-%m-%d %H:%M:%S")
+        if isinstance(kegged, datetime):
+            kegged = kegged.strftime("%Y-%m-%d %H:%M:%S")
+        if isinstance(tapped, datetime):
+            tapped = tapped.strftime("%Y-%m-%d %H:%M:%S")
+        
+        self._ensure_valid_session()
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO beers (
+                    Name, ABV, IBU, Color, OriginalGravity, FinalGravity,
+                    Description, Brewed, Kegged, Tapped, Notes
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (name, abv, ibu, color, og, fg, description, brewed, kegged, tapped, notes))
+            
+            beer_id = cursor.lastrowid
+            
+            # Log the change
+            self._log_change("beers", "INSERT", beer_id)
+            
+            # Notify peers
+            self.notify_update()
+            
+            logger.info(f"Added beer '{name}' with ID {beer_id}")
+            return beer_id
+
+    def update_beer(self, beer_id, name=None, abv=None, ibu=None, color=None, og=None, fg=None,
+                   description=None, brewed=None, kegged=None, tapped=None, notes=None):
+        """Update an existing beer in the database
+        
+        Args:
+            beer_id: ID of the beer to update
+            Other parameters: Same as add_beer, but all optional
+            
+        Returns:
+            success: True if the beer was updated, False if not found
+        """
+        self._ensure_valid_session()
+        
+        # Convert datetime objects to strings if needed
+        if isinstance(brewed, datetime):
+            brewed = brewed.strftime("%Y-%m-%d %H:%M:%S")
+        if isinstance(kegged, datetime):
+            kegged = kegged.strftime("%Y-%m-%d %H:%M:%S")
+        if isinstance(tapped, datetime):
+            tapped = tapped.strftime("%Y-%m-%d %H:%M:%S")
+        
+        # First get the current values
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT Name, ABV, IBU, Color, OriginalGravity, FinalGravity, "
+                "Description, Brewed, Kegged, Tapped, Notes FROM beers WHERE idBeer = ?", 
+                (beer_id,)
+            )
+            
+            row = cursor.fetchone()
+            if not row:
+                logger.warning(f"Beer with ID {beer_id} not found for update")
+                return False
+            
+            # Use existing values for any parameters not provided
+            current_name, current_abv, current_ibu, current_color = row[0:4]
+            current_og, current_fg, current_desc = row[4:7]
+            current_brewed, current_kegged, current_tapped, current_notes = row[7:11]
+            
+            # Update with new values if provided
+            update_name = name if name is not None else current_name
+            update_abv = abv if abv is not None else current_abv
+            update_ibu = ibu if ibu is not None else current_ibu
+            update_color = color if color is not None else current_color
+            update_og = og if og is not None else current_og
+            update_fg = fg if fg is not None else current_fg
+            update_desc = description if description is not None else current_desc
+            update_brewed = brewed if brewed is not None else current_brewed
+            update_kegged = kegged if kegged is not None else current_kegged
+            update_tapped = tapped if tapped is not None else current_tapped
+            update_notes = notes if notes is not None else current_notes
+            
+            # Perform the update
+            cursor.execute('''
+                UPDATE beers SET 
+                    Name = ?, ABV = ?, IBU = ?, Color = ?, OriginalGravity = ?, 
+                    FinalGravity = ?, Description = ?, Brewed = ?, Kegged = ?, 
+                    Tapped = ?, Notes = ?
+                WHERE idBeer = ?
+            ''', (update_name, update_abv, update_ibu, update_color, update_og, 
+                 update_fg, update_desc, update_brewed, update_kegged, update_tapped, 
+                 update_notes, beer_id))
+            
+            if cursor.rowcount > 0:
+                # Log the change
+                self._log_change("beers", "UPDATE", beer_id)
+                
+                # Notify peers
+                self.notify_update()
+                
+                logger.info(f"Updated beer '{update_name}' with ID {beer_id}")
+                return True
+            else:
+                logger.warning(f"No changes made to beer with ID {beer_id}")
+                return False
+
+    def delete_beer(self, beer_id):
+        """Delete a beer from the database
+        
+        Args:
+            beer_id: ID of the beer to delete
+            
+        Returns:
+            success: True if the beer was deleted, False if not found
+        """
+        self._ensure_valid_session()
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # First check if beer exists
+            cursor.execute("SELECT Name FROM beers WHERE idBeer = ?", (beer_id,))
+            beer = cursor.fetchone()
+            
+            if not beer:
+                logger.warning(f"Beer with ID {beer_id} not found for deletion")
+                return False
+            
+            beer_name = beer[0]
+            
+            # Check if any taps are using this beer and update them
+            cursor.execute("SELECT idTap FROM taps WHERE idBeer = ?", (beer_id,))
+            affected_taps = [row[0] for row in cursor.fetchall()]
+            
+            if affected_taps:
+                logger.info(f"Removing beer {beer_id} from {len(affected_taps)} taps")
+                cursor.execute("UPDATE taps SET idBeer = NULL WHERE idBeer = ?", (beer_id,))
+                
+                # Log changes for each affected tap
+                for tap_id in affected_taps:
+                    self._log_change("taps", "UPDATE", tap_id)
+            
+            # Now delete the beer
+            cursor.execute("DELETE FROM beers WHERE idBeer = ?", (beer_id,))
+            
+            if cursor.rowcount > 0:
+                # Log the change
+                self._log_change("beers", "DELETE", beer_id)
+                
+                # Notify peers
+                self.notify_update()
+                
+                logger.info(f"Deleted beer '{beer_name}' with ID {beer_id}")
+                return True
+            else:
+                logger.warning(f"Failed to delete beer with ID {beer_id}")
+                return False
+
+    def get_beer(self, beer_id):
+        """Get a beer by ID
+        
+        Args:
+            beer_id: ID of the beer to retrieve
+            
+        Returns:
+            beer: Dictionary with beer information or None if not found
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row  # Return rows as dictionaries
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                "SELECT * FROM beers WHERE idBeer = ?", 
+                (beer_id,)
+            )
+            
+            row = cursor.fetchone()
+            
+            if row:
+                return dict(row)
+            else:
+                return None
+
+    def get_all_beers(self):
+        """Get all beers from the database
+        
+        Returns:
+            beers: List of dictionaries with beer information
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row  # Return rows as dictionaries
+            cursor = conn.cursor()
+            
+            cursor.execute("SELECT * FROM beers ORDER BY Name")
+            
+            return [dict(row) for row in cursor.fetchall()]
+
+    # ---- Tap Management Functions ----
+
+    def add_tap(self, tap_id=None, beer_id=None):
+        """Add a new tap to the database
+        
+        Args:
+            tap_id: Optional tap ID (auto-assigned if not provided)
+            beer_id: Optional ID of beer on tap
+            
+        Returns:
+            id: The ID of the newly added tap
+        """
+        self._ensure_valid_session()
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            if tap_id is not None:
+                # Check if tap with this ID already exists
+                cursor.execute("SELECT idTap FROM taps WHERE idTap = ?", (tap_id,))
+                if cursor.fetchone():
+                    logger.warning(f"Tap with ID {tap_id} already exists")
+                    return None
+                
+                # Insert with specified ID
+                cursor.execute(
+                    "INSERT INTO taps (idTap, idBeer) VALUES (?, ?)",
+                    (tap_id, beer_id)
+                )
+            else:
+                # Let SQLite assign the ID
+                cursor.execute(
+                    "INSERT INTO taps (idBeer) VALUES (?)",
+                    (beer_id,)
+                )
+            
+            tap_id = cursor.lastrowid
+            
+            # Log the change
+            self._log_change("taps", "INSERT", tap_id)
+            
+            # Notify peers
+            self.notify_update()
+            
+            logger.info(f"Added tap {tap_id}" + (f" with beer {beer_id}" if beer_id else ""))
+            return tap_id
+
+    def update_tap(self, tap_id, beer_id):
+        """Update a tap's beer assignment
+        
+        Args:
+            tap_id: ID of the tap to update
+            beer_id: ID of beer to assign (or None to make tap empty)
+            
+        Returns:
+            success: True if updated, False if tap not found
+        """
+        self._ensure_valid_session()
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Check if tap exists
+            cursor.execute("SELECT idBeer FROM taps WHERE idTap = ?", (tap_id,))
+            result = cursor.fetchone()
+            
+            if not result:
+                logger.warning(f"Tap with ID {tap_id} not found for update")
+                return False
+            
+            current_beer = result[0]
+            
+            # Only update if the beer assignment is actually changing
+            if current_beer != beer_id:
+                cursor.execute(
+                    "UPDATE taps SET idBeer = ? WHERE idTap = ?",
+                    (beer_id, tap_id)
+                )
+                
+                # Log the change
+                self._log_change("taps", "UPDATE", tap_id)
+                
+                # Notify peers
+                self.notify_update()
+                
+                logger.info(f"Updated tap {tap_id} with beer {beer_id if beer_id else 'None'}")
+            else:
+                logger.info(f"Tap {tap_id} already has beer {beer_id if beer_id else 'None'}")
+            
+            return True
+
+    def delete_tap(self, tap_id):
+        """Delete a tap from the database
+        
+        Args:
+            tap_id: ID of the tap to delete
+            
+        Returns:
+            success: True if deleted, False if not found
+        """
+        self._ensure_valid_session()
+        
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            # Check if tap exists
+            cursor.execute("SELECT idTap FROM taps WHERE idTap = ?", (tap_id,))
+            if not cursor.fetchone():
+                logger.warning(f"Tap with ID {tap_id} not found for deletion")
+                return False
+            
+            # Delete the tap
+            cursor.execute("DELETE FROM taps WHERE idTap = ?", (tap_id,))
+            
+            # Log the change
+            self._log_change("taps", "DELETE", tap_id)
+            
+            # Notify peers
+            self.notify_update()
+            
+            logger.info(f"Deleted tap {tap_id}")
+            return True
+
+    def get_tap(self, tap_id):
+        """Get a tap by ID
+        
+        Args:
+            tap_id: ID of the tap to retrieve
+            
+        Returns:
+            tap: Dictionary with tap information or None if not found
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                "SELECT t.*, b.Name as BeerName FROM taps t "
+                "LEFT JOIN beers b ON t.idBeer = b.idBeer "
+                "WHERE t.idTap = ?", 
+                (tap_id,)
+            )
+            
+            row = cursor.fetchone()
+            
+            if row:
+                return dict(row)
+            else:
+                return None
+
+    def get_all_taps(self):
+        """Get all taps with their beer information
+        
+        Returns:
+            taps: List of dictionaries with tap information
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                "SELECT t.*, b.Name as BeerName FROM taps t "
+                "LEFT JOIN beers b ON t.idBeer = b.idBeer "
+                "ORDER BY t.idTap"
+            )
+            
+            return [dict(row) for row in cursor.fetchall()]
+
+    def get_tap_with_beer(self, beer_id):
+        """Find taps that have a specific beer
+        
+        Args:
+            beer_id: ID of the beer to look for
+            
+        Returns:
+            taps: List of tap IDs with this beer
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.cursor()
+            
+            cursor.execute(
+                "SELECT idTap FROM taps WHERE idBeer = ? ORDER BY idTap",
+                (beer_id,)
+            )
+            
+            return [row[0] for row in cursor.fetchall()] 
