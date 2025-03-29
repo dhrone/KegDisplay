@@ -8,6 +8,8 @@ from datetime import datetime, UTC
 import logging
 import argparse
 import sys
+import csv
+import io
 
 # Import the SyncedDatabase
 from KegDisplay.db import SyncedDatabase
@@ -186,6 +188,267 @@ def taps():
 @login_required
 def beers():
     return render_template('beers.html', active_page='beers')
+
+@app.route('/dbmanage')
+@login_required
+def db_manage():
+    return render_template('dbmanage.html', active_page='dbmanage')
+
+@app.route('/api/beers/backup', methods=['GET'])
+@login_required
+def backup_beers():
+    # Get all beers from the database
+    if synced_db:
+        beers = synced_db.get_all_beers()
+    else:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM beers ORDER BY Name")
+        beers = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+    
+    if not beers:
+        return jsonify({"error": "No beers to backup"}), 404
+    
+    # Create a CSV in memory
+    output = io.StringIO()
+    fieldnames = ['idBeer', 'Name', 'ABV', 'IBU', 'Color', 'OriginalGravity', 'FinalGravity', 
+                 'Description', 'Brewed', 'Kegged', 'Tapped', 'Notes']
+    
+    writer = csv.DictWriter(output, fieldnames=fieldnames)
+    writer.writeheader()
+    for beer in beers:
+        writer.writerow(beer)
+    
+    # Generate filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"beers_backup_{timestamp}.csv"
+    
+    # Create response with CSV data
+    response = app.response_class(
+        response=output.getvalue(),
+        status=200,
+        mimetype='text/csv',
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+    
+    return response
+
+@app.route('/api/beers/import', methods=['POST'])
+@login_required
+def import_beers():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No file selected"}), 400
+    
+    if not file.filename.endswith('.csv'):
+        return jsonify({"error": "File must be a CSV"}), 400
+    
+    # Read CSV file
+    try:
+        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        reader = csv.DictReader(stream)
+        
+        imported_count = 0
+        errors = []
+        
+        # Process each row in the CSV
+        for row in reader:
+            try:
+                # Skip rows without a name
+                if not row.get('Name'):
+                    continue
+                    
+                # Convert empty strings to None for numeric fields
+                for field in ['ABV', 'IBU', 'Color', 'OriginalGravity', 'FinalGravity']:
+                    if field in row and (not row[field] or row[field].strip() == ''):
+                        row[field] = None
+                    elif field in row:
+                        try:
+                            row[field] = float(row[field])
+                        except (ValueError, TypeError):
+                            row[field] = None
+                
+                # Handle existing beer with same ID
+                beer_id = row.get('idBeer')
+                existing_beer = None
+                
+                if beer_id and beer_id.strip() and beer_id != '':
+                    try:
+                        beer_id = int(beer_id)
+                        if synced_db:
+                            existing_beer = synced_db.get_beer(beer_id)
+                        else:
+                            conn = sqlite3.connect(DB_PATH)
+                            conn.row_factory = sqlite3.Row
+                            cursor = conn.cursor()
+                            cursor.execute("SELECT * FROM beers WHERE idBeer = ?", (beer_id,))
+                            existing_beer = cursor.fetchone()
+                            conn.close()
+                    except (ValueError, TypeError):
+                        beer_id = None
+                
+                # If beer exists, update it; otherwise add new beer
+                if existing_beer:
+                    if synced_db:
+                        synced_db.update_beer(
+                            beer_id=beer_id,
+                            name=row.get('Name'),
+                            abv=row.get('ABV'),
+                            ibu=row.get('IBU'),
+                            color=row.get('Color'),
+                            og=row.get('OriginalGravity'),
+                            fg=row.get('FinalGravity'),
+                            description=row.get('Description'),
+                            brewed=row.get('Brewed'),
+                            kegged=row.get('Kegged'),
+                            tapped=row.get('Tapped'),
+                            notes=row.get('Notes')
+                        )
+                    else:
+                        conn = sqlite3.connect(DB_PATH)
+                        cursor = conn.cursor()
+                        cursor.execute('''
+                            UPDATE beers SET
+                                Name = ?, ABV = ?, IBU = ?, Color = ?, OriginalGravity = ?, FinalGravity = ?,
+                                Description = ?, Brewed = ?, Kegged = ?, Tapped = ?, Notes = ?
+                            WHERE idBeer = ?
+                        ''', (
+                            row.get('Name'),
+                            row.get('ABV'),
+                            row.get('IBU'),
+                            row.get('Color'),
+                            row.get('OriginalGravity'),
+                            row.get('FinalGravity'),
+                            row.get('Description'),
+                            row.get('Brewed'),
+                            row.get('Kegged'),
+                            row.get('Tapped'),
+                            row.get('Notes'),
+                            beer_id
+                        ))
+                        log_change(conn, "beers", "UPDATE", beer_id)
+                        conn.commit()
+                        conn.close()
+                else:
+                    # Add new beer
+                    if synced_db:
+                        synced_db.add_beer(
+                            name=row.get('Name'),
+                            abv=row.get('ABV'),
+                            ibu=row.get('IBU'),
+                            color=row.get('Color'),
+                            og=row.get('OriginalGravity'),
+                            fg=row.get('FinalGravity'),
+                            description=row.get('Description'),
+                            brewed=row.get('Brewed'),
+                            kegged=row.get('Kegged'),
+                            tapped=row.get('Tapped'),
+                            notes=row.get('Notes')
+                        )
+                    else:
+                        conn = sqlite3.connect(DB_PATH)
+                        cursor = conn.cursor()
+                        cursor.execute('''
+                            INSERT INTO beers (
+                                Name, ABV, IBU, Color, OriginalGravity, FinalGravity,
+                                Description, Brewed, Kegged, Tapped, Notes
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ''', (
+                            row.get('Name'),
+                            row.get('ABV'),
+                            row.get('IBU'),
+                            row.get('Color'),
+                            row.get('OriginalGravity'),
+                            row.get('FinalGravity'),
+                            row.get('Description'),
+                            row.get('Brewed'),
+                            row.get('Kegged'),
+                            row.get('Tapped'),
+                            row.get('Notes')
+                        ))
+                        beer_id = cursor.lastrowid
+                        log_change(conn, "beers", "INSERT", beer_id)
+                        conn.commit()
+                        conn.close()
+                
+                imported_count += 1
+                
+            except Exception as e:
+                errors.append(f"Error on row {reader.line_num}: {str(e)}")
+        
+        result = {
+            "success": True,
+            "imported_count": imported_count
+        }
+        
+        if errors:
+            result["errors"] = errors
+            
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({"error": f"Error processing CSV: {str(e)}"}), 500
+
+@app.route('/api/beers/clear', methods=['POST'])
+@login_required
+def clear_beers():
+    # Check for confirmation
+    confirmation = request.json.get('confirmation')
+    if not confirmation or confirmation != 'CONFIRM':
+        return jsonify({"error": "Confirmation required"}), 400
+    
+    try:
+        # Get count of beers before clearing
+        if synced_db:
+            beers = synced_db.get_all_beers()
+            beer_count = len(beers)
+            
+            # Clear all taps first
+            taps = synced_db.get_all_taps()
+            for tap in taps:
+                if tap['idBeer']:
+                    synced_db.update_tap(tap['idTap'], None)
+            
+            # Delete each beer individually to trigger proper sync events
+            for beer in beers:
+                synced_db.delete_beer(beer['idBeer'])
+        else:
+            conn = sqlite3.connect(DB_PATH)
+            cursor = conn.cursor()
+            
+            # Get beer count
+            cursor.execute("SELECT COUNT(*) FROM beers")
+            beer_count = cursor.fetchone()[0]
+            
+            # Clear all tap assignments first
+            cursor.execute("UPDATE taps SET idBeer = NULL")
+            
+            # Get all beer IDs for logging
+            cursor.execute("SELECT idBeer FROM beers")
+            beer_ids = [row[0] for row in cursor.fetchall()]
+            
+            # Delete all beers
+            cursor.execute("DELETE FROM beers")
+            
+            # Log each deletion
+            for beer_id in beer_ids:
+                log_change(conn, "beers", "DELETE", beer_id)
+            
+            conn.commit()
+            conn.close()
+        
+        return jsonify({
+            "success": True,
+            "message": f"Successfully cleared {beer_count} beers from database"
+        })
+    
+    except Exception as e:
+        return jsonify({"error": f"Error clearing beers: {str(e)}"}), 500
 
 # This function is now used by the web interface to log changes
 # The SyncedDatabase handles the synchronization
