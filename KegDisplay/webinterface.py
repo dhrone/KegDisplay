@@ -131,21 +131,8 @@ def get_table_data(table_name):
 @app.route('/')
 @login_required
 def index():
-    tables = get_db_tables()
-    selected_table = request.args.get('table', tables[0] if tables else None)
-    
-    if selected_table:
-        columns, data = get_table_data(selected_table)
-        schema = get_table_schema(selected_table)
-    else:
-        columns, data, schema = [], [], []
-    
-    return render_template('index.html', 
-                         tables=tables, 
-                         selected_table=selected_table,
-                         columns=columns,
-                         schema=schema,
-                         data=data)
+    # Redirect to the taps page
+    return redirect(url_for('taps'))
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -190,6 +177,16 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+@app.route('/taps')
+@login_required
+def taps():
+    return render_template('taps.html', active_page='taps')
+
+@app.route('/beers')
+@login_required
+def beers():
+    return render_template('beers.html', active_page='beers')
+
 # This function is now used by the web interface to log changes
 # The SyncedDatabase handles the synchronization
 def log_change(conn, table_name, operation, row_id):
@@ -226,116 +223,533 @@ def log_change(conn, table_name, operation, row_id):
             logger.info(f"Database change in 'taps': {operation} on row {row_id}")
             synced_db.notify_update()
 
-@app.route('/add_record/<table_name>', methods=['POST'])
+# --- API Endpoints ---
+
+@app.route('/api/taps', methods=['GET'])
 @login_required
-def add_record(table_name):
-    try:
-        schema = get_table_schema(table_name)
-        columns = [col[1] for col in schema]
-        values = [request.form.get(col) for col in columns]
+def api_get_taps():
+    if synced_db:
+        taps = synced_db.get_all_taps()
         
+        # Get beer details for each tap
+        for tap in taps:
+            if tap['idBeer']:
+                beer = synced_db.get_beer(tap['idBeer'])
+                if beer:
+                    tap['BeerName'] = beer['Name']
+                    tap['ABV'] = beer['ABV']
+                    tap['IBU'] = beer['IBU']
+                    tap['Description'] = beer['Description']
+        
+        return jsonify(taps)
+    else:
+        # Fallback if synced_db is not available
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT t.*, b.Name as BeerName, b.ABV, b.IBU, b.Description 
+            FROM taps t
+            LEFT JOIN beers b ON t.idBeer = b.idBeer
+            ORDER BY t.idTap
+        ''')
+        
+        taps = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        
+        return jsonify(taps)
+
+@app.route('/api/taps/<int:tap_id>', methods=['GET'])
+@login_required
+def api_get_tap(tap_id):
+    if synced_db:
+        tap = synced_db.get_tap(tap_id)
+        
+        if tap and tap['idBeer']:
+            beer = synced_db.get_beer(tap['idBeer'])
+            if beer:
+                tap['BeerName'] = beer['Name']
+                tap['ABV'] = beer['ABV']
+                
+        if tap:
+            return jsonify(tap)
+        else:
+            return jsonify({"error": "Tap not found"}), 404
+    else:
+        # Fallback if synced_db is not available
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT t.*, b.Name as BeerName, b.ABV 
+            FROM taps t
+            LEFT JOIN beers b ON t.idBeer = b.idBeer
+            WHERE t.idTap = ?
+        ''', (tap_id,))
+        
+        tap = cursor.fetchone()
+        conn.close()
+        
+        if tap:
+            return jsonify(dict(tap))
+        else:
+            return jsonify({"error": "Tap not found"}), 404
+
+@app.route('/api/taps', methods=['POST'])
+@login_required
+def api_add_tap():
+    data = request.json
+    
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    tap_number = data.get('tap_number')
+    beer_id = data.get('beer_id')
+    
+    # Validate data
+    if not tap_number:
+        return jsonify({"error": "Tap number is required"}), 400
+    
+    # Check if tap already exists
+    if synced_db:
+        tap = synced_db.get_tap(tap_number)
+        if tap:
+            return jsonify({"error": f"Tap #{tap_number} already exists"}), 400
+            
+        # Add the tap
+        tap_id = synced_db.add_tap(tap_number, beer_id)
+        
+        if tap_id:
+            return jsonify({"success": True, "tap_id": tap_id}), 201
+        else:
+            return jsonify({"error": "Failed to create tap"}), 500
+    else:
+        # Fallback if synced_db is not available
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        placeholders = ','.join(['?' for _ in columns])
-        cursor.execute(f"INSERT INTO {table_name} ({','.join(columns)}) VALUES ({placeholders})", values)
         
-        # Get the rowid of the inserted record
-        row_id = cursor.lastrowid
+        # Check if tap already exists
+        cursor.execute("SELECT idTap FROM taps WHERE idTap = ?", (tap_number,))
+        if cursor.fetchone():
+            conn.close()
+            return jsonify({"error": f"Tap #{tap_number} already exists"}), 400
+        
+        # Add the tap
+        cursor.execute(
+            "INSERT INTO taps (idTap, idBeer) VALUES (?, ?)",
+            (tap_number, beer_id)
+        )
         
         # Log the change
-        log_change(conn, table_name, 'INSERT', row_id)
+        log_change(conn, "taps", "INSERT", tap_number)
         
         conn.commit()
         conn.close()
         
-        return jsonify({"success": True, "message": "Record added successfully"})
-        
-    except sqlite3.IntegrityError as e:
-        error_msg = str(e)
-        if "UNIQUE constraint failed" in error_msg:
-            return jsonify({
-                "error": "This record violates a unique constraint. The value already exists."
-            }), 400
-        elif "NOT NULL constraint failed" in error_msg:
-            column = error_msg.split(".")[-1]
-            return jsonify({
-                "error": f"The {column} field cannot be empty."
-            }), 400
-        else:
-            return jsonify({
-                "error": "This record violates a database constraint."
-            }), 400
+        return jsonify({"success": True, "tap_id": tap_number}), 201
+
+@app.route('/api/taps/<int:tap_id>', methods=['PUT'])
+@login_required
+def api_update_tap(tap_id):
+    data = request.json
+    
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    beer_id = data.get('beer_id')
+    
+    if synced_db:
+        # Check if tap exists
+        tap = synced_db.get_tap(tap_id)
+        if not tap:
+            return jsonify({"error": f"Tap #{tap_id} not found"}), 404
             
-    except Exception as e:
-        return jsonify({
-            "error": "An unexpected error occurred while adding the record."
-        }), 500
-    finally:
-        if 'conn' in locals():
-            conn.close()
-
-@app.route('/delete_record/<table_name>/<int:record_id>', methods=['POST'])
-@login_required
-def delete_record(table_name, record_id):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    # Log the change before deleting
-    log_change(conn, table_name, 'DELETE', record_id)
-    
-    cursor.execute(f"DELETE FROM {table_name} WHERE rowid=?", (record_id,))
-    conn.commit()
-    conn.close()
-    return redirect(url_for('index', table=table_name))
-
-@app.route('/update_record/<table_name>/<int:record_id>', methods=['POST'])
-@login_required
-def update_record(table_name, record_id):
-    try:
-        schema = get_table_schema(table_name)
-        columns = [col[1] for col in schema]
-        values = [request.form.get(col) for col in columns]
-        
+        # Update the beer assignment
+        if synced_db.update_tap(tap_id, beer_id):
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": "Failed to update tap"}), 500
+    else:
+        # Fallback if synced_db is not available
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        set_clause = ','.join([f"{col}=?" for col in columns])
-        values.append(record_id)
-        cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE rowid=?", values)
         
-        if cursor.rowcount == 0:
-            return jsonify({
-                "error": "Record not found or no changes made."
-            }), 404
+        # Check if tap exists
+        cursor.execute("SELECT idTap FROM taps WHERE idTap = ?", (tap_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({"error": f"Tap #{tap_id} not found"}), 404
         
-        # Log the change
-        log_change(conn, table_name, 'UPDATE', record_id)
+        # Update the beer assignment
+        cursor.execute(
+            "UPDATE taps SET idBeer = ? WHERE idTap = ?",
+            (beer_id, tap_id)
+        )
+        log_change(conn, "taps", "UPDATE", tap_id)
         
         conn.commit()
+        conn.close()
         
-        return jsonify({
-            "success": True,
-            "message": "Record updated successfully"
-        })
-        
-    except sqlite3.IntegrityError as e:
-        error_msg = str(e)
-        if "UNIQUE constraint failed" in error_msg:
-            return jsonify({
-                "error": "This record violates a unique constraint. The value already exists."
-            }), 400
+        return jsonify({"success": True})
+
+@app.route('/api/taps/<int:tap_id>', methods=['DELETE'])
+@login_required
+def api_delete_tap(tap_id):
+    if synced_db:
+        # Check if tap exists
+        tap = synced_db.get_tap(tap_id)
+        if not tap:
+            return jsonify({"error": f"Tap #{tap_id} not found"}), 404
+            
+        # Delete the tap
+        if synced_db.delete_tap(tap_id):
+            return jsonify({"success": True})
         else:
-            return jsonify({
-                "error": "This record violates a database constraint."
-            }), 400
-    
-    except Exception as e:
-        return jsonify({
-            "error": f"An unexpected error occurred while updating the record: {str(e)}"
-        }), 500
-    
-    finally:
-        if 'conn' in locals():
+            return jsonify({"error": "Failed to delete tap"}), 500
+    else:
+        # Fallback if synced_db is not available
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Check if tap exists
+        cursor.execute("SELECT idTap FROM taps WHERE idTap = ?", (tap_id,))
+        if not cursor.fetchone():
             conn.close()
+            return jsonify({"error": f"Tap #{tap_id} not found"}), 404
+        
+        # Delete the tap
+        cursor.execute("DELETE FROM taps WHERE idTap = ?", (tap_id,))
+        
+        # Log the change
+        log_change(conn, "taps", "DELETE", tap_id)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"success": True})
+
+@app.route('/api/beers', methods=['GET'])
+@login_required
+def api_get_beers():
+    if synced_db:
+        beers = synced_db.get_all_beers()
+        return jsonify(beers)
+    else:
+        # Fallback if synced_db is not available
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM beers ORDER BY Name")
+        
+        beers = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        
+        return jsonify(beers)
+
+@app.route('/api/beers/<int:beer_id>', methods=['GET'])
+@login_required
+def api_get_beer(beer_id):
+    if synced_db:
+        beer = synced_db.get_beer(beer_id)
+        
+        if beer:
+            return jsonify(beer)
+        else:
+            return jsonify({"error": "Beer not found"}), 404
+    else:
+        # Fallback if synced_db is not available
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM beers WHERE idBeer = ?", (beer_id,))
+        
+        beer = cursor.fetchone()
+        conn.close()
+        
+        if beer:
+            return jsonify(dict(beer))
+        else:
+            return jsonify({"error": "Beer not found"}), 404
+
+@app.route('/api/beers/<int:beer_id>/taps', methods=['GET'])
+@login_required
+def api_get_beer_taps(beer_id):
+    if synced_db:
+        taps = synced_db.get_tap_with_beer(beer_id)
+        return jsonify(taps)
+    else:
+        # Fallback if synced_db is not available
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT idTap FROM taps WHERE idBeer = ? ORDER BY idTap", (beer_id,))
+        
+        taps = [row[0] for row in cursor.fetchall()]
+        conn.close()
+        
+        return jsonify(taps)
+
+@app.route('/api/beers', methods=['POST'])
+@login_required
+def api_add_beer():
+    data = request.json
+    
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    name = data.get('Name')
+    
+    # Validate data
+    if not name:
+        return jsonify({"error": "Beer name is required"}), 400
+    
+    if synced_db:
+        # Add the beer
+        beer_data = {
+            'name': name,
+            'abv': data.get('ABV'),
+            'ibu': data.get('IBU'),
+            'color': data.get('Color'),
+            'og': data.get('OriginalGravity'),  # Use the correct field from frontend
+            'fg': data.get('FinalGravity'),     # Use the correct field from frontend
+            'description': data.get('Description'),
+            'brewed': data.get('Brewed'),
+            'kegged': data.get('Kegged'),
+            'tapped': data.get('Tapped'),
+            'notes': data.get('Notes')
+        }
+        
+        beer_id = synced_db.add_beer(**beer_data)
+        
+        if beer_id:
+            return jsonify({"success": True, "beer_id": beer_id}), 201
+        else:
+            return jsonify({"error": "Failed to create beer"}), 500
+    else:
+        # Fallback if synced_db is not available
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Add the beer
+        cursor.execute('''
+            INSERT INTO beers (
+                Name, ABV, IBU, Color, OriginalGravity, FinalGravity,
+                Description, Brewed, Kegged, Tapped, Notes
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            name,
+            data.get('ABV'),
+            data.get('IBU'),
+            data.get('Color'),
+            data.get('OriginalGravity'),
+            data.get('FinalGravity'),
+            data.get('Description'),
+            data.get('Brewed'),
+            data.get('Kegged'),
+            data.get('Tapped'),
+            data.get('Notes')
+        ))
+        
+        beer_id = cursor.lastrowid
+        
+        # Log the change
+        log_change(conn, "beers", "INSERT", beer_id)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"success": True, "beer_id": beer_id}), 201
+
+@app.route('/api/beers/<int:beer_id>', methods=['PUT'])
+@login_required
+def api_update_beer(beer_id):
+    data = request.json
+    
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    name = data.get('Name')
+    
+    # Validate data
+    if not name:
+        return jsonify({"error": "Beer name is required"}), 400
+    
+    if synced_db:
+        # Check if beer exists
+        beer = synced_db.get_beer(beer_id)
+        if not beer:
+            return jsonify({"error": "Beer not found"}), 404
+            
+        # Update the beer
+        beer_data = {
+            'beer_id': beer_id,
+            'name': name,
+            'abv': data.get('ABV'),
+            'ibu': data.get('IBU'),
+            'color': data.get('Color'),
+            'og': data.get('OriginalGravity'),  # Use the correct field from frontend
+            'fg': data.get('FinalGravity'),     # Use the correct field from frontend
+            'description': data.get('Description'),
+            'brewed': data.get('Brewed'),
+            'kegged': data.get('Kegged'),
+            'tapped': data.get('Tapped'),
+            'notes': data.get('Notes')
+        }
+        
+        if synced_db.update_beer(**beer_data):
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": "Failed to update beer"}), 500
+    else:
+        # Fallback if synced_db is not available
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Check if beer exists
+        cursor.execute("SELECT idBeer FROM beers WHERE idBeer = ?", (beer_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({"error": "Beer not found"}), 404
+        
+        # Update the beer
+        cursor.execute('''
+            UPDATE beers SET
+                Name = ?, ABV = ?, IBU = ?, Color = ?, OriginalGravity = ?, FinalGravity = ?,
+                Description = ?, Brewed = ?, Kegged = ?, Tapped = ?, Notes = ?
+            WHERE idBeer = ?
+        ''', (
+            name,
+            data.get('ABV'),
+            data.get('IBU'),
+            data.get('Color'),
+            data.get('OriginalGravity'),
+            data.get('FinalGravity'),
+            data.get('Description'),
+            data.get('Brewed'),
+            data.get('Kegged'),
+            data.get('Tapped'),
+            data.get('Notes'),
+            beer_id
+        ))
+        
+        # Log the change
+        log_change(conn, "beers", "UPDATE", beer_id)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"success": True})
+
+@app.route('/api/beers/<int:beer_id>', methods=['DELETE'])
+@login_required
+def api_delete_beer(beer_id):
+    if synced_db:
+        # Check if beer exists
+        beer = synced_db.get_beer(beer_id)
+        if not beer:
+            return jsonify({"error": "Beer not found"}), 404
+            
+        # Delete the beer (this will also update any taps using this beer)
+        if synced_db.delete_beer(beer_id):
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": "Failed to delete beer"}), 500
+    else:
+        # Fallback if synced_db is not available
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Check if beer exists
+        cursor.execute("SELECT idBeer FROM beers WHERE idBeer = ?", (beer_id,))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({"error": "Beer not found"}), 404
+        
+        # Check if any taps are using this beer
+        cursor.execute("SELECT idTap FROM taps WHERE idBeer = ?", (beer_id,))
+        affected_taps = [row[0] for row in cursor.fetchall()]
+        
+        if affected_taps:
+            # Update those taps to remove the beer
+            for tap_id in affected_taps:
+                cursor.execute("UPDATE taps SET idBeer = NULL WHERE idTap = ?", (tap_id,))
+                log_change(conn, "taps", "UPDATE", tap_id)
+        
+        # Delete the beer
+        cursor.execute("DELETE FROM beers WHERE idBeer = ?", (beer_id,))
+        
+        # Log the change
+        log_change(conn, "beers", "DELETE", beer_id)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"success": True})
+
+@app.route('/api/taps/count', methods=['POST'])
+@login_required
+def api_set_tap_count():
+    data = request.json
+    
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    count = data.get('count')
+    
+    if count is None or not isinstance(count, int) or count < 1:
+        return jsonify({"error": "Valid tap count is required (must be positive integer)"}), 400
+    
+    if synced_db:
+        # Get current taps
+        existing_taps = synced_db.get_all_taps()
+        current_count = len(existing_taps)
+        
+        # If decreasing, delete excess taps
+        if count < current_count:
+            # Delete taps from highest number to lowest
+            for i in range(current_count, count, -1):
+                tap_id = i
+                synced_db.delete_tap(tap_id)
+        
+        # If increasing, add new taps
+        elif count > current_count:
+            # Add new taps with sequential IDs
+            for i in range(current_count + 1, count + 1):
+                tap_id = i
+                synced_db.add_tap(tap_id, None)
+        
+        return jsonify({"success": True, "tap_count": count})
+    else:
+        # Fallback if synced_db is not available
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Get current tap count
+        cursor.execute("SELECT COUNT(*) FROM taps")
+        current_count = cursor.fetchone()[0]
+        
+        # If decreasing, delete excess taps
+        if count < current_count:
+            # Delete taps from highest number to lowest
+            for i in range(current_count, count, -1):
+                cursor.execute("DELETE FROM taps WHERE idTap = ?", (i,))
+                log_change(conn, "taps", "DELETE", i)
+        
+        # If increasing, add new taps
+        elif count > current_count:
+            # Add new taps with sequential IDs
+            for i in range(current_count + 1, count + 1):
+                cursor.execute("INSERT INTO taps (idTap, idBeer) VALUES (?, NULL)", (i,))
+                log_change(conn, "taps", "INSERT", i)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({"success": True, "tap_count": count})
 
 def start():
     """Start the web interface"""
@@ -343,6 +757,32 @@ def start():
     # Make sure all required tables exist
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    
+    # Create beers table if it doesn't exist
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS beers (
+        idBeer INTEGER PRIMARY KEY,
+        Name tinytext NOT NULL,
+        ABV float,
+        IBU float,
+        Color float,
+        OriginalGravity float,
+        FinalGravity float,
+        Description TEXT,
+        Brewed datetime,
+        Kegged datetime,
+        Tapped datetime,
+        Notes TEXT
+    )
+    ''')
+    
+    # Create taps table if it doesn't exist
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS taps (
+        idTap INTEGER PRIMARY KEY,
+        idBeer INTEGER
+    )
+    ''')
     
     # Create change_log table if it doesn't exist
     cursor.execute('''
