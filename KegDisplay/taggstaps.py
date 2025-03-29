@@ -93,6 +93,36 @@ def start():
                            choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                            type=str.upper,
                            help='Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
+        parser.add_argument('--tap', 
+                           type=int,
+                           default=1,
+                           help='Specify which tap number this server is displaying data for')
+        parser.add_argument('--display',
+                           choices=['ws0010', 'ssd1322'],
+                           default='ws0010',
+                           help='Select which display to use (ws0010 or ssd1322)')
+        parser.add_argument('--RS', 
+                           type=int,
+                           help='Provide the RS pin if it is needed')
+        parser.add_argument('--E', 
+                           type=int,
+                           help='Provide the E pin if it is needed')
+        parser.add_argument('--PINS', 
+                           type=int,
+                           nargs='+',
+                           help='Provide a list of data pins if they are needed')
+        parser.add_argument('--interface',
+                           choices=['bitbang', 'spi'],
+                           default='bitbang',
+                           help='Type of interface the display is using (bitbang or spi)')
+        parser.add_argument('--page',
+                           type=str,
+                           default='KegDisplay/page.yaml',
+                           help='Path to an alternate page file')
+        parser.add_argument('--db',
+                           type=str,
+                           default='KegDisplay/beer.db',
+                           help='Path to an alternate database file')
 
         args = parser.parse_args()
 
@@ -129,7 +159,7 @@ def start():
 
         sys.excepthook = handleuncaughtexceptions
 
-        dbPath = "KegDisplay/beer.db"
+        dbPath = args.db
         if Path(dbPath).exists() is False:
             raise FileNotFoundError(f"Database file {dbPath} missing")
         
@@ -138,21 +168,37 @@ def start():
         src.add("SELECT idTap, idBeer from taps", name='taps', frequency = 5)
 
         ds = dataset()
-        ds.add("sys", {"tapnr": 1, "status": "start"})
+        ds.add("sys", {"tapnr": args.tap, "status": "start"})
         ds.add("beers", {})
         ds.add("taps", {})
 
-        path = Path(__file__).parent / "page.yaml"
+        path = Path(args.page)
         if path.exists() is False:
             raise FileNotFoundError(f"Page file {path} missing")
         main = load(path, dataset=ds)
 
-        #interface = bitbang_6800(RS=7, E=8, PINS=[25,24,23,27])
-        interface = bitbang_6800(RS=7, E=8, PINS=[25,5,6,12])
-        #interface = bitbang_6800(RS=24, E=25, PINS=[16,26,20,21])
-        #interface = spi()
-        screen = ws0010(interface)
-        #screen = ssd1322(serial_interface=interface, mode='1')
+        # Initialize the appropriate interface based on command line arguments
+        if args.interface == 'bitbang':
+            rs_pin = args.RS if args.RS is not None else 7
+            e_pin = args.E if args.E is not None else 8
+            data_pins = args.PINS if args.PINS is not None else [25, 5, 6, 12]
+            interface = bitbang_6800(RS=rs_pin, E=e_pin, PINS=data_pins)
+            logger.debug(f"Initialized bitbang interface with RS={rs_pin}, E={e_pin}, PINS={data_pins}")
+        elif args.interface == 'spi':
+            interface = spi()
+            logger.debug("Initialized SPI interface")
+        else:
+            raise ValueError(f"Unsupported interface type: {args.interface}")
+
+        # Initialize the appropriate display based on command line arguments
+        if args.display == 'ws0010':
+            screen = ws0010(interface)
+            logger.debug("Initialized ws0010 display")
+        elif args.display == 'ssd1322':
+            screen = ssd1322(serial_interface=interface, mode='1')
+            logger.debug("Initialized ssd1322 display")
+        else:
+            raise ValueError(f"Unsupported display type: {args.display}")
 
         def dict_hash(dictionary, ignore_key=None):
             """Generate a hash of a dictionary, optionally ignoring a specific key.
