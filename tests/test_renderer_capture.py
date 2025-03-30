@@ -173,6 +173,7 @@ WIDGETS:
         color: white
         just: rt
     
+    # ABV - aligned to the right side of the display
     tap2_abv: &tap2_abv
         type: text
         dvalue: f"ABV:{{beers[taps[sys['tapnr']]]['ABV']}}%"
@@ -219,9 +220,9 @@ CANVASES:
           - <<: *bg_rect
             placement: [0, 0]
           - <<: *tap2_name
-            placement: [95, 2]
+            placement: [-5, 2, rt]  # Properly positioned 5px from right edge with right justification
           - <<: *tap2_abv
-            placement: [95, 10]
+            placement: [-5, 10, rt]  # Properly positioned 5px from right edge with right justification
           - <<: *tap2_line1
             placement: [0, 0]
           - <<: *tap2_line2

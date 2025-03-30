@@ -333,8 +333,7 @@ DISPLAY:
             except ImportError as e:
                 self.skipTest(f"Could not import tinyDisplay.cfg.load: {e}")
             
-            # Create a template file with alignment-specific tests
-            # Define text alignments using the supported values from the error message
+            # Create an alignment test template
             alignment_template = self.test_dir / "alignment_test.yaml"
             with open(alignment_template, 'w') as f:
                 f.write(f"""
@@ -344,13 +343,13 @@ PATHS:
 FONTS:
   tiny: upperascii_3x5.fnt
   small: hd44780.fnt
+  large: Vintl01_10x16.fnt
 
 DEFAULTS:
   display:
     dsize: &dsize [100, 16]
 
 WIDGETS:
-    # Define text with valid alignment values
     text_left: &text_left
         type: text
         dvalue: f"Left"
@@ -374,11 +373,11 @@ CANVASES:
         type: canvas
         items:
           - <<: *text_left
-            placement: [0, 0]   # Left-aligned at (0,0)
+            placement: [0, 0, lt]  # Left-aligned at (0,0) - No offset needed
           - <<: *text_right
-            placement: [100, 0, rt]  # Right-aligned at right edge 
+            placement: [-5, 0, rt]  # Right-aligned at right edge, 5px inset from right
           - <<: *text_center
-            placement: [50, 8, mt]   # Center-aligned at horizontal center
+            placement: [0, 8, mt]   # Center-aligned at horizontal center, no x offset needed
         size: [100, 16]
         activeWhen: True
 
