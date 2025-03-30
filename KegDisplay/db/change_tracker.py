@@ -29,7 +29,7 @@ class ChangeTracker:
     
     def initialize_tracking(self):
         """Initialize the change tracking system"""
-        with sqlite3.connect(self.db_manager.db_path) as conn:
+        with self.db_manager.get_connection() as conn:
             cursor = conn.cursor()
             
             # Create change_log table if it doesn't exist
@@ -82,7 +82,7 @@ class ChangeTracker:
         """
         self.ensure_valid_session()
         
-        with sqlite3.connect(self.db_manager.db_path) as conn:
+        with self.db_manager.get_connection() as conn:
             cursor = conn.cursor()
             timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
             content_hash = self._get_table_hash(table_name)
@@ -109,7 +109,7 @@ class ChangeTracker:
             changes: List of changes since the timestamp
         """
         changes = []
-        with sqlite3.connect(self.db_manager.db_path) as conn:
+        with self.db_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 SELECT table_name, operation, row_id, timestamp, content_hash
@@ -140,7 +140,7 @@ class ChangeTracker:
         Returns:
             success: True if all changes applied successfully, False otherwise
         """
-        with sqlite3.connect(self.db_manager.db_path) as conn:
+        with self.db_manager.get_connection() as conn:
             cursor = conn.cursor()
             
             last_timestamp = None
@@ -206,28 +206,32 @@ class ChangeTracker:
         if not os.path.exists(self.db_manager.db_path):
             return {"hash": "0", "timestamp": "1970-01-01T00:00:00Z"}
         
-        with sqlite3.connect(self.db_manager.db_path) as conn:
-            cursor = conn.cursor()
-            
-            # Calculate content-based hash from all tracked tables
-            tables = ['beers', 'taps']
-            content_hashes = []
-            for table in tables:
-                content_hashes.append(self._get_table_hash(table))
-            content_hash = hashlib.md5(''.join(content_hashes).encode()).hexdigest()
-            
-            # Get timestamp from version table
-            try:
-                cursor.execute("SELECT last_modified FROM version LIMIT 1")
-                timestamp = cursor.fetchone()[0]
-                if not timestamp:
+        try:
+            with self.db_manager.get_connection() as conn:
+                cursor = conn.cursor()
+                
+                # Calculate content-based hash from all tracked tables
+                tables = ['beers', 'taps']
+                content_hashes = []
+                for table in tables:
+                    content_hashes.append(self._get_table_hash(table))
+                content_hash = hashlib.md5(''.join(content_hashes).encode()).hexdigest()
+                
+                # Get timestamp from version table
+                try:
+                    cursor.execute("SELECT last_modified FROM version LIMIT 1")
+                    timestamp = cursor.fetchone()[0]
+                    if not timestamp:
+                        timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+                        cursor.execute("UPDATE version SET last_modified = ?", (timestamp,))
+                        conn.commit()
+                except sqlite3.Error as e:
+                    logger.error(f"Error accessing version table: {e}")
                     timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-                    cursor.execute("UPDATE version SET last_modified = ?", (timestamp,))
-                    conn.commit()
-            except sqlite3.Error as e:
-                logger.error(f"Error accessing version table: {e}")
-                timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-        
+        except Exception as e:
+            logger.error(f"Error getting database version: {e}")
+            return {"hash": "0", "timestamp": "1970-01-01T00:00:00Z"}
+            
         return {"hash": content_hash, "timestamp": timestamp}
     
     def _get_table_hash(self, table_name):
@@ -239,38 +243,54 @@ class ChangeTracker:
         Returns:
             hash: MD5 hash of the table's contents
         """
-        with sqlite3.connect(self.db_manager.db_path) as conn:
-            cursor = conn.cursor()
-            
-            try:
-                cursor.execute(f"SELECT * FROM {table_name} ORDER BY rowid")
-                rows = cursor.fetchall()
-                if not rows:
+        try:
+            # Check if a non-empty table exists
+            with self.db_manager.get_connection() as conn:
+                cursor = conn.cursor()
+                try:
+                    cursor.execute(f"SELECT count(*) FROM {table_name}")
+                    count = cursor.fetchone()[0]
+                    if count == 0:
+                        return "0"
+                    
+                    cursor.execute(f"SELECT * FROM {table_name} ORDER BY rowid")
+                    rows = cursor.fetchall()
+                    return hashlib.md5(str(rows).encode()).hexdigest()
+                except sqlite3.Error as e:
+                    logger.error(f"Error calculating hash for {table_name}: {e}")
                     return "0"
-                return hashlib.md5(str(rows).encode()).hexdigest()
-            except sqlite3.Error as e:
-                logger.error(f"Error calculating hash for {table_name}: {e}")
-                return "0"
+        except Exception as e:
+            logger.error(f"Unexpected error in _get_table_hash: {e}")
+            return "0"
     
     def prune_change_log(self, days_to_keep=30):
-        """Prune old entries from the change log
+        """Prune old entries from the change_log table
         
         Args:
-            days_to_keep: Number of days of changes to keep
+            days_to_keep: Number of days worth of changes to keep
             
         Returns:
-            count: Number of records deleted
+            count: Number of entries pruned
         """
-        cutoff_date = (datetime.now(UTC) - datetime.timedelta(days=days_to_keep)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        from datetime import timedelta
         
-        with sqlite3.connect(self.db_manager.db_path) as conn:
+        # Calculate the cutoff date
+        cutoff_date = (datetime.now(UTC) - timedelta(days=days_to_keep)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        
+        with self.db_manager.get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("DELETE FROM change_log WHERE timestamp < ?", (cutoff_date,))
-            deleted_count = cursor.rowcount
-            conn.commit()
-        
-        logger.info(f"Pruned {deleted_count} old entries from change_log")
-        return deleted_count
+            
+            # Get count of entries to be pruned
+            cursor.execute("SELECT COUNT(*) FROM change_log WHERE timestamp < ?", (cutoff_date,))
+            count = cursor.fetchone()[0]
+            
+            if count > 0:
+                # Delete old entries
+                cursor.execute("DELETE FROM change_log WHERE timestamp < ?", (cutoff_date,))
+                conn.commit()
+                logger.info(f"Pruned {count} entries from change_log")
+            
+            return count
     
     def is_newer_version(self, version1, version2):
         """Determine if version1 is newer than version2 based on timestamps

@@ -8,6 +8,8 @@ import logging
 from datetime import datetime
 import os
 import json
+import threading
+import queue
 
 logger = logging.getLogger("KegDisplay")
 
@@ -17,15 +19,32 @@ class DatabaseManager:
     Manages the beer and tap tables and provides CRUD operations.
     """
     
-    def __init__(self, db_path):
+    # Class variable to store connection pools for different database paths
+    _connection_pools = {}
+    _pool_locks = {}
+    
+    def __init__(self, db_path, pool_size=5):
         """Initialize the database manager
         
         Args:
             db_path: Path to the SQLite database file
+            pool_size: Size of the connection pool
         """
         self.db_path = db_path
-        self.initialize_tables()
+        self.pool_size = pool_size
         
+        # Initialize connection pool for this database path if it doesn't exist
+        if db_path not in self._connection_pools:
+            self._connection_pools[db_path] = queue.Queue(maxsize=pool_size)
+            self._pool_locks[db_path] = threading.Lock()
+            
+            # Pre-populate the pool with connections
+            for _ in range(pool_size):
+                conn = sqlite3.connect(db_path)
+                self._connection_pools[db_path].put(conn)
+        
+        self.initialize_tables()
+    
     def initialize_tables(self):
         """Initialize database tables if they don't exist"""
         with self.get_connection() as conn:
@@ -61,13 +80,78 @@ class DatabaseManager:
             logger.info("Database tables initialized")
     
     def get_connection(self):
-        """Get a database connection with proper settings
+        """Get a database connection from the pool
         
         Returns:
             conn: SQLite database connection
         """
-        conn = sqlite3.connect(self.db_path)
-        return conn
+        # Use a context manager to ensure connections are returned to the pool
+        class ConnectionContext:
+            def __init__(self, db_manager, conn):
+                self.db_manager = db_manager
+                self.conn = conn
+            
+            def __enter__(self):
+                return self.conn
+            
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                # Return connection to the pool instead of closing it
+                try:
+                    if self.conn:
+                        # Rollback any uncommitted changes if there was an exception
+                        if exc_type:
+                            self.conn.rollback()
+                        self.db_manager._connection_pools[self.db_manager.db_path].put(self.conn)
+                except Exception as e:
+                    logger.error(f"Error returning connection to pool: {e}")
+                    # If there's an error returning to the pool, close it
+                    if self.conn:
+                        self.conn.close()
+        
+        # Get a connection from the pool or create a new one if the pool is empty
+        try:
+            with self._pool_locks[self.db_path]:
+                try:
+                    # Try to get a connection from the pool with a short timeout
+                    conn = self._connection_pools[self.db_path].get(block=True, timeout=0.1)
+                except queue.Empty:
+                    # If pool is empty, create a new connection
+                    logger.warning(f"Connection pool for {self.db_path} is empty, creating new connection")
+                    conn = sqlite3.connect(self.db_path)
+                
+                # Test if the connection is still valid
+                try:
+                    conn.execute("SELECT 1").fetchone()
+                except sqlite3.Error:
+                    # If connection is invalid, create a new one
+                    logger.warning("Connection invalid, creating new connection")
+                    conn.close()
+                    conn = sqlite3.connect(self.db_path)
+                
+                return ConnectionContext(self, conn)
+        except Exception as e:
+            logger.error(f"Error getting connection from pool: {e}")
+            # If there's an error with the pool, fall back to a direct connection
+            return sqlite3.connect(self.db_path)
+            
+    def close_all_connections(self):
+        """Close all connections in the pool for this database path"""
+        if self.db_path in self._connection_pools:
+            with self._pool_locks[self.db_path]:
+                # Empty the queue and close all connections
+                while not self._connection_pools[self.db_path].empty():
+                    try:
+                        conn = self._connection_pools[self.db_path].get(block=False)
+                        conn.close()
+                    except Exception as e:
+                        logger.error(f"Error closing connection: {e}")
+    
+    def __del__(self):
+        """Clean up resources when the instance is destroyed"""
+        try:
+            self.close_all_connections()
+        except:
+            pass
     
     def query(self, sql, params=(), fetch_all=False, row_factory=None):
         """Execute a query and return results
