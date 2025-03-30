@@ -266,7 +266,14 @@ class SequenceRenderer:
         
         # Debug the timing calculations
         time_since_last = current_time - self.last_frame_time
-        logger.debug(f"Frame {self.sequence_index}: time since last frame: {time_since_last:.3f}s, duration: {duration:.3f}s")
+        
+        # Only log timing info occasionally to reduce output volume
+        if not hasattr(self, '_debug_counter'):
+            self._debug_counter = 0
+        self._debug_counter = (self._debug_counter + 1) % 100  # Log every 20th frame
+        
+        if self._debug_counter == 0:
+            logger.debug(f"Frame {self.sequence_index}: time since last frame: {time_since_last:.3f}s, duration: {duration:.3f}s")
         
         if time_since_last >= duration:
             # Display the current frame
