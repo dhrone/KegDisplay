@@ -187,6 +187,9 @@ class SequenceRenderer:
             # For diagnostic purposes, periodically log image content (very infrequently)
             if i % 100 == 0:
                 logger.debug(f"{self.main_display}")
+                ds = self._dataset
+                logger.debug(f"{ds['beers'][ds['sys']['tapnr']]['Name']}")
+                # beers[taps[sys['tapnr']]]['Name']
                 logger.debug(f"Frame {i} generated - checking for changes.  {self._dataset['sys']['status']}")
             
             # Process the frame
