@@ -71,7 +71,7 @@ class DataManager:
                 
                 for key, value in db_row.items():
                     if key == 'beer':
-                        logger.debug(f"Processing beer data: {value}")
+                        logger.debug(f"Processing beer data: {len(value) if isinstance(value, list) else 1} items")
                         if isinstance(value, dict):
                             self.renderer.update_dataset("beers", value, merge=True)
                             updates_found = True
@@ -80,7 +80,11 @@ class DataManager:
                                 if 'idBeer' in item:
                                     beer_id = item['idBeer']
                                     beer_data = {k: v for k, v in item.items() if k != 'idBeer'}
-                                    logger.debug(f"Adding beer {beer_id}: {beer_data}")
+                                    # Only log the first few beers to avoid flooding the logs
+                                    if beer_id <= 3:
+                                        logger.debug(f"Adding beer {beer_id}: {beer_data}")
+                                    elif beer_id == 4:
+                                        logger.debug(f"Adding more beers...")
                                     self.renderer.update_dataset(
                                         "beers",
                                         {beer_id: beer_data},
