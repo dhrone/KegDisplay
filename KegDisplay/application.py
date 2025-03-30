@@ -69,6 +69,10 @@ class Application:
         self.renderer.sequence_index = 0
         self.renderer.last_frame_time = time.time()
         
+        # Explicitly set status to running to hide splash screen
+        self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)
+        logger.debug("Set system status to 'running'")
+        
         last_db_check_time = 0
         
         # Main loop
@@ -93,6 +97,10 @@ class Application:
                         self.renderer.image_sequence = self.renderer.generate_image_sequence()
                         self.renderer.sequence_index = 0
                         self.renderer.last_frame_time = current_time
+                        
+                        # Ensure status is set back to running
+                        self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)
+                        logger.debug("Reset system status to 'running' after data change")
                 
                 # Display current frame
                 self.renderer.display_next_frame()

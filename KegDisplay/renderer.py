@@ -113,6 +113,7 @@ class SequenceRenderer:
         """
         if status:
             self._dataset.update('sys', {'status': status}, merge=True)
+            logger.debug(f"Status changed to '{status}'")
             
         if self.main_display:
             self.main_display.render()
@@ -132,6 +133,7 @@ class SequenceRenderer:
             
         # Update status to indicate we're in 'running' mode
         self._dataset.update('sys', {'status': 'running'}, merge=True)
+        logger.debug("Set status to 'running' in generate_image_sequence")
         
         # Initialize variables
         image_sequence = []
@@ -226,7 +228,13 @@ class SequenceRenderer:
         if current_time - self.last_frame_time >= duration:
             self.display.display(current_image)
             self.last_frame_time = current_time
+            prev_index = self.sequence_index
             self.sequence_index = (self.sequence_index + 1) % len(self.image_sequence)
+            
+            # Log every 20th frame to avoid excessive logs
+            if prev_index % 20 == 0:
+                logger.debug(f"Displaying frame {prev_index}/{len(self.image_sequence)}")
+            
             return True
             
         return False 
