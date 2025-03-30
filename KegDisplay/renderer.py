@@ -187,7 +187,7 @@ class SequenceRenderer:
             # For diagnostic purposes, periodically log image content (very infrequently)
             if i % 100 == 0:
                 logger.debug(f"{self.main_display}")
-                logger.debug(f"Frame {i} generated - checking for changes")
+                logger.debug(f"Frame {i} generated - checking for changes.  {_dataset['sys']['status']}")
             
             # Process the frame
             if last_image is not None:
