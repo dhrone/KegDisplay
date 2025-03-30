@@ -1,0 +1,109 @@
+PATHS:
+  'images': './test_images'
+  'fonts': './test_fonts'
+
+DEFAULTS:
+  display:
+    dsize: &dsize [100, 16]
+    type: &dtype ws0010
+    
+  widgets:
+    scroll: &scroll
+      type: scroll
+      dgap: __self__['size'][0]/4, 0
+      size: [100, 8]
+      wait: 'atStart'
+      actions:
+        - [pause, 100]
+        - rtl
+
+FONTS:
+  tiny: test_tiny.fnt
+  small: test_small.fnt
+  large: test_large.fnt
+
+WIDGETS:
+    # Test widgets
+    test_title: &test_title
+        type: text
+        dvalue: "Test Display"
+        font: large
+
+    test_name: &test_name
+        type: text
+        dvalue: f"{beers[taps[1]]['Name']}"
+        font: small
+        
+    test_description: &test_description
+        type: text
+        font: small
+        dvalue: f"{beers[taps[1]]['Description']}"
+        effect: *scroll
+        
+    test_abv: &test_abv
+        type: text
+        font: tiny
+        just: rt
+        dvalue: f"{beers[taps[1]]['ABV']}"
+
+    test_status: &test_status
+        type: text
+        font: small
+        just: mt
+        dvalue: f"{sys['status']}"
+
+    test_rect: &test_rect
+        type: rectangle
+        xy: [0, 0, 99, 15]
+        fill: black
+        outline: black
+
+CANVASES:
+  # Test canvases
+  test_info_canvas: &test_info_canvas
+    type: canvas
+    items:
+      - <<: *test_name
+        placement: [0, 0]
+      - <<: *test_abv
+        placement: [0, 0, rt] 
+      - <<: *test_description
+        placement: [0, 0, lb] 
+    size: [100, 16]
+    activeWhen: True
+
+  test_splash_canvas: &test_splash_canvas
+    type: canvas
+    items:
+      - <<: *test_title
+        placement: [0, 0, mm]
+        z: 10
+      - <<: *test_rect
+        placement: [0, 0]
+        z: 1
+    size: [100, 16]
+    z: 1000
+    activeWhen: sys['status']=='test'
+
+  test_status_canvas: &test_status_canvas
+    type: canvas
+    items:
+      - <<: *test_status
+        placement: [0, 0, mm]
+        z: 10
+      - <<: *test_rect
+        placement: [0, 0]
+        z: 1
+    size: [100, 16]
+    z: 500
+    activeWhen: sys['status']=='status'
+
+DISPLAY:
+  size: *dsize
+  items:
+    - name: INFO
+      <<: *test_info_canvas
+    - name: SPLASH
+      <<: *test_splash_canvas
+    - name: STATUS
+      <<: *test_status_canvas 
