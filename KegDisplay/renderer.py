@@ -135,9 +135,13 @@ class SequenceRenderer:
         beers = self._dataset.get('beers', {})
         taps = self._dataset.get('taps', {})
         sys_data = self._dataset.get('sys', {})
-        logger.debug(f"Current beer data: {beers}")
-        logger.debug(f"Current tap data: {taps}")
-        logger.debug(f"Current system data: {sys_data}")
+        
+        # Only log data at startup or when something changes
+        if not hasattr(self, '_data_logged'):
+            logger.debug(f"Current beer data: {beers}")
+            logger.debug(f"Current tap data: {taps}")
+            logger.debug(f"Current system data: {sys_data}")
+            self._data_logged = True
         
         # Make sure we have valid beer data for the current tap
         tapnr = sys_data.get('tapnr', 1)
@@ -180,8 +184,8 @@ class SequenceRenderer:
             # Add to raw frames collection
             raw_frames.append(current_bytes)
             
-            # For diagnostic purposes, periodically log image content (every 20 frames)
-            if i % 20 == 0:
+            # For diagnostic purposes, periodically log image content (very infrequently)
+            if i % 100 == 0:
                 logger.debug(f"Frame {i} generated - checking for changes")
             
             # Process the frame
@@ -191,8 +195,8 @@ class SequenceRenderer:
                 if current_bytes == last_bytes:
                     # Frame hasn't changed
                     static_count += 1
-                    # Log long static periods to help diagnose issues
-                    if static_count % 20 == 0:
+                    # Log long static periods to help diagnose issues - but much less frequently
+                    if static_count % 100 == 0:
                         logger.debug(f"Static frame count: {static_count}")
                 else:
                     # Frame has changed
@@ -267,10 +271,10 @@ class SequenceRenderer:
         # Debug the timing calculations
         time_since_last = current_time - self.last_frame_time
         
-        # Only log timing info very occasionally to reduce output volume
+        # Only log timing info extremely occasionally to reduce output volume
         if not hasattr(self, '_debug_counter'):
             self._debug_counter = 0
-        self._debug_counter = (self._debug_counter + 1) % 100  # Log every 100th frame
+        self._debug_counter = (self._debug_counter + 1) % 250  # Log every 250th frame
         
         if self._debug_counter == 0:
             logger.debug(f"Frame {self.sequence_index}: time since last frame: {time_since_last:.3f}s, duration: {duration:.3f}s")

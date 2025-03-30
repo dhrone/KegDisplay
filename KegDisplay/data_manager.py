@@ -93,21 +93,35 @@ class DataManager:
                                     updates_found = True
                     
                     if key == 'taps':
-                        logger.debug(f"Processing tap data: {value}")
+                        # Only log tap data changes, not every query
                         if isinstance(value, dict):
-                            self.renderer.update_dataset("taps", {value['idTap']: value['idBeer']}, merge=True)
-                            updates_found = True
+                            tap_id = value.get('idTap')
+                            beer_id = value.get('idBeer')
+                            if tap_id and beer_id:
+                                logger.debug(f"Processing tap update: Tap {tap_id} with beer {beer_id}")
+                                self.renderer.update_dataset("taps", {tap_id: beer_id}, merge=True)
+                                updates_found = True
                         else:
                             for item in value:
                                 if 'idTap' in item:
-                                    logger.debug(f"Adding tap {item['idTap']} with beer {item['idBeer']}")
-                                    self.renderer.update_dataset("taps", {item['idTap']: item['idBeer']}, merge=True)
+                                    tap_id = item['idTap']
+                                    beer_id = item['idBeer']
+                                    logger.debug(f"Adding tap {tap_id} with beer {beer_id}")
+                                    self.renderer.update_dataset("taps", {tap_id: beer_id}, merge=True)
                                     updates_found = True
-                        
+            
             if items_processed == 0:
                 logger.debug("No database updates found")
             else:
-                logger.debug(f"Processed {items_processed} database updates")
+                # Only log detailed updates if not too frequent
+                if not hasattr(self, '_update_counter'):
+                    self._update_counter = 0
+                self._update_counter = (self._update_counter + 1) % 5  # Log every 5th update batch
+                
+                if self._update_counter == 0:
+                    logger.debug(f"Processed {items_processed} database updates")
+                else:
+                    logger.debug(f"Database updated")
                 
             return updates_found
         except Exception as e:
