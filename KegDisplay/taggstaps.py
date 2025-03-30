@@ -49,6 +49,7 @@ if not logger.handlers:
     
 # Import our application class
 from .application import Application
+from .dependency_container import DependencyContainer
 
 
 def start():
@@ -69,15 +70,20 @@ def start():
     sys.excepthook = handle_uncaught_exceptions
     
     try:
-        # Create and initialize the application
-        app = Application()
-        if not app.initialize():
-            logger.error("Failed to initialize application")
+        # Create dependency container
+        container = DependencyContainer()
+        
+        # Initialize components
+        try:
+            config_manager, display, renderer, data_manager = container.create_application_components()
+        except Exception as e:
+            logger.error(f"Failed to initialize components: {e}")
             return 1
             
-        # Run the application
-        app.run()
-        return 0
+        # Create and run the application with injected dependencies
+        app = Application(config_manager, display, renderer, data_manager)
+        return 0 if app.run() else 1
+        
     except KeyboardInterrupt:
         logger.info("KeyboardInterrupt received, exiting")
         return 0

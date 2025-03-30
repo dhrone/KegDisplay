@@ -20,13 +20,20 @@ logger = logging.getLogger("KegDisplay")
 class Application:
     """Main application class for KegDisplay."""
     
-    def __init__(self):
-        """Initialize the application."""
+    def __init__(self, config_manager, display, renderer, data_manager):
+        """Initialize the application with injected dependencies.
+        
+        Args:
+            config_manager: Configuration manager instance
+            display: Display instance
+            renderer: Renderer instance
+            data_manager: Data manager instance
+        """
         self.exit_requested = False
-        self.config_manager = ConfigManager()
-        self.display = None
-        self.renderer = None
-        self.data_manager = None
+        self.config_manager = config_manager
+        self.display = display
+        self.renderer = renderer
+        self.data_manager = data_manager
         
         # Set up signal handlers
         signal.signal(signal.SIGTERM, self._sigterm_handler)
@@ -42,65 +49,6 @@ class Application:
         logger.info(f"Signal {_signo} received, initiating shutdown")
         self.exit_requested = True
         
-    def initialize(self, args=None):
-        """Initialize the application.
-        
-        Args:
-            args: Command line arguments to parse
-            
-        Returns:
-            bool: True if initialization successful, False otherwise
-        """
-        # Parse and validate configuration
-        self.config_manager.parse_args(args)
-        if not self.config_manager.validate_config():
-            logger.error("Invalid configuration")
-            return False
-            
-        # Set up logging
-        config = self.config_manager.get_config()
-        log_level = config['log_level']
-        logger.setLevel(getattr(logging, log_level))
-        
-        # Initialize display
-        try:
-            self.display = DisplayFactory.create_display(
-                config['display'], 
-                interface_type=config['interface'], 
-                RS=config['RS'],
-                E=config['E'],
-                PINS=config['PINS']
-            )
-            
-            if not self.display.initialize():
-                logger.error("Failed to initialize display")
-                return False
-                
-            logger.info(f"Initialized {config['display']} display")
-        except Exception as e:
-            logger.error(f"Error creating display: {e}")
-            return False
-            
-        # Initialize dataset
-        ds = dataset()
-        ds.add("sys", {"tapnr": config['tap'], "status": "start"})
-        ds.add("beers", {})
-        ds.add("taps", {})
-        
-        # Initialize renderer
-        self.renderer = SequenceRenderer(self.display, ds)
-        if not self.renderer.load_page(config['page']):
-            logger.error(f"Failed to load page template: {config['page']}")
-            return False
-            
-        # Initialize data manager
-        self.data_manager = DataManager(config['db'], self.renderer)
-        if not self.data_manager.initialize():
-            logger.error(f"Failed to initialize database: {config['db']}")
-            return False
-            
-        return True
-    
     def run(self):
         """Run the main application loop."""
         if not self.display or not self.renderer or not self.data_manager:
