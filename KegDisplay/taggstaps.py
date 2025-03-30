@@ -81,7 +81,7 @@ def start():
             return 1
             
         # Create and run the application with injected dependencies
-        app = Application(config_manager, display, renderer, data_manager)
+        app = Application(renderer, data_manager)
         return 0 if app.run() else 1
         
     except KeyboardInterrupt:

@@ -142,9 +142,18 @@ class DefaultRendererFactory(RendererFactoryInterface):
         Raises:
             Exception: If renderer creation fails
         """
+        # Create the renderer with the provided dataset object
         renderer = SequenceRenderer(display, dataset_obj)
+        
+        # Load the page template - this will reuse the dataset
         if not renderer.load_page(config['page']):
             raise Exception(f"Failed to load page template: {config['page']}")
+            
+        # Verify dataset integrity after loading the page
+        if not renderer.verify_dataset_integrity():
+            logger.warning("Dataset integrity check failed after loading page template")
+            logger.warning("This may cause display issues - the dataset is not properly shared")
+            
         return renderer
 
 
