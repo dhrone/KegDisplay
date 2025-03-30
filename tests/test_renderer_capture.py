@@ -6,60 +6,72 @@ These tests focus on visual inspection rather than automated verification.
 
 import unittest
 import tempfile
-import os
 from pathlib import Path
+import os
 import shutil
-from PIL import Image
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, MagicMock, patch
+import time
+from PIL import Image, ImageDraw, ImageFont
 
+# Import the necessary modules from your project
 from KegDisplay.renderer import SequenceRenderer
 from tinyDisplay.utility import dataset
 
 
 class TestRendererCapture(unittest.TestCase):
-    """Test class for capturing rendered outputs from SequenceRenderer."""
+    """Test class for capturing and saving rendered outputs for visual inspection."""
     
     def setUp(self):
         """Set up the test fixture."""
-        # Find the project root directory (needed to reference fonts correctly)
-        self.project_root = Path(__file__).parent.parent.absolute()
-        self.fonts_dir = self.project_root / "fonts"
+        # Set up the test environment
+        self.root_dir = Path(os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+        self.fonts_dir = self.root_dir / "fonts"
+        
+        # Create a permanent output directory for test results
+        self.output_dir = self.root_dir / "test_output"
+        os.makedirs(self.output_dir, exist_ok=True)
         
         # Create a mock display
-        self.mock_display = Mock()
+        self.display = Mock()
+        self.display.width = 100
+        self.display.height = 16
         
-        # Create a temp directory for test files
+        # Create a temporary directory for test files
         self.temp_dir = tempfile.TemporaryDirectory()
         self.test_dir = Path(self.temp_dir.name)
         
-        # Create an output directory for rendered images
-        self.output_dir = self.test_dir / "output"
-        self.output_dir.mkdir(exist_ok=True)
-        
-        # Test data for beers
-        self.test_beers = {
+        # Set up test data
+        self.beer_data = {
             1: {
-                'Name': 'Test IPA', 
-                'ABV': 6.5, 
-                'Description': 'A hoppy test beer with citrus notes'
+                "Name": "Test Beer 1",
+                "Brewery": "Test Brewery",
+                "Style": "IPA",
+                "ABV": 5.5,
+                "IBU": 65,
+                "Description": "A hoppy test beer",
+                "tap": 1
             },
             2: {
-                'Name': 'Test Stout', 
-                'ABV': 7.2, 
-                'Description': 'A rich, dark test beer with coffee flavors'
+                "Name": "Test Beer 2",
+                "Brewery": "Another Brewery",
+                "Style": "Stout",
+                "ABV": 7.0,
+                "IBU": 30,
+                "Description": "A dark test beer",
+                "tap": 2
             }
         }
         
-        # Create the actual dataset with test data
+        # Create a dataset
         self.test_dataset = dataset()
-        self.test_dataset.update('beers', self.test_beers)
+        self.test_dataset.update('beers', self.beer_data)
         self.test_dataset.update('taps', {1: 1, 2: 2})  # Map taps to beers
         self.test_dataset.update('sys', {'status': 'running', 'tapnr': 1})
         
-        # Create the renderer with the dataset
-        self.renderer = SequenceRenderer(self.mock_display, self.test_dataset)
+        # Create the renderer
+        self.renderer = SequenceRenderer(self.display, self.test_dataset)
         
-        # Create a simple test template file that should render without complex logic
+        # Create a simple test template
         self.simple_template_path = self.test_dir / "simple_template.yaml"
         with open(self.simple_template_path, 'w') as f:
             f.write(f"""
@@ -74,39 +86,36 @@ DEFAULTS:
   display:
     dsize: &dsize [100, 16]
 
-CANVASES:
-  simple_canvas:
-    type: canvas
-    items:
-      - type: text
-        dvalue: "Test Display"
+WIDGETS:
+    test_title: &test_title
+        type: text
+        dvalue: f"Test Display"
         font: small
-        placement: [0, 0]
-      - type: text
-        dvalue: "Tap 1"
+    
+    tap_number: &tap_number
+        type: text
+        dvalue: f"Tap 1"
         font: tiny
-        placement: [0, 8]
-    size: [100, 16]
-    activeWhen: True
+
+CANVASES:
+    simple_canvas: &simple_canvas
+        type: canvas
+        items:
+          - <<: *test_title
+            placement: [0, 0]
+          - <<: *tap_number
+            placement: [0, 8]
+        size: [100, 16]
+        activeWhen: True
 
 DISPLAY:
   size: *dsize
   items:
     - name: MAIN
-      type: canvas
-      items:
-        - type: text
-          dvalue: "Test Display"
-          font: small
-          placement: [0, 0]
-        - type: text
-          dvalue: "Tap 1"
-          font: tiny
-          placement: [0, 8]
-      size: [100, 16]
+      <<: *simple_canvas
             """)
-            
-        # Create a template for beer info
+        
+        # Create a beer info template
         self.beer_template_path = self.test_dir / "beer_template.yaml"
         with open(self.beer_template_path, 'w') as f:
             f.write(f"""
@@ -121,17 +130,33 @@ DEFAULTS:
   display:
     dsize: &dsize [100, 16]
 
+WIDGETS:
+    beer_name: &beer_name
+        type: text
+        dvalue: f"{{beers[taps[sys['tapnr']]]['Name']}}"
+        font: small
+    
+    beer_abv: &beer_abv
+        type: text
+        dvalue: f"{{beers[taps[sys['tapnr']]]['ABV']}}% ABV"
+        font: tiny
+
+CANVASES:
+    beer_canvas: &beer_canvas
+        type: canvas
+        items:
+          - <<: *beer_name
+            placement: [0, 0]
+          - <<: *beer_abv
+            placement: [0, 8]
+        size: [100, 16]
+        activeWhen: True
+
 DISPLAY:
   size: *dsize
   items:
     - name: MAIN
-      type: canvas
-      items:
-        - type: text
-          dvalue: "Beer Information"
-          font: small
-          placement: [0, 0]
-      size: [100, 16]
+      <<: *beer_canvas
             """)
     
     def tearDown(self):
@@ -139,11 +164,11 @@ DISPLAY:
         self.temp_dir.cleanup()
     
     def test_capture_simple_template(self):
-        """Capture a rendered image from a simple template."""
+        """Test capturing a rendered image from a simple template."""
         # Skip if fonts directory doesn't exist
         if not self.fonts_dir.exists():
             self.skipTest(f"Fonts directory not found at {self.fonts_dir}")
-            
+        
         # Skip if required fonts are missing
         for font in ["upperascii_3x5.fnt", "hd44780.fnt"]:
             if not (self.fonts_dir / font).exists():
@@ -159,7 +184,7 @@ DISPLAY:
                 for y in range(16):
                     mock_canvas.image.putpixel((x, y), 1)
             
-            with patch('KegDisplay.renderer.load', return_value=mock_canvas):
+            with patch('tinyDisplay.cfg.load', return_value=mock_canvas):
                 # Load the template
                 result = self.renderer.load_page(self.simple_template_path)
                 self.assertTrue(result)
@@ -171,40 +196,41 @@ DISPLAY:
                 output_path = self.output_dir / "simple_template.png"
                 rendered_image.save(output_path)
                 
-                print(f"Saved simple template render to {output_path}")
+                print(f"Saved simple template image to: {output_path}")
                 
                 # Basic verification
-                self.assertEqual((100, 16), rendered_image.size)
+                self.assertEqual(rendered_image.width, 100)
+                self.assertEqual(rendered_image.height, 16)
         
         except Exception as e:
-            self.skipTest(f"Could not capture simple template: {e}")
+            self.skipTest(f"Could not capture simple template: {str(e)}")
     
     def test_capture_beer_info(self):
-        """Capture a beer information display."""
+        """Test capturing a beer information display."""
         # Skip if fonts directory doesn't exist
         if not self.fonts_dir.exists():
             self.skipTest(f"Fonts directory not found at {self.fonts_dir}")
         
         try:
-            # Create a mock canvas with a basic beer display
+            # Mock the template loading to return a canvas with a known image
             mock_canvas = Mock()
             mock_canvas.image = Image.new('1', (100, 16), color=0)
             
-            # Add content to the image - a simple border
-            for x in range(100):
-                mock_canvas.image.putpixel((x, 0), 1)  # Top border
-                mock_canvas.image.putpixel((x, 15), 1)  # Bottom border
-            for y in range(16):
-                mock_canvas.image.putpixel((0, y), 1)  # Left border
-                mock_canvas.image.putpixel((99, y), 1)  # Right border
-            
-            with patch('KegDisplay.renderer.load', return_value=mock_canvas):
-                # Load the template
-                result = self.renderer.load_page(self.beer_template_path)
-                self.assertTrue(result)
+            # Test for multiple tap values
+            for tap in [1, 2]:
+                # Add content to the image - a simple border
+                for x in range(100):
+                    mock_canvas.image.putpixel((x, 0), 1)  # Top border
+                    mock_canvas.image.putpixel((x, 15), 1)  # Bottom border
+                for y in range(16):
+                    mock_canvas.image.putpixel((0, y), 1)  # Left border
+                    mock_canvas.image.putpixel((99, y), 1)  # Right border
                 
-                # Render with different tap values
-                for tap in [1, 2]:
+                with patch('tinyDisplay.cfg.load', return_value=mock_canvas):
+                    # Load the template
+                    result = self.renderer.load_page(self.beer_template_path)
+                    self.assertTrue(result)
+                    
                     # Update the current tap
                     self.test_dataset.update('sys', {'tapnr': tap})
                     
@@ -215,13 +241,14 @@ DISPLAY:
                     output_path = self.output_dir / f"beer_info_tap{tap}.png"
                     rendered_image.save(output_path)
                     
-                    print(f"Saved beer info for tap {tap} to {output_path}")
+                    print(f"Saved beer info image for tap {tap} to: {output_path}")
                     
                     # Basic verification
-                    self.assertEqual((100, 16), rendered_image.size)
+                    self.assertEqual(rendered_image.width, 100)
+                    self.assertEqual(rendered_image.height, 16)
         
         except Exception as e:
-            self.skipTest(f"Could not capture beer info: {e}")
+            self.skipTest(f"Could not capture beer info: {str(e)}")
     
     def test_sequence_generation(self):
         """Test generating a sequence of images."""
@@ -256,27 +283,25 @@ DISPLAY:
             
             mock_canvas.render = mock_render
             
-            with patch('KegDisplay.renderer.load', return_value=mock_canvas), \
-                 patch('KegDisplay.renderer.time.time', return_value=12345):
-                
+            with patch('tinyDisplay.cfg.load', return_value=mock_canvas):
                 # Load the template
                 result = self.renderer.load_page(self.simple_template_path)
                 self.assertTrue(result)
                 
-                # Generate a sequence (this will call render multiple times)
+                # Generate a sequence of images
                 sequence = self.renderer.generate_image_sequence()
                 
-                # Save some frames from the sequence
+                # Save the first few frames
                 for i, (image, duration) in enumerate(sequence[:3]):  # First 3 frames
                     output_path = self.output_dir / f"sequence_frame_{i}.png"
                     image.save(output_path)
-                    print(f"Saved sequence frame {i} to {output_path}, duration: {duration:.2f}s")
+                    print(f"Saved sequence frame {i} to: {output_path}")
                 
-                # Basic verification
+                # Verify the sequence
                 self.assertGreater(len(sequence), 0)
         
         except Exception as e:
-            self.skipTest(f"Could not generate sequence: {e}")
+            self.skipTest(f"Could not generate sequence: {str(e)}")
 
 
 if __name__ == '__main__':
