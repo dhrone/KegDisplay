@@ -58,6 +58,7 @@ class DataManager:
             
         try:
             updates_found = False
+            items_processed = 0
             
             # Process all pending database updates
             while True:
@@ -65,31 +66,45 @@ class DataManager:
                 if db_row is None:
                     break
                 
+                items_processed += 1
+                logger.debug(f"Database query returned: {db_row}")
+                
                 for key, value in db_row.items():
                     if key == 'beer':
+                        logger.debug(f"Processing beer data: {value}")
                         if isinstance(value, dict):
                             self.renderer.update_dataset("beers", value, merge=True)
                             updates_found = True
                         else:
                             for item in value:
                                 if 'idBeer' in item:
+                                    beer_id = item['idBeer']
+                                    beer_data = {k: v for k, v in item.items() if k != 'idBeer'}
+                                    logger.debug(f"Adding beer {beer_id}: {beer_data}")
                                     self.renderer.update_dataset(
                                         "beers",
-                                        {item['idBeer']: {k: v for k, v in item.items() if k != 'idBeer'}},
+                                        {beer_id: beer_data},
                                         merge=True
                                     )
                                     updates_found = True
                     
                     if key == 'taps':
+                        logger.debug(f"Processing tap data: {value}")
                         if isinstance(value, dict):
                             self.renderer.update_dataset("taps", {value['idTap']: value['idBeer']}, merge=True)
                             updates_found = True
                         else:
                             for item in value:
                                 if 'idTap' in item:
+                                    logger.debug(f"Adding tap {item['idTap']} with beer {item['idBeer']}")
                                     self.renderer.update_dataset("taps", {item['idTap']: item['idBeer']}, merge=True)
                                     updates_found = True
                         
+            if items_processed == 0:
+                logger.debug("No database updates found")
+            else:
+                logger.debug(f"Processed {items_processed} database updates")
+                
             return updates_found
         except Exception as e:
             logger.error(f"Error updating data: {e}")

@@ -131,6 +131,29 @@ class SequenceRenderer:
             logger.error("No display loaded")
             return []
             
+        # Check if beer data exists
+        beers = self._dataset.get('beers', {})
+        taps = self._dataset.get('taps', {})
+        sys_data = self._dataset.get('sys', {})
+        logger.debug(f"Current beer data: {beers}")
+        logger.debug(f"Current tap data: {taps}")
+        logger.debug(f"Current system data: {sys_data}")
+        
+        # Make sure we have valid beer data for the current tap
+        tapnr = sys_data.get('tapnr', 1)
+        if tapnr not in taps or len(beers) == 0 or taps[tapnr] not in beers:
+            logger.warning(f"Missing beer data for tap {tapnr}. Adding sample data for display.")
+            # Add sample beer data to avoid errors
+            beer_id = 1
+            self._dataset.update('beers', {
+                beer_id: {
+                    'Name': 'Sample Beer',
+                    'ABV': 5.0,
+                    'Description': 'Sample beer description for testing'
+                }
+            }, merge=True)
+            self._dataset.update('taps', {tapnr: beer_id}, merge=True)
+        
         # Update status to indicate we're in 'running' mode
         self._dataset.update('sys', {'status': 'running'}, merge=True)
         logger.debug("Set status to 'running' in generate_image_sequence")
@@ -157,6 +180,10 @@ class SequenceRenderer:
             # Add to raw frames collection
             raw_frames.append(current_bytes)
             
+            # For diagnostic purposes, periodically log image content (every 20 frames)
+            if i % 20 == 0:
+                logger.debug(f"Frame {i} generated - checking for changes")
+            
             # Process the frame
             if last_image is not None:
                 last_bytes = last_image.tobytes()
@@ -164,6 +191,9 @@ class SequenceRenderer:
                 if current_bytes == last_bytes:
                     # Frame hasn't changed
                     static_count += 1
+                    # Log long static periods to help diagnose issues
+                    if static_count % 20 == 0:
+                        logger.debug(f"Static frame count: {static_count}")
                 else:
                     # Frame has changed
                     frame_changes += 1

@@ -152,7 +152,7 @@ class DefaultDataManagerFactory(DataManagerFactoryInterface):
     """Default implementation of the data manager factory."""
     
     def create_data_manager(self, db_path: str, renderer: SequenceRenderer) -> DataManager:
-        """Create a data manager.
+        """Create a data manager based on configuration.
         
         Args:
             db_path: Path to the database file
@@ -166,7 +166,7 @@ class DefaultDataManagerFactory(DataManagerFactoryInterface):
         """
         data_manager = DataManager(db_path, renderer)
         if not data_manager.initialize():
-            raise Exception(f"Failed to initialize database: {db_path}")
+            raise Exception(f"Failed to initialize database connection for {db_path}")
         return data_manager
 
 
