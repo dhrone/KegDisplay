@@ -142,6 +142,7 @@ class SequenceRenderer:
         max_iterations = 2000      # Safety limit
         last_image = None
         static_count = 0
+        frame_changes = 0
         
         logger.debug("Starting image sequence generation")
         start_time = time.time()
@@ -165,15 +166,19 @@ class SequenceRenderer:
                     static_count += 1
                 else:
                     # Frame has changed
+                    frame_changes += 1
                     if static_count > 0:
                         # Store the previous static frame with its duration
                         image_sequence.append((last_image, static_count / 20.0))  # 20 is render frequency
+                        logger.debug(f"Added static frame with duration {static_count / 20.0:.2f}s")
                     static_count = 0
                     # Store the new frame
                     image_sequence.append((current_image, 1 / 20.0))
+                    logger.debug(f"Added new frame {len(image_sequence)-1} (frame change #{frame_changes})")
             else:
                 # First frame
                 image_sequence.append((current_image, 1 / 20.0))
+                logger.debug("Added first frame to sequence")
                 
             last_image = current_image
             
@@ -202,9 +207,12 @@ class SequenceRenderer:
                         # Add any remaining static frames
                         if static_count > 0:
                             image_sequence.append((last_image, static_count / 20.0))
+                            logger.debug(f"Added final static frame with duration {static_count / 20.0:.2f}s")
                             
                         # Trim to one complete cycle
-                        return image_sequence[:sequence_length]
+                        final_sequence = image_sequence[:sequence_length]
+                        logger.debug(f"Returning sequence with {len(final_sequence)} frames and {frame_changes} frame changes")
+                        return final_sequence
         
         # If we reach max iterations without finding a pattern
         logger.warning(f"Reached maximum iterations ({max_iterations}) - using collected frames")
@@ -220,21 +228,26 @@ class SequenceRenderer:
             bool: True if frame was displayed, False otherwise
         """
         if not self.image_sequence:
+            logger.debug("No image sequence available")
             return False
             
         current_time = time.time()
         current_image, duration = self.image_sequence[self.sequence_index]
         
-        if current_time - self.last_frame_time >= duration:
+        # Debug the timing calculations
+        time_since_last = current_time - self.last_frame_time
+        logger.debug(f"Frame {self.sequence_index}: time since last frame: {time_since_last:.3f}s, duration: {duration:.3f}s")
+        
+        if time_since_last >= duration:
+            # Display the current frame
             self.display.display(current_image)
             self.last_frame_time = current_time
+            
+            # Advance to next frame
             prev_index = self.sequence_index
             self.sequence_index = (self.sequence_index + 1) % len(self.image_sequence)
             
-            # Log every 20th frame to avoid excessive logs
-            if prev_index % 20 == 0:
-                logger.debug(f"Displaying frame {prev_index}/{len(self.image_sequence)}")
-            
+            logger.debug(f"Advanced from frame {prev_index} to frame {self.sequence_index}/{len(self.image_sequence)-1}")
             return True
             
         return False 

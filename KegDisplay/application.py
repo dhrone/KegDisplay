@@ -60,6 +60,17 @@ class Application:
         # Initial data load
         self.data_manager.update_data()
         
+        # Diagnostics - log the current beer data
+        beer_data = self.renderer._dataset.get('beers', {})
+        tap_data = self.renderer._dataset.get('taps', {})
+        logger.debug(f"Loaded beer data: {beer_data}")
+        logger.debug(f"Loaded tap data: {tap_data}")
+        
+        # Make sure we have a tap number set
+        if not self.renderer._dataset.get('sys', {}).get('tapnr'):
+            logger.debug("Setting default tap number to 1")
+            self.renderer.update_dataset('sys', {'tapnr': 1}, merge=True)
+        
         # Initial render and display
         splash_image = self.renderer.render("start")
         self.display.display(splash_image.convert("1"))
