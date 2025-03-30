@@ -32,13 +32,13 @@ class TestRendererTextElements(unittest.TestCase):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.test_dir = Path(self.temp_dir.name)
         
-        # Create directories for output images
+        # Create a temp directory for output
         self.output_dir = self.test_dir / "output"
         self.output_dir.mkdir(exist_ok=True)
         
-        # Create a permanent output directory for the test results
-        self.permanent_output_dir = self.project_root / "text_element_tests"
-        self.permanent_output_dir.mkdir(exist_ok=True, parents=True)
+        # Use the temporary directory for test results
+        # Instead of a permanent one
+        self.permanent_output_dir = self.output_dir
         
         # Test data
         self.test_beer = {
@@ -128,11 +128,9 @@ DISPLAY:
         large_path = self.output_dir / f"{element_type}_large.png"
         large_image.save(large_path)
         
-        # Copy to permanent location
-        for img_path in [output_path, bg_path, large_path]:
-            dest = self.permanent_output_dir / img_path.name
-            shutil.copy(img_path, dest)
-            print(f"Saved {element_type} image to: {dest}")
+        # No need to copy to permanent location since we're now using the temp directory
+        # Just log that images were saved
+        print(f"Saved {element_type} images to: {self.output_dir}")
         
         return rendered_image
     
@@ -312,18 +310,12 @@ DISPLAY:
         debug_large_path = self.output_dir / "debug_layout_large.png"
         debug_large.save(debug_large_path)
         
-        # Copy to permanent location
-        for img_path in [debug_path, debug_large_path]:
-            dest = self.permanent_output_dir / img_path.name
-            shutil.copy(img_path, dest)
-            print(f"Saved debug image to: {dest}")
-        
         # Create HTML to display the results
         self.create_comparison_html()
     
     def create_comparison_html(self):
         """Create an HTML file to display all test results."""
-        html_path = self.permanent_output_dir / "text_elements_comparison.html"
+        html_path = self.output_dir / "text_elements_comparison.html"
         
         with open(html_path, 'w') as f:
             f.write(f"""<!DOCTYPE html>
@@ -372,33 +364,81 @@ DISPLAY:
     <h1>Text Elements Rendering Test</h1>
     
     <div class="section">
-        <h2>Complete Layout</h2>
+        <h2>Beer Name Element</h2>
         <div class="image-grid">
             <div class="image-item">
-                <img src="complete_layout_large.png" alt="Complete Layout">
-                <span>Complete Layout</span>
+                <img src="beer_name.png" alt="Beer Name">
+                <span>Original</span>
             </div>
             <div class="image-item">
-                <img src="debug_layout_large.png" alt="Debug Layout">
-                <span>Debug Layout (Expected)</span>
+                <img src="beer_name_with_bg.png" alt="Beer Name with Background">
+                <span>With Background</span>
+            </div>
+            <div class="image-item">
+                <img src="beer_name_large.png" alt="Beer Name Large">
+                <span>Enlarged (4x)</span>
             </div>
         </div>
     </div>
     
     <div class="section">
-        <h2>Individual Elements</h2>
+        <h2>Beer ABV Element</h2>
         <div class="image-grid">
             <div class="image-item">
-                <img src="beer_name_large.png" alt="Beer Name">
-                <span>Beer Name (Test IPA)</span>
+                <img src="beer_abv.png" alt="Beer ABV">
+                <span>Original</span>
             </div>
             <div class="image-item">
-                <img src="beer_abv_large.png" alt="Beer ABV">
-                <span>Beer ABV (6.5%)</span>
+                <img src="beer_abv_with_bg.png" alt="Beer ABV with Background">
+                <span>With Background</span>
             </div>
             <div class="image-item">
-                <img src="beer_desc_large.png" alt="Beer Description">
-                <span>Beer Description (A hoppy test beer)</span>
+                <img src="beer_abv_large.png" alt="Beer ABV Large">
+                <span>Enlarged (4x)</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Beer Description Element</h2>
+        <div class="image-grid">
+            <div class="image-item">
+                <img src="beer_desc.png" alt="Beer Description">
+                <span>Original</span>
+            </div>
+            <div class="image-item">
+                <img src="beer_desc_with_bg.png" alt="Beer Description with Background">
+                <span>With Background</span>
+            </div>
+            <div class="image-item">
+                <img src="beer_desc_large.png" alt="Beer Description Large">
+                <span>Enlarged (4x)</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Complete Layout</h2>
+        <div class="image-grid">
+            <div class="image-item">
+                <img src="complete_layout.png" alt="Complete Layout">
+                <span>Original</span>
+            </div>
+            <div class="image-item">
+                <img src="complete_layout_with_bg.png" alt="Complete Layout with Background">
+                <span>With Background</span>
+            </div>
+            <div class="image-item">
+                <img src="complete_layout_large.png" alt="Complete Layout Large">
+                <span>Enlarged (4x)</span>
+            </div>
+            <div class="image-item">
+                <img src="debug_layout.png" alt="Debug Layout">
+                <span>Debug Layout</span>
+            </div>
+            <div class="image-item">
+                <img src="debug_layout_large.png" alt="Debug Layout Large">
+                <span>Debug Layout Enlarged (4x)</span>
             </div>
         </div>
     </div>
@@ -407,28 +447,16 @@ DISPLAY:
         <h2>Right-Top Justification Variants</h2>
         <div class="image-grid">
             <div class="image-item">
-                <img src="abv_rt_99_large.png" alt="RT 99">
-                <span>rt, [99, 0, rt]</span>
+                <img src="abv_rt_neg5_with_bg.png" alt="RT -5px">
+                <span>RT with -5px offset</span>
             </div>
             <div class="image-item">
-                <img src="abv_rt_100_large.png" alt="RT 100">
-                <span>rt, [100, 0, rt]</span>
+                <img src="abv_rt_0_with_bg.png" alt="RT 0px">
+                <span>RT with 0px offset</span>
             </div>
             <div class="image-item">
-                <img src="abv_rt_95_large.png" alt="RT 95">
-                <span>rt, [95, 0, rt]</span>
-            </div>
-            <div class="image-item">
-                <img src="abv_rt_plain_large.png" alt="RT Plain">
-                <span>rt, [100, 0]</span>
-            </div>
-            <div class="image-item">
-                <img src="abv_r_plain_large.png" alt="R Plain">
-                <span>r, [100, 8]</span>
-            </div>
-            <div class="image-item">
-                <img src="abv_r_90_large.png" alt="R 90">
-                <span>r, [90, 8]</span>
+                <img src="abv_rt_neg10_with_bg.png" alt="RT -10px">
+                <span>RT with -10px offset</span>
             </div>
         </div>
     </div>
@@ -437,35 +465,24 @@ DISPLAY:
         <h2>Left-Bottom Justification Variants</h2>
         <div class="image-grid">
             <div class="image-item">
-                <img src="desc_lb_15_large.png" alt="LB 15">
-                <span>lb, [0, 15, lb]</span>
+                <img src="desc_lb_0_with_bg.png" alt="LB 0px" onerror="this.src='desc_lb_15_with_bg.png'">
+                <span>LB with 0px offset</span>
             </div>
             <div class="image-item">
-                <img src="desc_lb_16_large.png" alt="LB 16">
-                <span>lb, [0, 16, lb]</span>
+                <img src="desc_lb_15_with_bg.png" alt="LB 15px">
+                <span>LB with 15px offset</span>
             </div>
             <div class="image-item">
-                <img src="desc_lb_14_large.png" alt="LB 14">
-                <span>lb, [0, 14, lb]</span>
-            </div>
-            <div class="image-item">
-                <img src="desc_lb_plain_large.png" alt="LB Plain">
-                <span>lb, [0, 16]</span>
-            </div>
-            <div class="image-item">
-                <img src="desc_l_plain_large.png" alt="L Plain">
-                <span>l, [0, 8]</span>
-            </div>
-            <div class="image-item">
-                <img src="desc_b_plain_large.png" alt="B Plain">
-                <span>b, [50, 16]</span>
+                <img src="desc_lb_14_with_bg.png" alt="LB 14px">
+                <span>LB with 14px offset</span>
             </div>
         </div>
     </div>
 </body>
-</html>""")
+</html>
+""")
             
-        print(f"Created comparison HTML at: {html_path}")
+            print(f"Created comparison HTML at: {html_path}")
 
 
 if __name__ == '__main__':
