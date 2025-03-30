@@ -49,6 +49,8 @@ class SequenceRenderer:
             bool: True if successful, False otherwise
         """
         try:
+            # Pass our dataset to the loader to ensure we're using a single dataset instance
+            # throughout the application. This prevents data synchronization issues.
             self.main_display = load(page_path, dataset=self._dataset)
             return True
         except Exception as e:
@@ -187,12 +189,6 @@ class SequenceRenderer:
             # For diagnostic purposes, periodically log image content (very infrequently)
             if i % 100 == 0:
                 logger.debug(f"{self.main_display}")
-                ds = self._dataset
-                logger.debug(f"{ds['beers'][ds['sys']['tapnr']]['Name']}")
-                ds = self.main_display._dataset
-                logger.debug(f"====\n{ds}====")
-
-                # beers[taps[sys['tapnr']]]['Name']
                 logger.debug(f"Frame {i} generated - checking for changes.  {self._dataset['sys']['status']}")
             
             # Process the frame
@@ -301,3 +297,43 @@ class SequenceRenderer:
             return True
             
         return False 
+        
+    def verify_dataset_integrity(self):
+        """Verify that the dataset is properly shared with the display.
+        
+        This method can be used to confirm that the dataset object is correctly
+        shared between the renderer and its display object.
+        
+        Returns:
+            bool: True if the dataset is properly shared, False otherwise
+        """
+        if not self.main_display:
+            logger.warning("Cannot verify dataset integrity: No display loaded")
+            return False
+            
+        # Check that the display's dataset is the same object instance as the renderer's
+        display_dataset_id = id(self.main_display._dataset)
+        renderer_dataset_id = id(self._dataset)
+        
+        if display_dataset_id != renderer_dataset_id:
+            logger.error(f"Dataset integrity issue: Display dataset (id={display_dataset_id}) "
+                        f"!= Renderer dataset (id={renderer_dataset_id})")
+            return False
+            
+        # Check that a sample update to the renderer's dataset is visible in the display's dataset
+        test_key = "__dataset_integrity_test__"
+        test_value = {"timestamp": time.time()}
+        self._dataset.update(test_key, test_value)
+        
+        if test_key not in self.main_display._dataset or self.main_display._dataset[test_key] != test_value:
+            logger.error("Dataset integrity issue: Test update not visible in display's dataset")
+            # Clean up test data
+            if test_key in self._dataset:
+                del self._dataset[test_key]
+            return False
+            
+        # Clean up test data
+        if test_key in self._dataset:
+            del self._dataset[test_key]
+            
+        return True 

@@ -19,41 +19,40 @@ class TestApplication(unittest.TestCase):
     def setUp(self):
         """Set up the test fixture."""
         # Create mock dependencies
-        self.mock_config_manager = Mock()
-        self.mock_display = Mock()
         self.mock_renderer = Mock()
         self.mock_data_manager = Mock()
         
         # Configure mocks with necessary functionality
         self.mock_renderer.check_data_changed = MagicMock(return_value=False)
         self.mock_renderer.render = MagicMock(return_value=Image.new('1', (100, 16)))
+        self.mock_renderer.display = Mock()
+        self.mock_renderer.verify_dataset_integrity = MagicMock(return_value=True)
         self.mock_renderer.image_sequence = []
+        self.mock_renderer._dataset = Mock()
+        self.mock_renderer._dataset.get = MagicMock(return_value={})
         self.mock_data_manager.update_frequency = 0.1  # Small value for testing
         
         # Create application with mock dependencies
         self.app = Application(
-            self.mock_config_manager,
-            self.mock_display,
             self.mock_renderer,
             self.mock_data_manager
         )
         
     def test_signal_handler(self):
-        """Test that the signal handler sets exit_requested."""
+        """Test that the signal handler sets running to False."""
         # When
-        self.app._sigterm_handler(15, None)
+        self.app.signal_handler(15, None)
         
         # Then
-        self.assertTrue(self.app.exit_requested)
+        self.assertFalse(self.app.running)
         
     def test_cleanup(self):
-        """Test that cleanup calls cleanup on dependencies."""
+        """Test that cleanup calls cleanup on data_manager."""
         # When
         self.app.cleanup()
         
         # Then
         self.mock_data_manager.cleanup.assert_called_once()
-        self.mock_display.cleanup.assert_called_once()
     
     def test_run_checks_data_and_updates_display(self):
         """Test that run checks for data updates and updates the display."""
@@ -61,21 +60,21 @@ class TestApplication(unittest.TestCase):
         original_run = self.app.run
         
         def mock_run():
-            # Call the original method but override the main loop
-            if not self.app.display or not self.app.renderer or not self.app.data_manager:
-                return False
-                
-            # Initial data load
-            self.app.data_manager.update_data()
+            # Set running to True
+            self.app.running = True
             
-            # Initial render and display
-            splash_image = self.app.renderer.render("start")
-            self.app.display.display(splash_image.convert("1"))
+            # Perform initial data load
+            self.app.data_manager.load_all_data()
             
-            # Generate initial image sequence
+            # Initialize display
+            splash_image = self.app.renderer.render('start')
+            self.app.renderer.display.display(splash_image)
+            
+            # Generate image sequence
             self.app.renderer.image_sequence = self.app.renderer.generate_image_sequence()
             
             # Exit after setup
+            self.app.running = False
             return True
         
         # Replace the run method temporarily
@@ -86,7 +85,7 @@ class TestApplication(unittest.TestCase):
             self.app.run()
             
             # Then
-            self.mock_data_manager.update_data.assert_called()
+            self.mock_data_manager.load_all_data.assert_called()
             self.mock_renderer.render.assert_called()
             self.mock_renderer.generate_image_sequence.assert_called()
         finally:
@@ -108,7 +107,7 @@ class TestApplication(unittest.TestCase):
             # Check if data has changed
             if self.app.renderer.check_data_changed():
                 updating_image = self.app.renderer.render("update")
-                self.app.display.display(updating_image.convert("1"))
+                self.app.renderer.display.display(updating_image)
                 
                 # Generate new image sequence
                 self.app.renderer.image_sequence = self.app.renderer.generate_image_sequence()
@@ -117,12 +116,14 @@ class TestApplication(unittest.TestCase):
         original_run = self.app.run
         
         def modified_run():
-            # Call only the setup part of the original method
-            if not self.app.display or not self.app.renderer or not self.app.data_manager:
-                return False
-                
+            # Set running to True
+            self.app.running = True
+            
             # Run mock main loop once
             mock_main_loop()
+            
+            # Exit after one iteration
+            self.app.running = False
             return True
             
         self.app.run = modified_run
@@ -154,12 +155,14 @@ class TestApplication(unittest.TestCase):
         original_run = self.app.run
         
         def modified_run():
-            # Call only the setup part of the original method
-            if not self.app.display or not self.app.renderer or not self.app.data_manager:
-                return False
-                
+            # Set running to True
+            self.app.running = True
+            
             # Run mock main loop once
             mock_main_loop()
+            
+            # Exit after one iteration
+            self.app.running = False
             return True
             
         self.app.run = modified_run

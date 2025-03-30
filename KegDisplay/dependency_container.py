@@ -63,20 +63,23 @@ class DependencyContainer:
         return self.config_manager
     
     def create_application_components(self, args=None):
-        """Create all application components.
+        """Create the application components.
         
         Args:
-            args: Command line arguments to parse
+            args: Optional command line arguments
             
         Returns:
-            tuple: (config_manager, display, renderer, data_manager)
+            A tuple of (config_manager, display, renderer, data_manager)
             
         Raises:
             Exception: If component creation fails
         """
-        # Get configuration
+        # Create config manager and load configuration
         config_manager = self.get_config_manager()
-        config_manager.parse_args(args)
+        
+        if args:
+            config_manager.parse_args(args)
+            
         if not config_manager.validate_config():
             raise Exception("Invalid configuration")
             
@@ -101,7 +104,40 @@ class DependencyContainer:
             self.renderer = renderer
             self.data_manager = data_manager
             
+            # Verify integrity of created components
+            self.verify_integrity()
+            
             return config_manager, display, renderer, data_manager
         except Exception as e:
             logger.error(f"Error creating components: {e}")
-            raise 
+            raise
+            
+    def verify_integrity(self):
+        """Verify that all components have a consistent view of shared objects.
+        
+        This method verifies that the dataset object is properly shared across 
+        all components that need it, preventing synchronization issues.
+        """
+        if not hasattr(self, 'renderer') or not hasattr(self, 'dataset_obj'):
+            logger.warning("Cannot verify integrity: Not all components are initialized")
+            return False
+            
+        # Verify that the renderer uses the same dataset object that was created
+        if id(self.renderer._dataset) != id(self.dataset_obj):
+            logger.error("Integrity issue: Renderer is not using the dataset object created by the factory")
+            logger.error(f"Renderer dataset id: {id(self.renderer._dataset)}, Factory dataset id: {id(self.dataset_obj)}")
+            return False
+            
+        # If the renderer has a display object with a dataset, check that too
+        if (hasattr(self.renderer, 'main_display') and 
+            self.renderer.main_display is not None and 
+            hasattr(self.renderer.main_display, '_dataset')):
+            
+            if id(self.renderer.main_display._dataset) != id(self.dataset_obj):
+                logger.error("Integrity issue: Display is not using the dataset object created by the factory")
+                logger.error(f"Display dataset id: {id(self.renderer.main_display._dataset)}, " 
+                          f"Factory dataset id: {id(self.dataset_obj)}")
+                return False
+                
+        logger.debug("Component integrity verified: All components are using the same dataset object")
+        return True 
