@@ -33,17 +33,25 @@ class DatabaseManager:
         self.db_path = db_path
         self.pool_size = pool_size
         
-        # Initialize connection pool for this database path if it doesn't exist
-        if db_path not in self._connection_pools:
-            self._connection_pools[db_path] = queue.Queue(maxsize=pool_size)
-            self._pool_locks[db_path] = threading.Lock()
-            
-            # Pre-populate the pool with connections
-            for _ in range(pool_size):
-                conn = sqlite3.connect(db_path)
-                self._connection_pools[db_path].put(conn)
-        
+        self._initialize_connection_pool()
         self.initialize_tables()
+    
+    def _initialize_connection_pool(self):
+        """Initialize the connection pool for this database path"""
+        
+        # Create a pool lock if it doesn't exist
+        if self.db_path not in self._pool_locks:
+            self._pool_locks[self.db_path] = threading.Lock()
+        
+        # Create a connection pool if it doesn't exist
+        with self._pool_locks[self.db_path]:
+            if self.db_path not in self._connection_pools:
+                self._connection_pools[self.db_path] = queue.Queue(maxsize=self.pool_size)
+                
+                # Pre-populate the pool with connections
+                for _ in range(self.pool_size):
+                    conn = sqlite3.connect(self.db_path, check_same_thread=False)
+                    self._connection_pools[self.db_path].put(conn)
     
     def initialize_tables(self):
         """Initialize database tables if they don't exist"""
@@ -80,10 +88,10 @@ class DatabaseManager:
             logger.info("Database tables initialized")
     
     def get_connection(self):
-        """Get a database connection from the pool
+        """Get a database connection from the pool or create a new one
         
         Returns:
-            conn: SQLite database connection
+            ConnectionContext: Context manager for the connection
         """
         # Use a context manager to ensure connections are returned to the pool
         class ConnectionContext:
@@ -107,32 +115,21 @@ class DatabaseManager:
                     # If there's an error returning to the pool, close it
                     if self.conn:
                         self.conn.close()
-        
-        # Get a connection from the pool or create a new one if the pool is empty
+
         try:
-            with self._pool_locks[self.db_path]:
-                try:
-                    # Try to get a connection from the pool with a short timeout
-                    conn = self._connection_pools[self.db_path].get(block=True, timeout=0.1)
-                except queue.Empty:
-                    # If pool is empty, create a new connection
-                    logger.warning(f"Connection pool for {self.db_path} is empty, creating new connection")
-                    conn = sqlite3.connect(self.db_path)
-                
-                # Test if the connection is still valid
-                try:
-                    conn.execute("SELECT 1").fetchone()
-                except sqlite3.Error:
-                    # If connection is invalid, create a new one
-                    logger.warning("Connection invalid, creating new connection")
-                    conn.close()
-                    conn = sqlite3.connect(self.db_path)
+            if self.db_path in self._connection_pools:
+                with self._pool_locks[self.db_path]:
+                    try:
+                        conn = self._connection_pools[self.db_path].get(block=False)
+                    except queue.Empty:
+                        # If pool is empty, create a new connection
+                        conn = sqlite3.connect(self.db_path, check_same_thread=False)
                 
                 return ConnectionContext(self, conn)
         except Exception as e:
             logger.error(f"Error getting connection from pool: {e}")
             # If there's an error with the pool, fall back to a direct connection
-            return sqlite3.connect(self.db_path)
+            return sqlite3.connect(self.db_path, check_same_thread=False)
             
     def close_all_connections(self):
         """Close all connections in the pool for this database path"""

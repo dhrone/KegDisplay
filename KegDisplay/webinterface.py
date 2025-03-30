@@ -11,8 +11,9 @@ import sys
 import csv
 import io
 
-# Import the SyncedDatabase
+# Import the SyncedDatabase and DatabaseManager
 from KegDisplay.db import SyncedDatabase
+from KegDisplay.db.database import DatabaseManager
 
 # Get the directory where this script is located
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -66,6 +67,9 @@ if not args.no_sync:
         print("or use --no-sync to disable synchronization for this instance.")
         sys.exit(1)
 
+# Initialize database manager for query operations
+db_manager = DatabaseManager(DB_PATH)
+
 app = Flask(__name__, 
            template_folder=TEMPLATE_DIR)  # Specify the template folder
 app.secret_key = os.urandom(24)  # Generate a random secret key
@@ -105,29 +109,26 @@ def load_user(user_id):
     return User.get(user_id)
 
 def get_db_tables():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
-    tables = cursor.fetchall()
-    conn.close()
+    with db_manager.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+        tables = cursor.fetchall()
     return [table[0] for table in tables]
 
 def get_table_schema(table_name):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute(f"PRAGMA table_info({table_name});")
-    schema = cursor.fetchall()
-    conn.close()
+    with db_manager.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(f"PRAGMA table_info({table_name});")
+        schema = cursor.fetchall()
     return schema
 
 def get_table_data(table_name):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute(f"SELECT * FROM {table_name};")
-    data = cursor.fetchall()
-    schema = get_table_schema(table_name)
-    columns = [col[1] for col in schema]
-    conn.close()
+    with db_manager.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM {table_name};")
+        data = cursor.fetchall()
+        schema = get_table_schema(table_name)
+        columns = [col[1] for col in schema]
     return columns, data
 
 @app.route('/')
@@ -198,39 +199,34 @@ def db_manage():
 @login_required
 def backup_beers():
     # Get all beers from the database
-    if synced_db:
-        beers = synced_db.get_all_beers()
-    else:
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
+    with db_manager.get_connection() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM beers ORDER BY Name")
-        beers = [dict(row) for row in cursor.fetchall()]
-        conn.close()
+        cursor.execute("SELECT * FROM beers")
+        beers = cursor.fetchall()
+        
+        # Get column names
+        cursor.execute("PRAGMA table_info(beers)")
+        columns = [info[1] for info in cursor.fetchall()]
     
-    if not beers:
-        return jsonify({"error": "No beers to backup"}), 404
-    
-    # Create a CSV in memory
+    # Create a CSV string
     output = io.StringIO()
-    fieldnames = ['idBeer', 'Name', 'ABV', 'IBU', 'Color', 'OriginalGravity', 'FinalGravity', 
-                 'Description', 'Brewed', 'Kegged', 'Tapped', 'Notes']
+    writer = csv.writer(output)
     
-    writer = csv.DictWriter(output, fieldnames=fieldnames)
-    writer.writeheader()
+    # Write header
+    writer.writerow(columns)
+    
+    # Write data
     for beer in beers:
         writer.writerow(beer)
     
-    # Generate filename with timestamp
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"beers_backup_{timestamp}.csv"
+    # Prepare response
+    csv_content = output.getvalue()
+    output.close()
     
-    # Create response with CSV data
     response = app.response_class(
-        response=output.getvalue(),
-        status=200,
+        response=csv_content,
         mimetype='text/csv',
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={'Content-Disposition': 'attachment; filename=beers_backup.csv'}
     )
     
     return response
@@ -491,37 +487,26 @@ def log_change(conn, table_name, operation, row_id):
 @app.route('/api/taps', methods=['GET'])
 @login_required
 def api_get_taps():
-    if synced_db:
-        taps = synced_db.get_all_taps()
-        
-        # Get beer details for each tap
-        for tap in taps:
-            if tap['idBeer']:
-                beer = synced_db.get_beer(tap['idBeer'])
-                if beer:
-                    tap['BeerName'] = beer['Name']
-                    tap['ABV'] = beer['ABV']
-                    tap['IBU'] = beer['IBU']
-                    tap['Description'] = beer['Description']
-        
+    """Get all taps with beer information"""
+    try:
+        with db_manager.get_connection() as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # Get all taps with beer information
+            cursor.execute("""
+                SELECT t.idTap, t.idBeer, 
+                       b.Name as BeerName, b.ABV, b.IBU, b.Description 
+                FROM taps t
+                LEFT JOIN beers b ON t.idBeer = b.idBeer
+                ORDER BY t.idTap
+            """)
+            
+            taps = [dict(row) for row in cursor.fetchall()]
+            
         return jsonify(taps)
-    else:
-        # Fallback if synced_db is not available
-        conn = sqlite3.connect(DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute('''
-            SELECT t.*, b.Name as BeerName, b.ABV, b.IBU, b.Description 
-            FROM taps t
-            LEFT JOIN beers b ON t.idBeer = b.idBeer
-            ORDER BY t.idTap
-        ''')
-        
-        taps = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        
-        return jsonify(taps)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/taps/<int:tap_id>', methods=['GET'])
 @login_required
@@ -563,55 +548,50 @@ def api_get_tap(tap_id):
 @app.route('/api/taps', methods=['POST'])
 @login_required
 def api_add_tap():
-    data = request.json
-    
-    if not data:
-        return jsonify({"error": "No data provided"}), 400
-    
-    tap_number = data.get('tap_number')
-    beer_id = data.get('beer_id')
-    
-    # Validate data
-    if not tap_number:
-        return jsonify({"error": "Tap number is required"}), 400
-    
-    # Check if tap already exists
-    if synced_db:
-        tap = synced_db.get_tap(tap_number)
-        if tap:
-            return jsonify({"error": f"Tap #{tap_number} already exists"}), 400
+    """Add a new tap"""
+    try:
+        data = request.json
+        
+        # Get beer_id if provided, otherwise use NULL
+        beer_id = data.get('idBeer')
+        
+        with db_manager.get_connection() as conn:
+            cursor = conn.cursor()
             
-        # Add the tap
-        tap_id = synced_db.add_tap(tap_number, beer_id)
+            # Find the next available tap ID
+            cursor.execute("SELECT MAX(idTap) FROM taps")
+            result = cursor.fetchone()
+            next_tap_id = 1 if result[0] is None else result[0] + 1
+            
+            # Insert the new tap
+            cursor.execute(
+                "INSERT INTO taps (idTap, idBeer) VALUES (?, ?)",
+                (next_tap_id, beer_id)
+            )
+            
+            conn.commit()
+            
+            # Get the new tap with beer info if applicable
+            if beer_id:
+                cursor.execute("""
+                    SELECT t.idTap, t.idBeer, 
+                           b.Name as BeerName, b.ABV, b.IBU, b.Description 
+                    FROM taps t
+                    LEFT JOIN beers b ON t.idBeer = b.idBeer
+                    WHERE t.idTap = ?
+                """, (next_tap_id,))
+            else:
+                cursor.execute("SELECT idTap, idBeer FROM taps WHERE idTap = ?", (next_tap_id,))
+            
+            tap = dict(cursor.fetchone())
         
-        if tap_id:
-            return jsonify({"success": True, "tap_id": tap_id}), 201
-        else:
-            return jsonify({"error": "Failed to create tap"}), 500
-    else:
-        # Fallback if synced_db is not available
-        conn = sqlite3.connect(DB_PATH)
-        cursor = conn.cursor()
-        
-        # Check if tap already exists
-        cursor.execute("SELECT idTap FROM taps WHERE idTap = ?", (tap_number,))
-        if cursor.fetchone():
-            conn.close()
-            return jsonify({"error": f"Tap #{tap_number} already exists"}), 400
-        
-        # Add the tap
-        cursor.execute(
-            "INSERT INTO taps (idTap, idBeer) VALUES (?, ?)",
-            (tap_number, beer_id)
-        )
-        
-        # Log the change
-        log_change(conn, "taps", "INSERT", tap_number)
-        
-        conn.commit()
-        conn.close()
-        
-        return jsonify({"success": True, "tap_id": tap_number}), 201
+        # Notify peers of the update if using synced database
+        if synced_db:
+            synced_db.notify_update()
+            
+        return jsonify(tap), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/taps/<int:tap_id>', methods=['PUT'])
 @login_required

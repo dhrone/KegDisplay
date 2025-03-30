@@ -18,7 +18,7 @@ import threading
 
 # Add the parent directory to the Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from dbsync import DatabaseSync
+from KegDisplay.dbsync_adapter import DatabaseSync
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, 
