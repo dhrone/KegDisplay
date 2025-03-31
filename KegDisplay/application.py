@@ -21,15 +21,17 @@ logger = logging.getLogger("KegDisplay")
 class Application:
     """Main application class for KegDisplay."""
     
-    def __init__(self, renderer, data_manager):
+    def __init__(self, renderer, data_manager, config_manager):
         """Initialize the application with the required components.
         
         Args:
             renderer: The renderer object for display
             data_manager: The data manager for handling beer data
+            config_manager: The configuration manager for application settings
         """
         self.renderer = renderer
         self.data_manager = data_manager
+        self.config_manager = config_manager
         self.running = False
         self.status = 'start'
         
@@ -50,23 +52,40 @@ class Application:
     def run(self):
         """Run the main application loop."""
         self.running = True
-  
+        splash_time = self.config_manager.get_config('splash_time')
+    
         # Initialize display with splash screen
         logger.info("Initializing display with splash screen...")
         splash_image = self.renderer.render('start')
         if splash_image:
             self.renderer.display.display(splash_image)
+
+        # Wait for the splash time to elapse
+        current_time = time.time()
         
         # Perform initial data load while showing splash
         logger.info("Loading initial data...")
         self.data_manager.load_all_data()
-        last_db_check_time = time.time()
+ 
         
         # Get current data for diagnostics
         beer_data = self.renderer._dataset.get('beers', {})
         tap_data = self.renderer._dataset.get('taps', {})
-        
-        logger.debug(f"Loaded {len(beer_data)} beers and {len(tap_data)} tap mappings")
+
+        # Check if we have any data to display.  If not, log a warning and set default values
+        if len(beer_data) == 0:
+            logger.warning("No beers found in database")
+            self.renderer.update_dataset("beers", {
+                "1": {
+                    'Name': 'No Beer Data',
+                    'ABV': 0.0,
+                    'Description': 'Check the database.  It does not appear to have any beers.'
+                }
+            }, merge=True)
+            
+        if len(tap_data) == 0:
+            logger.warning("No tap mappings found in database")
+            self.renderer.update_dataset("taps", { 1: 1}, merge=True)
         
         # Make sure we have a default tap selected
         if not self.renderer._dataset.get('sys', {}).get('tapnr'):
@@ -74,12 +93,18 @@ class Application:
             self.renderer.update_dataset('sys', {'tapnr': 1}, merge=True)
         
         # Generate image sequence for the first beer canvas
-        logger.info("Generating image sequence...")
         self.renderer.image_sequence = self.renderer.generate_image_sequence()
         logger.info(f"Generated sequence with {len(self.renderer.image_sequence)} frames")
         self.renderer.sequence_index = 0
         self.renderer.last_frame_time = time.time()
-            
+
+        # Wait for the splash time to elapse
+        while time.time() - current_time < splash_time:
+            time.sleep(0.1)
+
+        # Reset last_db_check_time to current time
+        last_db_check_time = time.time()
+
         # Main loop
         logger.info("Starting main loop...")
         frame_count = 0

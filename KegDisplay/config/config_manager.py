@@ -26,6 +26,7 @@ class ConfigManager:
             'page': 'KegDisplay/page.yaml',
             'db': 'KegDisplay/beer.db',
             'log_level': 'INFO',
+            'splash_time': 4,
         }
         
     def parse_args(self, args=None):
@@ -73,6 +74,10 @@ class ConfigManager:
                            type=str,
                            default='KegDisplay/beer.db',
                            help='Path to an alternate database file')
+        parser.add_argument('--splash',
+                           type=int,
+                           default=4,
+                           help='Number of seconds to display the splash screen')                  
                            
         parsed_args = parser.parse_args(args)
         

@@ -21,6 +21,7 @@ class TestApplication(unittest.TestCase):
         # Create mock dependencies
         self.mock_renderer = Mock()
         self.mock_data_manager = Mock()
+        self.mock_config_manager = Mock()
         
         # Configure mocks with necessary functionality
         self.mock_renderer.check_data_changed = MagicMock(return_value=False)
@@ -31,11 +32,13 @@ class TestApplication(unittest.TestCase):
         self.mock_renderer._dataset = Mock()
         self.mock_renderer._dataset.get = MagicMock(return_value={})
         self.mock_data_manager.update_frequency = 0.1  # Small value for testing
+        self.mock_config_manager.get_config = MagicMock(return_value={'splash_time': 2.0})
         
         # Create application with mock dependencies
         self.app = Application(
             self.mock_renderer,
-            self.mock_data_manager
+            self.mock_data_manager,
+            self.mock_config_manager
         )
         
     def test_signal_handler(self):

@@ -52,7 +52,7 @@ WIDGETS:
         type: text
         font: small
         just: mt
-        dvalue: f"Updating..."
+        dvalue: f"Hold my\nBeer!"
 
     rectStart: &rectStart
         type: rectangle
