@@ -186,7 +186,16 @@ class SyncProtocol:
         Returns:
             bytes: Serialized changes
         """
-        return json.dumps(changes).encode()
+        # Convert SQLite Row objects to serializable lists
+        serializable_changes = []
+        for change in changes:
+            # If the change is a sqlite3.Row object, convert it to a tuple
+            if hasattr(change, 'keys'):  # This is how we detect a Row object
+                serializable_changes.append(tuple(change))
+            else:
+                serializable_changes.append(change)
+        
+        return json.dumps(serializable_changes).encode()
     
     @staticmethod
     def deserialize_changes(data):
