@@ -68,7 +68,10 @@ class DataManager:
                     break
                 
                 items_processed += 1
-                logger.debug(f"Database query returned: {db_row}")
+                db_row_str = str(db_row)
+                if len(db_row_str) > 80:
+                    db_row_str = db_row_str[:77] + "..."
+                logger.debug(f"Database query returned: {db_row_str}")
                 
                 for key, value in db_row.items():
                     if key == 'beer':

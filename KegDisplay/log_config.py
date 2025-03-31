@@ -64,8 +64,8 @@ def configure_logging(log_level=None):
         # Ensure log directory exists
         os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
         file_handler = logging.FileHandler(LOG_FILE)
-        # File handler should always capture everything for debugging
-        file_handler.setLevel(logging.DEBUG)
+        # File handler now uses the same level as the console handler
+        file_handler.setLevel(effective_level)
         file_handler.setFormatter(CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s'))
         logger.addHandler(file_handler)
     except Exception as e:
@@ -82,8 +82,7 @@ def configure_logging(log_level=None):
 
 def update_log_level(log_level):
     """
-    Update the log level of the console handler only.
-    File handler will continue to log everything for debugging purposes.
+    Update the log level of all handlers.
     
     Args:
         log_level: The new log level as a string or logging constant
@@ -95,9 +94,8 @@ def update_log_level(log_level):
     if isinstance(log_level, str):
         log_level = getattr(logging, log_level, logging.INFO)
     
-    # Only update console handler(s)
+    # Update all handlers to the same level
     for handler in logger.handlers:
-        if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
-            handler.setLevel(log_level)
+        handler.setLevel(log_level)
             
-    logger.debug(f"Console log level updated to: {logging.getLevelName(log_level)}") 
+    logger.debug(f"All handler log levels updated to: {logging.getLevelName(log_level)}") 
