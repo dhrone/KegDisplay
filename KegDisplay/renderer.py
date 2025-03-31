@@ -250,10 +250,6 @@ class SequenceRenderer:
         if self._dataset is None:
             logger.error("Cannot generate image sequence: No dataset available")
             return []
-        
-
-        logger.info(f"Dataset check: Renderer dataset (id={id(self._dataset)}) " 
-                        f" Display dataset (id={id(self.main_display._dataset)})")
 
             
         # Check if beer data exists
@@ -309,7 +305,7 @@ class SequenceRenderer:
             raw_frames.append(current_bytes)
             
             # For diagnostic purposes, periodically log image content
-            if i % 100 == 0:
+            if i % 10 == 0:
                 logger.debug(f"Frame {i} generated - checking for changes")
             
             # Process the frame
