@@ -158,17 +158,23 @@ class SequenceRenderer:
         current_beers_hash = self.dict_hash(self._dataset.get('beers', {}), '__timestamp__')
         current_taps_hash = self.dict_hash(self._dataset.get('taps', {}), '__timestamp__')
         
+        logger.debug(f"Hash check - Beer hashes: stored={self.beers_hash}, current={current_beers_hash}")
+        logger.debug(f"Hash check - Tap hashes: stored={self.taps_hash}, current={current_taps_hash}")
+        
         # Check if this is the first check or if data has changed
         if self.beers_hash is None or self.taps_hash is None:
+            logger.debug("First data check - initializing hashes")
             self.beers_hash = current_beers_hash
             self.taps_hash = current_taps_hash
             return True
             
         if current_beers_hash != self.beers_hash or current_taps_hash != self.taps_hash:
+            logger.debug(f"Data changed - Beer hash match: {current_beers_hash == self.beers_hash}, Tap hash match: {current_taps_hash == self.taps_hash}")
             self.beers_hash = current_beers_hash
             self.taps_hash = current_taps_hash
             return True
             
+        logger.debug("No data changes detected")
         return False
     
     def render(self, status=None):
