@@ -102,8 +102,7 @@ class DataManager:
                             tap_id = value.get('idTap')
                             beer_id = value.get('idBeer')
                             if tap_id and beer_id:
-                                # Log tap updates at INFO level as they're more significant
-                                logger.info(f"Updated tap {tap_id} with beer {beer_id}")
+                                logger.debug(f"Updated tap {tap_id} with beer {beer_id}")
                                 self.renderer.update_dataset("taps", {tap_id: beer_id}, merge=True)
                                 updates_found = True
                         else:
