@@ -141,6 +141,41 @@
         max-width: calc(33.333% - 0px);
     }
     
+    /* Inline assign button styles */
+    .inline-assign-btn {
+        display: none;
+        position: absolute;
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%);
+        z-index: 5;
+        padding: 5px 10px;
+        margin-right: 5px;
+        font-weight: 500;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid #0d6efd;
+    }
+    
+    .list-group-item.active .inline-assign-btn {
+        display: inline-block;
+    }
+    
+    /* Show the assign button on hover for a better UX */
+    .list-group-item:hover .inline-assign-btn {
+        display: inline-block;
+    }
+    
+    .list-group-item {
+        position: relative;
+        padding-right: 85px; /* Make room for the assign button */
+    }
+    
+    /* Dark mode support for the inline assign button */
+    body.dark-mode .inline-assign-btn {
+        background-color: #375a7f;
+        border-color: #375a7f;
+    }
+    
     /* Responsive adjustments */
     @media (max-width: 991.98px) {
         .tap-col {
@@ -363,40 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Disable button while processing
-            this.disabled = true;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assigning...';
-            
-            // Update tap with selected beer
-            fetch(`/api/taps/${currentTapId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    beer_id: selectedBeerId
-                })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => { throw err; });
-                }
-                return response.json();
-            })
-            .then(result => {
-                // Close modal and reload taps
-                beerSelectionModal.hide();
-                loadTaps();
-            })
-            .catch(error => {
-                console.error('Error assigning beer:', error);
-                this.innerHTML = '<i class="fas fa-times"></i> Error';
-                setTimeout(() => {
-                    this.disabled = false;
-                    this.innerHTML = 'Assign Beer';
-                    alert(error.error || 'Failed to assign beer. Please try again.');
-                }, 1000);
-            });
+            assignBeerToTap(selectedBeerId, currentTapId, this);
         });
     }
     
@@ -610,6 +612,26 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     }
 
+    // Define the document click handler as a named function outside the other functions
+    function handleOutsideClick(e) {
+        const beerList = document.getElementById('beer-list');
+        // Only handle clicks outside the beer list and not on assign buttons
+        if (beerList && !beerList.contains(e.target) && 
+            !e.target.classList.contains('inline-assign-btn') && 
+            !e.target.classList.contains('assign-beer-btn')) {
+            document.querySelectorAll('#beer-list a').forEach(a => {
+                a.classList.remove('active');
+            });
+            
+            // Disable the main assign button
+            const assignButton = document.getElementById('assign-beer-btn');
+            if (assignButton) {
+                assignButton.disabled = true;
+            }
+            selectedBeerId = null;
+        }
+    }
+
     function renderBeerSelectionList(beers) {
         console.log(`Rendering ${beers.length} beers for selection, sorted by ${modalCurrentSortField} (${modalCurrentSortDirection})`);
         
@@ -704,9 +726,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                         ${beer.Description ? `<small class="text-muted">${beer.Description}</small>` : ''}
                         ${additionalDetails ? `<div class="mt-1">${additionalDetails}</div>` : ''}
+                        <button class="btn btn-sm btn-primary inline-assign-btn">Assign</button>
                     `;
                     
                     item.addEventListener('click', function(e) {
+                        // Check if the click was on the assign button
+                        if (e.target.classList.contains('inline-assign-btn')) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            assignBeerToTap(beer.idBeer, currentTapId, null);
+                            return;
+                        }
+                        
                         e.preventDefault();
                         
                         // Remove active class from all items
@@ -731,6 +762,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Continue with the next item
                 }
             });
+            
+            // Remove any existing click handler before adding a new one
+            document.removeEventListener('click', handleOutsideClick);
+            
+            // Add click handler for document to remove selection when clicking outside
+            document.addEventListener('click', handleOutsideClick);
+            
         } catch (error) {
             console.error("Error rendering beer list:", error);
             document.getElementById('beer-list').innerHTML = 
@@ -772,6 +810,54 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         return `background-color: ${color};`;
+    }
+
+    // Function to assign a beer to a tap with button reference for updating UI
+    function assignBeerToTap(beerId, tapId, buttonElement) {
+        if (!beerId || !tapId) {
+            return;
+        }
+        
+        // Disable button while processing
+        if (buttonElement) {
+            buttonElement.disabled = true;
+            buttonElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Assigning...';
+        }
+        
+        // Update tap with selected beer
+        fetch(`/api/taps/${tapId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                beer_id: beerId
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw err; });
+            }
+            return response.json();
+        })
+        .then(result => {
+            // Close modal and reload taps
+            beerSelectionModal.hide();
+            loadTaps();
+        })
+        .catch(error => {
+            console.error('Error assigning beer:', error);
+            if (buttonElement) {
+                buttonElement.innerHTML = '<i class="fas fa-times"></i> Error';
+                setTimeout(() => {
+                    buttonElement.disabled = false;
+                    buttonElement.innerHTML = 'Assign Beer';
+                    alert(error.error || 'Failed to assign beer. Please try again.');
+                }, 1000);
+            } else {
+                alert(error.error || 'Failed to assign beer. Please try again.');
+            }
+        });
     }
 });
 </script>
