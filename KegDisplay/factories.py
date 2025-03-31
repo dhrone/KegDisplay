@@ -45,7 +45,7 @@ class RendererFactoryInterface(ABC):
         
         Args:
             display: Display instance
-            dataset_obj: Dataset instance
+            dataset_obj: Dataset instance (optional, may be None)
             config: Configuration dictionary
             
         Returns:
@@ -131,9 +131,13 @@ class DefaultRendererFactory(RendererFactoryInterface):
     def create_renderer(self, display: DisplayBase, dataset_obj: Any, config: Dict[str, Any]) -> SequenceRenderer:
         """Create a renderer based on configuration.
         
+        In the new approach, we don't need a pre-created dataset since we'll use
+        tinyDisplay's dataset after loading the page. However, we still accept
+        an optional dataset_obj for backward compatibility and testing.
+        
         Args:
             display: Display instance
-            dataset_obj: Dataset instance
+            dataset_obj: Initial dataset values (optional, mainly for testing)
             config: Configuration dictionary
             
         Returns:
@@ -142,10 +146,10 @@ class DefaultRendererFactory(RendererFactoryInterface):
         Raises:
             Exception: If renderer creation fails
         """
-        # Create the renderer with the provided dataset object
+        # Create the renderer, possibly with initial dataset values
         renderer = SequenceRenderer(display, dataset_obj)
         
-        # Load the page template - this will reuse the dataset
+        # Load the page template - this will get tinyDisplay's dataset
         if not renderer.load_page(config['page']):
             raise Exception(f"Failed to load page template: {config['page']}")
             
@@ -180,16 +184,21 @@ class DefaultDataManagerFactory(DataManagerFactoryInterface):
 
 
 class DefaultDatasetFactory(DatasetFactoryInterface):
-    """Default implementation of the dataset factory."""
+    """Default implementation of the dataset factory.
+    
+    This factory is maintained for backward compatibility, but in the current
+    architecture, we use tinyDisplay's dataset after loading the page template.
+    The dataset created here will be used only as initial values.
+    """
     
     def create_dataset(self, config: Dict[str, Any]) -> Any:
-        """Create a dataset based on configuration.
+        """Create a dataset with initial values based on configuration.
         
         Args:
             config: Configuration dictionary
             
         Returns:
-            A configured dataset instance
+            A dataset with initial values
         """
         ds = dataset()
         ds.add("sys", {"tapnr": config['tap'], "status": "start"})

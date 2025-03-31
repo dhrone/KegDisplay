@@ -50,18 +50,17 @@ class Application:
     def run(self):
         """Run the main application loop."""
         self.running = True
+  
+        # Initialize display with splash screen
+        logger.info("Initializing display with splash screen...")
+        splash_image = self.renderer.render('start')
+        if splash_image:
+            self.renderer.display.display(splash_image)
         
-        # Verify dataset integrity to ensure we don't have synchronization issues
-        dataset_ok = self.renderer.verify_dataset_integrity()
-        if not dataset_ok:
-            logger.error("Dataset integrity check failed - dataset is not properly shared between components")
-            logger.warning("Continuing with operation, but display may not work correctly")
-        else:
-            logger.debug("Dataset integrity verified - single dataset instance is properly shared")
-        
-        # Perform initial data load
+        # Perform initial data load while showing splash
         logger.info("Loading initial data...")
         self.data_manager.load_all_data()
+        last_db_check_time = time.time()
         
         # Get current data for diagnostics
         beer_data = self.renderer._dataset.get('beers', {})
@@ -73,33 +72,17 @@ class Application:
         if not self.renderer._dataset.get('sys', {}).get('tapnr'):
             # Default to tap 1
             self.renderer.update_dataset('sys', {'tapnr': 1}, merge=True)
-            
-        # Initialize display
-        logger.info("Initializing display...")
-        splash_image = self.renderer.render('start')
-        if splash_image:
-            self.renderer.display.display(splash_image)
         
-        # Generate image sequence
+        # Generate image sequence for the first beer canvas
         logger.info("Generating image sequence...")
-        self.renderer.update_dataset('sys', {'status': 'update'}, merge=True)
-        update_image = self.renderer.render()  # Will use current 'update' status
-        if update_image:
-            self.renderer.display.display(update_image)
-            
         self.renderer.image_sequence = self.renderer.generate_image_sequence()
         logger.info(f"Generated sequence with {len(self.renderer.image_sequence)} frames")
-        
-        # The renderer sets status to 'running' in generate_image_sequence,
-        # but we'll set it again just to be explicit
-        self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)
+        self.renderer.sequence_index = 0
+        self.renderer.last_frame_time = time.time()
             
         # Main loop
         logger.info("Starting main loop...")
         frame_count = 0
-        data_check_interval = 50  # Check for data changes every 50 frames
-        
-        last_db_check_time = 0
         
         while self.running:
             try:

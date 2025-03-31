@@ -38,11 +38,11 @@ class DependencyContainer:
             display_factory: Optional custom display factory
             renderer_factory: Optional custom renderer factory
             data_manager_factory: Optional custom data manager factory
-            dataset_factory: Optional custom dataset factory
+            dataset_factory: Optional custom dataset factory (kept for backward compatibility)
         """
         self.config_manager = None
         self.display = None
-        self.dataset_obj = None
+        self.dataset_obj = None  # This field is kept for backward compatibility
         self.renderer = None
         self.data_manager = None
         
@@ -93,19 +93,23 @@ class DependencyContainer:
         try:
             # Use the factory interfaces to create components
             display = self.display_factory.create_display(config)
+            
+            # Create initial dataset values for backward compatibility
+            # In the new approach, the renderer will use tinyDisplay's dataset after loading the page
             dataset_obj = self.dataset_factory.create_dataset(config)
+            
+            # Create renderer with display and initial dataset values
             renderer = self.renderer_factory.create_renderer(display, dataset_obj, config)
+            
+            # Create data manager
             data_manager = self.data_manager_factory.create_data_manager(config['db'], renderer)
             
             # Store for reuse
             self.config_manager = config_manager
             self.display = display
-            self.dataset_obj = dataset_obj
+            self.dataset_obj = dataset_obj  # Keep reference for backward compatibility
             self.renderer = renderer
             self.data_manager = data_manager
-            
-            # Verify integrity of created components
-            self.verify_integrity()
             
             return config_manager, display, renderer, data_manager
         except Exception as e:
@@ -115,29 +119,18 @@ class DependencyContainer:
     def verify_integrity(self):
         """Verify that all components have a consistent view of shared objects.
         
-        This method verifies that the dataset object is properly shared across 
-        all components that need it, preventing synchronization issues.
+        In the current architecture, the renderer uses tinyDisplay's dataset
+        after loading the page template, so this method is mainly kept for
+        backward compatibility.
         """
-        if not hasattr(self, 'renderer') or not hasattr(self, 'dataset_obj'):
+        if not hasattr(self, 'renderer'):
             logger.warning("Cannot verify integrity: Not all components are initialized")
             return False
             
-        # Verify that the renderer uses the same dataset object that was created
-        if id(self.renderer._dataset) != id(self.dataset_obj):
-            logger.error("Integrity issue: Renderer is not using the dataset object created by the factory")
-            logger.error(f"Renderer dataset id: {id(self.renderer._dataset)}, Factory dataset id: {id(self.dataset_obj)}")
+        # Verify that the renderer has a valid dataset
+        if not self.renderer.verify_dataset_integrity():
+            logger.error("Integrity issue: Renderer's dataset integrity check failed")
             return False
-            
-        # If the renderer has a display object with a dataset, check that too
-        if (hasattr(self.renderer, 'main_display') and 
-            self.renderer.main_display is not None and 
-            hasattr(self.renderer.main_display, '_dataset')):
-            
-            if id(self.renderer.main_display._dataset) != id(self.dataset_obj):
-                logger.error("Integrity issue: Display is not using the dataset object created by the factory")
-                logger.error(f"Display dataset id: {id(self.renderer.main_display._dataset)}, " 
-                          f"Factory dataset id: {id(self.dataset_obj)}")
-                return False
                 
-        logger.debug("Component integrity verified: All components are using the same dataset object")
+        logger.debug("Component integrity verified")
         return True 
