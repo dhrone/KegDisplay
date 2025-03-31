@@ -258,9 +258,9 @@ class SequenceRenderer:
         
         # Only log data at startup or when something changes
         if not hasattr(self, '_data_logged'):
-            logger.debug(f"Current beer data: {beers}")
-            logger.debug(f"Current tap data: {taps}")
-            logger.debug(f"Current system data: {sys_data}")
+            logger.debug(f"Current beer data: {str(beers)[:80]}")
+            logger.debug(f"Current tap data: {str(taps)[:80]}")
+            logger.debug(f"Current system data: {str(sys_data)[:80]}")
             self._data_logged = True
         
         # Make sure we have valid beer data for the current tap
