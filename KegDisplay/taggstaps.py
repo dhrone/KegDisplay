@@ -52,9 +52,26 @@ def start():
             
             # Update log level based on config
             log_level = config_manager.get_config('log_level')
-            update_log_level(log_level)
+            print(f"DEBUG: log_level from config_manager: '{log_level}' (type: {type(log_level)})")
+            
+            # IMPORTANT: Ensure log level is explicitly set to proper DEBUG constant
+            # rather than relying on string conversion which might be failing
+            if isinstance(log_level, str) and log_level.upper() == 'DEBUG':
+                print("DEBUG: Explicitly setting log level to logging.DEBUG")
+                update_log_level(logging.DEBUG)
+            else:
+                # For other levels, use the normal mechanism
+                if isinstance(log_level, str):
+                    log_level = log_level.upper()
+                update_log_level(log_level)
+                
             logger.debug(f"Log level updated to {log_level} based on command-line arguments")
             
+            # Verify logging levels of all handlers
+            logger.error(f"VERIFY - Logger level: {logger.level}, DEBUG={logging.DEBUG}")
+            for i, handler in enumerate(logger.handlers):
+                logger.error(f"VERIFY - Handler {i} level: {handler.level}, class: {handler.__class__.__name__}")
+                
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}")
             return 1
