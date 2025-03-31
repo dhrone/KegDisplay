@@ -251,9 +251,9 @@ class SequenceRenderer:
             logger.error("Cannot generate image sequence: No dataset available")
             return []
         
-        if id(self._dataset) != id(self.main_display._dataset):
-            logger.error(f"Dataset integrity issue: Renderer dataset (id={id(self._dataset)}) " 
-                        f"!= Display dataset (id={id(self.main_display._dataset)})")
+
+        logger.info(f"Dataset check: Renderer dataset (id={id(self._dataset)}) " 
+                        f" Display dataset (id={id(self.main_display._dataset)})")
 
             
         # Check if beer data exists
