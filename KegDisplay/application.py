@@ -66,7 +66,10 @@ class Application:
         # Perform initial data load while showing splash
         logger.info("Loading initial data...")
         self.data_manager.load_all_data()
- 
+
+        # Check if data has changed and initialize the check_data_changed hashes
+        if not self.renderer.check_data_changed():
+            logger.warning("On initial load, no data was received from the database")
         
         # Get current data for diagnostics
         beer_data = self.renderer._dataset.get('beers', {})
@@ -94,9 +97,9 @@ class Application:
         
         # Generate image sequence for the first beer canvas
         self.renderer.image_sequence = self.renderer.generate_image_sequence()
-        logger.info(f"Generated sequence with {len(self.renderer.image_sequence)} frames")
         self.renderer.sequence_index = 0
         self.renderer.last_frame_time = time.time()
+        logger.info(f"Generated sequence with {len(self.renderer.image_sequence)} frames")
 
         # Wait for the splash time to elapse
         while time.time() - current_time < splash_time:
