@@ -46,9 +46,9 @@ def start():
         # Create dependency container
         container = DependencyContainer()
         
-        # Initialize components
+        # Initialize components - IMPORTANT: Pass sys.argv to ensure command line args are used
         try:
-            config_manager, display, renderer, data_manager = container.create_application_components()
+            config_manager, display, renderer, data_manager = container.create_application_components(args=sys.argv[1:])
             
             # Update log level based on config
             log_level = config_manager.get_config('log_level')
