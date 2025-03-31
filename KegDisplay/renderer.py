@@ -60,6 +60,16 @@ class SequenceRenderer:
         self.beers_hash = None
         self.taps_hash = None
         
+        # Get tap number if available in the initial dataset
+        tapnr = None
+        if dataset_obj and hasattr(dataset_obj, 'get'):
+            sys_data = dataset_obj.get('sys', {})
+            if isinstance(sys_data, dict) and 'tapnr' in sys_data:
+                tapnr = sys_data['tapnr']
+                logger.debug(f"Renderer initialized for tap #{tapnr}")
+        else:
+            logger.debug("Renderer initialized without initial tap information")
+        
     def load_page(self, page_path):
         """Load a page template from a YAML file.
         
@@ -156,26 +166,51 @@ class SequenceRenderer:
             logger.warning("Cannot check for data changes: No dataset available")
             return False
             
-        current_beers_hash = self.dict_hash(self._dataset.get('beers', {}), '__timestamp__')
-        current_taps_hash = self.dict_hash(self._dataset.get('taps', {}), '__timestamp__')
+        # Get current tap number for this display
+        sys_data = self._dataset.get('sys', {})
+        current_tapnr = sys_data.get('tapnr', 1)
         
-        logger.debug(f"Hash check - Beer hashes: stored={self.beers_hash}, current={current_beers_hash}")
-        logger.debug(f"Hash check - Tap hashes: stored={self.taps_hash}, current={current_taps_hash}")
+        # Get current taps and beers data
+        beers = self._dataset.get('beers', {})
+        taps = self._dataset.get('taps', {})
         
-        # Check if this is the first check or if data has changed
+        # Get the beer ID currently assigned to this tap
+        current_beer_id = taps.get(current_tapnr)
+        
+        # First check - let's only hash the data we care about:
+        # 1. The tap mapping for this display's assigned tap number
+        tap_mapping = {current_tapnr: taps.get(current_tapnr)} if current_tapnr in taps else {}
+        current_tap_hash = self.dict_hash(tap_mapping)
+        
+        # 2. The beer data for the beer currently assigned to this tap
+        beer_data = {current_beer_id: beers.get(current_beer_id)} if current_beer_id and current_beer_id in beers else {}
+        current_beer_hash = self.dict_hash(beer_data, '__timestamp__')
+        
+        logger.debug(f"Hash check - Current tap {current_tapnr}, beer ID {current_beer_id}")
+        logger.debug(f"Hash check - Beer hash: stored={self.beers_hash}, current={current_beer_hash}")
+        logger.debug(f"Hash check - Tap hash: stored={self.taps_hash}, current={current_tap_hash}")
+        
+        # Check if this is the first check
         if self.beers_hash is None or self.taps_hash is None:
             logger.debug("First data check - initializing hashes")
-            self.beers_hash = current_beers_hash
-            self.taps_hash = current_taps_hash
+            self.beers_hash = current_beer_hash
+            self.taps_hash = current_tap_hash
             return True
             
-        if current_beers_hash != self.beers_hash or current_taps_hash != self.taps_hash:
-            logger.debug(f"Data changed - Beer hash match: {current_beers_hash == self.beers_hash}, Tap hash match: {current_taps_hash == self.taps_hash}")
-            self.beers_hash = current_beers_hash
-            self.taps_hash = current_taps_hash
+        # Check if the relevant data has changed
+        if current_beer_hash != self.beers_hash or current_tap_hash != self.taps_hash:
+            changed_elements = []
+            if current_beer_hash != self.beers_hash:
+                changed_elements.append("beer data")
+            if current_tap_hash != self.taps_hash:
+                changed_elements.append("tap mapping")
+            
+            logger.debug(f"Data changed - {', '.join(changed_elements)} for tap {current_tapnr}")
+            self.beers_hash = current_beer_hash
+            self.taps_hash = current_tap_hash
             return True
             
-        logger.debug("No data changes detected")
+        logger.debug(f"No relevant data changes for tap {current_tapnr}")
         return False
     
     def render(self, status=None):
@@ -257,15 +292,19 @@ class SequenceRenderer:
         taps = self._dataset.get('taps', {})
         sys_data = self._dataset.get('sys', {})
         
+        # Get tap number and beer ID for this display
+        tapnr = sys_data.get('tapnr', 1)
+        beer_id = taps.get(tapnr)
+        
         # Only log data at startup or when something changes
         if not hasattr(self, '_data_logged'):
+            logger.debug(f"Display for tap {tapnr}, showing beer ID {beer_id}")
             logger.debug(f"Current beer data: {str(beers)[:80]}")
             logger.debug(f"Current tap data: {str(taps)[:80]}")
             logger.debug(f"Current system data: {str(sys_data)[:80]}")
             self._data_logged = True
         
         # Make sure we have valid beer data for the current tap
-        tapnr = sys_data.get('tapnr', 1)
         if tapnr not in taps or len(beers) == 0 or taps[tapnr] not in beers:
             logger.warning(f"Missing beer data for tap {tapnr}. Adding sample data for display.")
             # Add sample beer data to avoid errors
@@ -278,6 +317,10 @@ class SequenceRenderer:
                 }
             }, merge=True)
             self.update_dataset('taps', {tapnr: beer_id}, merge=True)
+        else:
+            # Log the beer details being displayed
+            beer_name = beers.get(beer_id, {}).get('Name', 'Unknown')
+            logger.debug(f"Generating sequence for tap {tapnr}, beer: {beer_name} (ID: {beer_id})")
         
         # Update status to indicate we're in 'running' mode
         self.update_dataset('sys', {'status': 'running'}, merge=True)

@@ -131,7 +131,18 @@ class Application:
                     data_changed = self.renderer.check_data_changed()
                     
                     if data_changed:
-                        logger.info("Data changed - updating display")
+                        sys_data = self.renderer._dataset.get('sys', {})
+                        tapnr = sys_data.get('tapnr', 1)
+                        taps = self.renderer._dataset.get('taps', {})
+                        beer_id = taps.get(tapnr)
+                        beer_name = "Unknown"
+                        
+                        # Get the beer name if available
+                        beers = self.renderer._dataset.get('beers', {})
+                        if beer_id in beers:
+                            beer_name = beers[beer_id].get('Name', 'Unknown')
+                        
+                        logger.info(f"Data changed for tap #{tapnr} - updating display (showing beer: {beer_name})")
                         
                         # Ensure dataset is synchronized after data change
                         if hasattr(self.renderer, 'force_dataset_sync') and self.renderer.main_display:
