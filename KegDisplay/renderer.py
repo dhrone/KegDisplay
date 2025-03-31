@@ -15,6 +15,7 @@ from tinyDisplay.render.widget import text
 from tinyDisplay.utility import dataset, image2Text
 from tinyDisplay.cfg import _tdLoader, load as td_load
 
+# Use the pre-configured logger
 logger = logging.getLogger("KegDisplay")
 
 # Use tinyDisplay's load function directly

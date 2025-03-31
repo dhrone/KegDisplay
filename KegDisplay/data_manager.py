@@ -5,8 +5,9 @@ Handles database access and updates.
 """
 
 import logging
-from pyAttention.source import database
+from .db.database import SQLiteSource
 
+# Use the pre-configured logger
 logger = logging.getLogger("KegDisplay")
 
 
@@ -34,7 +35,7 @@ class DataManager:
         """
         try:
             # Initialize database source
-            self.src = database(f'sqlite+aiosqlite:///{self.db_path}')
+            self.src = SQLiteSource(f'sqlite+aiosqlite:///{self.db_path}')
             
             # Add queries for beer and tap data
             self.src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency=self.update_frequency)

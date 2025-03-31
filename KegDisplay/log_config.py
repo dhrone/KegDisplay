@@ -1,0 +1,103 @@
+"""
+Centralized logging configuration for KegDisplay
+
+This module handles all logging configuration to ensure consistent behavior
+across all parts of the application.
+"""
+
+import os
+import logging
+import sys
+
+# Constants
+LOG_FILE = "/var/log/KegDisplay/taggstaps.log"
+LOGGER_NAME = "KegDisplay"
+
+# Custom formatter for clean log messages
+class CleanFormatter(logging.Formatter):
+    """Custom formatter that ensures clean, left-aligned output with proper line endings."""
+    def format(self, record):
+        # Clean any existing whitespace and handle slow render messages
+        record.msg = record.msg.strip()
+        # Format the message and ensure proper line endings
+        return super().format(record)
+
+def configure_logging(log_level=None):
+    """
+    Configure the logging system with the specified log level.
+    
+    Args:
+        log_level: The log level as a string ('DEBUG', 'INFO', etc.) or
+                  a logging level constant (logging.DEBUG, logging.INFO, etc.)
+                  
+    Returns:
+        The configured logger
+    """
+    # Get the logger
+    logger = logging.getLogger(LOGGER_NAME)
+    
+    # Clear any existing handlers to avoid duplicates when reconfigured
+    if logger.handlers:
+        logger.handlers.clear()
+    
+    # Set the initial level to DEBUG to capture everything, will be filtered by handlers
+    logger.setLevel(logging.DEBUG)
+    
+    # Determine the effective log level
+    effective_level = log_level
+    
+    # If a string is provided, convert it to the corresponding logging level
+    if isinstance(effective_level, str):
+        effective_level = getattr(logging, effective_level, logging.INFO)
+    # If nothing is provided, default to INFO
+    elif effective_level is None:
+        effective_level = logging.INFO
+    
+    # Create console handler
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(effective_level)
+    console_handler.setFormatter(CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s'))
+    logger.addHandler(console_handler)
+    
+    # Create file handler if possible
+    try:
+        # Ensure log directory exists
+        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
+        file_handler = logging.FileHandler(LOG_FILE)
+        # File handler should always capture everything for debugging
+        file_handler.setLevel(logging.DEBUG)
+        file_handler.setFormatter(CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s'))
+        logger.addHandler(file_handler)
+    except Exception as e:
+        # Log to console if file logging setup fails
+        logger.error(f"Could not set up file logging: {e}")
+    
+    # Log the configuration
+    logger.debug(f"Logging configured with level: {logging.getLevelName(effective_level)}")
+    for i, handler in enumerate(logger.handlers):
+        handler_level = logging.getLevelName(handler.level)
+        logger.debug(f"Handler {i} ({handler.__class__.__name__}) configured with level: {handler_level}")
+        
+    return logger
+
+def update_log_level(log_level):
+    """
+    Update the log level of the console handler only.
+    File handler will continue to log everything for debugging purposes.
+    
+    Args:
+        log_level: The new log level as a string or logging constant
+    """
+    # Get the logger
+    logger = logging.getLogger(LOGGER_NAME)
+    
+    # Convert string level to logging constant if needed
+    if isinstance(log_level, str):
+        log_level = getattr(logging, log_level, logging.INFO)
+    
+    # Only update console handler(s)
+    for handler in logger.handlers:
+        if isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler):
+            handler.setLevel(log_level)
+            
+    logger.debug(f"Console log level updated to: {logging.getLevelName(log_level)}") 

@@ -11,6 +11,9 @@ import sys
 import csv
 import io
 
+# Import log configuration
+from .log_config import configure_logging
+
 # Import the SyncedDatabase and DatabaseManager
 from KegDisplay.db import SyncedDatabase
 from KegDisplay.db.database import DatabaseManager
@@ -22,6 +25,9 @@ PASSWD_PATH = os.path.join(BASE_DIR, 'passwd')
 TEMPLATE_DIR = os.path.join(BASE_DIR, 'templates')
 print(f"Password file path: {PASSWD_PATH}")
 print(f"Template directory: {TEMPLATE_DIR}")
+
+# Get the pre-configured logger
+logger = logging.getLogger("KegDisplay")
 
 # Parse all command line arguments at the beginning
 def parse_args():
@@ -36,6 +42,11 @@ def parse_args():
                        help='Disable database synchronization')
     parser.add_argument('--debug', action='store_true',
                        help='Run Flask in debug mode')
+    parser.add_argument('--log-level', 
+                       default='INFO',
+                       choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                       type=str.upper,
+                       help='Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
     return parser.parse_args()
 
 # Parse arguments once at module level
@@ -59,7 +70,6 @@ if not args.no_sync:
             sync_port=args.sync_port,
             test_mode=False
         )
-        logger = logging.getLogger("KegDisplay")
         logger.info("Initialized SyncedDatabase for web interface")
     except OSError as e:
         print(f"Error initializing SyncedDatabase: {e}")
@@ -995,74 +1005,24 @@ def api_set_tap_count():
         return jsonify({"success": True, "tap_count": count})
 
 def start():
-    """Start the web interface"""
+    """
+    Main entry point for the web interface.
+    """
+    # Parse arguments again to get actual command line args
+    args = parse_args()
     
-    # Make sure all required tables exist
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    # Configure logging with the specified level
+    configure_logging(args.log_level)
+    logger.debug(f"Starting KegDisplay web interface with log level {args.log_level}")
     
-    # Create beers table if it doesn't exist
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS beers (
-        idBeer INTEGER PRIMARY KEY,
-        Name tinytext NOT NULL,
-        ABV float,
-        IBU float,
-        Color float,
-        OriginalGravity float,
-        FinalGravity float,
-        Description TEXT,
-        Brewed datetime,
-        Kegged datetime,
-        Tapped datetime,
-        Notes TEXT
-    )
-    ''')
+    # Initialize database synchronization if enabled
+    if not args.no_sync and synced_db:
+        synced_db.start()
+        logger.info(f"Database synchronization started on ports {args.broadcast_port} (UDP) and {args.sync_port} (TCP)")
     
-    # Create taps table if it doesn't exist
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS taps (
-        idTap INTEGER PRIMARY KEY,
-        idBeer INTEGER
-    )
-    ''')
-    
-    # Create change_log table if it doesn't exist
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS change_log (
-        id INTEGER PRIMARY KEY,
-        table_name TEXT,
-        operation TEXT,
-        row_id INTEGER,
-        timestamp TEXT,
-        content_hash TEXT
-    )
-    ''')
-    
-    # Create version table if it doesn't exist
-    cursor.execute('''
-    CREATE TABLE IF NOT EXISTS version (
-        id INTEGER PRIMARY KEY CHECK (id = 1),
-        last_modified TEXT
-    )
-    ''')
-    
-    # Make sure there's an entry in the version table
-    cursor.execute('SELECT COUNT(*) FROM version')
-    if cursor.fetchone()[0] == 0:
-        cursor.execute('''
-        INSERT INTO version (id, last_modified) VALUES (1, datetime('now'))
-        ''')
-    
-    conn.commit()
-    conn.close()
-    
-    # Start the Flask application
+    # Start the web server
+    logger.info(f"Starting web server on {args.host}:{args.port}, debug mode: {args.debug}")
     app.run(host=args.host, port=args.port, debug=args.debug)
-    
-    # When shutting down, stop the synced_db gracefully
-    if synced_db:
-        synced_db.stop()
 
 if __name__ == '__main__':
     start() 

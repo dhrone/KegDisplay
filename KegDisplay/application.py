@@ -16,6 +16,7 @@ from .display import DisplayFactory
 from .renderer import SequenceRenderer
 from .data_manager import DataManager
 
+# Get the pre-existing logger instead of creating a new one
 logger = logging.getLogger("KegDisplay")
 
 class Application:
@@ -51,9 +52,7 @@ class Application:
         
     def run(self):
         """Run the main application loop."""
-        logger.debug("RUN() Debug Test")
-        logger.warning("RUN() Warning Test")
-        logger.error("RUN() Error Test")
+        logger.debug("Starting application main loop")
         self.running = True
         splash_time = self.config_manager.get_config('splash_time')
     

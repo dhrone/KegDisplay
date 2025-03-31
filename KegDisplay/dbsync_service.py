@@ -20,20 +20,15 @@ import threading
 import signal
 from pathlib import Path
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("/var/log/KegDisplay/dbsync.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger("KegDisplay.DBSync")
+# Import log configuration
+from .log_config import configure_logging
 
 # Import SyncedDatabase from db package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from KegDisplay.db import SyncedDatabase
+
+# Get the pre-configured logger
+logger = logging.getLogger("KegDisplay.DBSync")
 
 class DBSyncService:
     """
@@ -147,8 +142,17 @@ if __name__ == "__main__":
                        type=int,
                        default=5003,
                        help='Port for sync connections')
+    parser.add_argument('--log-level', 
+                       default='INFO',
+                       choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                       type=str.upper,
+                       help='Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
     
     args = parser.parse_args()
+    
+    # Configure logging with the specified level
+    configure_logging(args.log_level)
+    logger.debug(f"Starting dbsync service with log level {args.log_level}")
     
     # Register signal handlers
     signal.signal(signal.SIGINT, signal_handler)

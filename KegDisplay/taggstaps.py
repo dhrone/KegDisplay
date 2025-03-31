@@ -9,50 +9,19 @@ Main module for taggstaps program
 """
 
 import sys
-import logging
 import signal
 import os
 
-# Configure logging
-LOG_FILE = "/var/log/KegDisplay/taggstaps.log"
-LOGGER_NAME = "KegDisplay"
+# Import logging configuration first, before any other modules
+from .log_config import configure_logging, update_log_level, LOGGER_NAME
+import logging
 
-# Set up logger
-logger = logging.getLogger(LOGGER_NAME)
-logger.setLevel(logging.DEBUG)  # Set to DEBUG initially, will be adjusted by command line args later
-
-# Create handlers if they don't exist already
-if not logger.handlers:
-    # Create a clean formatter
-    class CleanFormatter(logging.Formatter):
-        """Custom formatter that ensures clean, left-aligned output with proper line endings in raw mode."""
-        def format(self, record):
-            # Clean any existing whitespace and handle slow render messages
-            record.msg = record.msg.strip()
-            # Format the message and ensure proper line endings
-            return super().format(record)
-            
-    # Create file handler
-    try:
-        # Ensure log directory exists
-        os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
-        file_handler = logging.FileHandler(LOG_FILE)
-        file_handler.setLevel(logging.DEBUG)  # Ensure handlers don't filter debug messages
-        file_handler.setFormatter(CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s'))
-        logger.addHandler(file_handler)
-    except Exception as e:
-        print(f"Warning: Could not set up file logging: {e}")
-    
-    # Create console handler
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.DEBUG)  # Ensure handlers don't filter debug messages
-    stream_handler.setFormatter(CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s'))
-    logger.addHandler(stream_handler)
-    
 # Import our application class
 from .application import Application
 from .dependency_container import DependencyContainer
 
+# Set up initial logger with default level (will be updated after parsing args)
+logger = configure_logging()
 
 def start():
     """
@@ -60,8 +29,7 @@ def start():
     
     This function initializes and runs the KegDisplay application.
     """
-    # Add an early debug message
-    logger.debug("STARTUP DEBUG TEST - This should appear if debug logging is working")
+    logger.debug("Starting KegDisplay application")
     
     # Move unhandled exception messages to log file
     def handle_uncaught_exceptions(exc_type, exc_value, exc_traceback):
@@ -81,6 +49,12 @@ def start():
         # Initialize components
         try:
             config_manager, display, renderer, data_manager = container.create_application_components()
+            
+            # Update log level based on config
+            log_level = config_manager.get_config('log_level')
+            update_log_level(log_level)
+            logger.debug(f"Log level updated to {log_level} based on command-line arguments")
+            
         except Exception as e:
             logger.error(f"Failed to initialize components: {e}")
             return 1

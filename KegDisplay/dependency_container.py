@@ -85,10 +85,8 @@ class DependencyContainer:
             
         config = config_manager.get_config()
         
-        # Set up logging
-        log_level = config['log_level']
-        logger.setLevel(getattr(logging, log_level))
-        logger.debug(f"Logging level set to {log_level}")
+        # Note: Logging level is now handled in the main entry point
+        logger.debug("Creating application components with configuration")
         
         # Create components
         try:
