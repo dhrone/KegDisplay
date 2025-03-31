@@ -1017,8 +1017,8 @@ def start():
     
     # Initialize database synchronization if enabled
     if not args.no_sync and synced_db:
-        synced_db.start()
-        logger.info(f"Database synchronization started on ports {args.broadcast_port} (UDP) and {args.sync_port} (TCP)")
+        # The SyncedDatabase already starts the synchronizer in its constructor
+        logger.info(f"Database synchronization active on ports {args.broadcast_port} (UDP) and {args.sync_port} (TCP)")
     
     # Start the web server
     logger.info(f"Starting web server on {args.host}:{args.port}, debug mode: {args.debug}")
