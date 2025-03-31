@@ -120,17 +120,18 @@ class Application:
                 
                 # Check for database updates at specified frequency
                 if current_time - last_db_check_time >= self.data_manager.update_frequency:
-                    logger.debug(f"Checking for database updates (frequency: {self.data_manager.update_frequency}s)")
                     update_result = self.data_manager.update_data()
                     last_db_check_time = current_time
-                    logger.debug(f"Database update check completed. Update found: {update_result}")
+                    
+                    # Only log if update was found
+                    if update_result:
+                        logger.debug(f"Database update found")
                     
                     # Check if data has changed
                     data_changed = self.renderer.check_data_changed()
-                    logger.debug(f"Data change check result: {data_changed}")
                     
                     if data_changed:
-                        logger.debug("Data changed - updating display")
+                        logger.info("Data changed - updating display")
                         
                         # Ensure dataset is synchronized after data change
                         if hasattr(self.renderer, 'force_dataset_sync') and self.renderer.main_display:
@@ -149,7 +150,6 @@ class Application:
                         
                         # Ensure status is set back to running
                         self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)
-                        logger.debug("Reset system status to 'running' after data change")
                 
                 # Display current frame
                 self.renderer.display_next_frame()

@@ -286,7 +286,7 @@ class SequenceRenderer:
         # Initialize variables
         image_sequence = []
         raw_frames = []
-        min_sequence_length = 120  # Minimum frames to collect
+        min_sequence_length = 200  # Minimum frames to collect
         max_iterations = 2000      # Safety limit
         last_image = None
         static_count = 0

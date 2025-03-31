@@ -71,11 +71,11 @@ class DataManager:
                 db_row_str = str(db_row)
                 if len(db_row_str) > 80:
                     db_row_str = db_row_str[:77] + "..."
-                logger.debug(f"Database query returned: {db_row_str}")
+                # Only log detailed DB rows at trace level (which isn't used by default)
                 
                 for key, value in db_row.items():
                     if key == 'beer':
-                        logger.debug(f"Processing beer data: {len(value) if isinstance(value, list) else 1} items")
+                        # Remove redundant logging of beer data processing
                         if isinstance(value, dict):
                             self.renderer.update_dataset("beers", value, merge=True)
                             updates_found = True
@@ -84,13 +84,11 @@ class DataManager:
                                 if 'idBeer' in item:
                                     beer_id = item['idBeer']
                                     beer_data = {k: v for k, v in item.items() if k != 'idBeer'}
-                                    # Only log the first few beers to avoid flooding the logs
-                                    if beer_id <= 3:
+                                    # Only log the first beer to avoid flooding the logs
+                                    if beer_id == 1:
                                         beerstr = f"Adding beer {beer_id}: {beer_data}"
                                         beerstr = beerstr[:80]
                                         logger.debug(beerstr)
-                                    elif beer_id == 4:
-                                        logger.debug(f"Adding more beers...")
                                     self.renderer.update_dataset(
                                         "beers",
                                         {beer_id: beer_data},
@@ -99,12 +97,13 @@ class DataManager:
                                     updates_found = True
                     
                     if key == 'taps':
-                        # Only log tap data changes, not every query
+                        # Only log significant tap changes
                         if isinstance(value, dict):
                             tap_id = value.get('idTap')
                             beer_id = value.get('idBeer')
                             if tap_id and beer_id:
-                                logger.debug(f"Processing tap update: Tap {tap_id} with beer {beer_id}")
+                                # Log tap updates at INFO level as they're more significant
+                                logger.info(f"Updated tap {tap_id} with beer {beer_id}")
                                 self.renderer.update_dataset("taps", {tap_id: beer_id}, merge=True)
                                 updates_found = True
                         else:
@@ -112,23 +111,13 @@ class DataManager:
                                 if 'idTap' in item:
                                     tap_id = item['idTap']
                                     beer_id = item['idBeer']
-                                    logger.debug(f"Adding tap {tap_id} with beer {beer_id}")
+                                    logger.info(f"Updated tap {tap_id} with beer {beer_id}")
                                     self.renderer.update_dataset("taps", {tap_id: beer_id}, merge=True)
                                     updates_found = True
             
-            if items_processed == 0:
-                logger.debug("No database updates found")
-            else:
-                # Only log detailed updates if not too frequent
-                if not hasattr(self, '_update_counter'):
-                    self._update_counter = 0
-                self._update_counter = (self._update_counter + 1) % 5  # Log every 5th update batch
-                
-                if self._update_counter == 0:
-                    logger.debug(f"Processed {items_processed} database updates")
-                else:
-                    logger.debug(f"Database updated")
-                
+            if updates_found:
+                logger.debug(f"Processed {items_processed} database updates")
+            
             return updates_found
         except Exception as e:
             logger.error(f"Error updating data: {e}")
