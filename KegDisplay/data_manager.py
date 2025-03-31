@@ -110,7 +110,7 @@ class DataManager:
                                 if 'idTap' in item:
                                     tap_id = item['idTap']
                                     beer_id = item['idBeer']
-                                    logger.info(f"Updated tap {tap_id} with beer {beer_id}")
+                                    logger.debug(f"Updated tap {tap_id} with beer {beer_id}")
                                     self.renderer.update_dataset("taps", {tap_id: beer_id}, merge=True)
                                     updates_found = True
             
