@@ -14,6 +14,46 @@
         .nav-link.active {
             font-weight: bold;
         }
+        
+        /* Dark mode styles */
+        body.dark-mode {
+            background-color: #222;
+            color: #eee;
+        }
+        
+        body.dark-mode .card {
+            background-color: #333;
+            color: #eee;
+            border-color: #444;
+        }
+        
+        body.dark-mode .table {
+            color: #eee;
+        }
+        
+        body.dark-mode .modal-content {
+            background-color: #333;
+            color: #eee;
+        }
+        
+        body.dark-mode .form-control,
+        body.dark-mode .form-select {
+            background-color: #444;
+            color: #eee;
+            border-color: #555;
+        }
+        
+        body.dark-mode .form-control:focus,
+        body.dark-mode .form-select:focus {
+            background-color: #444;
+            color: #eee;
+        }
+        
+        /* Dark mode toggle button */
+        .dark-mode-toggle {
+            cursor: pointer;
+            padding: 0 10px;
+        }
     </style>
     {% block extra_styles %}{% endblock %}
 </head>
@@ -44,6 +84,9 @@
                     </li>
                 </ul>
                 <div class="navbar-nav ms-auto">
+                    <div class="nav-link dark-mode-toggle" id="darkModeToggle">
+                        <i class="fas fa-moon" id="darkModeIcon"></i>
+                    </div>
                     <span class="nav-item nav-link text-light">Welcome, {{ current_user.id }}</span>
                     <a class="nav-item nav-link" href="{{ url_for('logout') }}">Logout</a>
                 </div>
@@ -67,6 +110,42 @@
     <!-- Bootstrap Bundle with Popper -->
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Dark Mode Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const darkModeToggle = document.getElementById('darkModeToggle');
+            const darkModeIcon = document.getElementById('darkModeIcon');
+            
+            // Check for saved dark mode preference
+            let darkMode = localStorage.getItem('darkMode');
+            
+            // Apply dark mode if saved
+            if (darkMode === 'enabled') {
+                document.body.classList.add('dark-mode');
+                darkModeIcon.classList.remove('fa-moon');
+                darkModeIcon.classList.add('fa-sun');
+            }
+            
+            // Toggle dark mode on click
+            darkModeToggle.addEventListener('click', function() {
+                darkMode = localStorage.getItem('darkMode');
+                
+                if (darkMode !== 'enabled') {
+                    document.body.classList.add('dark-mode');
+                    localStorage.setItem('darkMode', 'enabled');
+                    darkModeIcon.classList.remove('fa-moon');
+                    darkModeIcon.classList.add('fa-sun');
+                } else {
+                    document.body.classList.remove('dark-mode');
+                    localStorage.setItem('darkMode', null);
+                    darkModeIcon.classList.remove('fa-sun');
+                    darkModeIcon.classList.add('fa-moon');
+                }
+            });
+        });
+    </script>
+    
     {% block scripts %}{% endblock %}
 </body>
 </html> 
