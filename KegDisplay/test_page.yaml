@@ -1,0 +1,34 @@
+PATHS:
+  'images': './images'
+  'fonts': 'fonts/'
+
+DEFAULTS:
+  display:
+    dsize: [100, 16]
+    type: ws0010
+
+FONTS:
+  tiny: upperascii_3x5.fnt
+  small: hd44780.fnt
+  large: Vintl01_10x16.fnt
+
+WIDGETS:
+  splash:
+    type: text
+    dvalue: "Test Page"
+    font: large
+
+CANVASES:
+  mainCanvas: &mainCanvas
+    type: canvas
+    items:
+      - name: splash
+        placement: [0, 0, mm]
+    size: [100, 16]
+    activeWhen: True
+
+DISPLAY:
+  size: [100, 16]
+  items:
+    - name: MAIN
+      <<: *mainCanvas 
