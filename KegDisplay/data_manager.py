@@ -87,7 +87,7 @@ class DataManager:
                                     # Only log the first few beers to avoid flooding the logs
                                     if beer_id <= 3:
                                         beerstr = f"Adding beer {beer_id}: {beer_data}"
-                                        logger.debug(f"{beerstr}:80")
+                                        logger.debug(f"{beerstr:80}")
                                     elif beer_id == 4:
                                         logger.debug(f"Adding more beers...")
                                     self.renderer.update_dataset(
