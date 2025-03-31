@@ -41,44 +41,44 @@ def configure_logging(log_level=None):
         temp_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
         temp_logger.addHandler(temp_handler)
     
-    temp_logger.error(f"configure_logging called with log_level={log_level} (type: {type(log_level)})")
+    temp_logger.debug(f"configure_logging called with log_level={log_level} (type: {type(log_level)})")
     
     # Get the logger
     logger = logging.getLogger(LOGGER_NAME)
     
     # Clear any existing handlers to avoid duplicates when reconfigured
     if logger.handlers:
-        temp_logger.error(f"Clearing {len(logger.handlers)} existing handlers")
+        temp_logger.debug(f"Clearing {len(logger.handlers)} existing handlers")
         logger.handlers.clear()
     
     # Set the initial level to DEBUG to capture everything, will be filtered by handlers
     logger.setLevel(logging.DEBUG)
-    temp_logger.error(f"Set logger level to DEBUG ({logging.DEBUG})")
+    temp_logger.debug(f"Set logger level to DEBUG ({logging.DEBUG})")
     
     # Determine the effective log level
     effective_level = log_level
     
     # If a string is provided, convert it to the corresponding logging level
     if isinstance(effective_level, str):
-        temp_logger.error(f"Converting string '{effective_level}' to logging level")
+        temp_logger.debug(f"Converting string '{effective_level}' to logging level")
         level_value = getattr(logging, effective_level.upper(), None)
         if level_value is None:
-            temp_logger.error(f"Could not convert '{effective_level}' to a valid logging level, using INFO")
+            temp_logger.debug(f"Could not convert '{effective_level}' to a valid logging level, using INFO")
             effective_level = logging.INFO
         else:
             effective_level = level_value
-            temp_logger.error(f"Converted to {effective_level}")
+            temp_logger.debug(f"Converted to {effective_level}")
     # If nothing is provided, default to INFO
     elif effective_level is None:
-        temp_logger.error("No log level provided, defaulting to INFO")
+        temp_logger.debug("No log level provided, defaulting to INFO")
         effective_level = logging.INFO
     else:
-        temp_logger.error(f"Using provided numeric level: {effective_level}")
+        temp_logger.debug(f"Using provided numeric level: {effective_level}")
     
     # Create console handler
     console_handler = logging.StreamHandler()
     console_handler.setLevel(effective_level)
-    temp_logger.error(f"Created console handler with level {effective_level}")
+    temp_logger.debug(f"Created console handler with level {effective_level}")
     console_handler.setFormatter(CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s'))
     logger.addHandler(console_handler)
     
@@ -89,7 +89,7 @@ def configure_logging(log_level=None):
         file_handler = logging.FileHandler(LOG_FILE)
         # File handler now uses the same level as the console handler
         file_handler.setLevel(effective_level)
-        temp_logger.error(f"Created file handler with level {effective_level}")
+        temp_logger.debug(f"Created file handler with level {effective_level}")
         file_handler.setFormatter(CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s'))
         logger.addHandler(file_handler)
     except Exception as e:
@@ -122,33 +122,33 @@ def update_log_level(log_level):
         temp_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
         temp_logger.addHandler(temp_handler)
     
-    temp_logger.error(f"update_log_level called with log_level={log_level} (type: {type(log_level)})")
+    temp_logger.debug(f"update_log_level called with log_level={log_level} (type: {type(log_level)})")
     
     # Get the logger
     logger = logging.getLogger(LOGGER_NAME)
     
     # Convert string level to logging constant if needed
     if isinstance(log_level, str):
-        temp_logger.error(f"Converting string '{log_level}' to logging level")
+        temp_logger.debug(f"Converting string '{log_level}' to logging level")
         level_value = getattr(logging, log_level.upper(), None)
         if level_value is None:
-            temp_logger.error(f"Could not convert '{log_level}' to a valid logging level, using INFO")
+            temp_logger.debug(f"Could not convert '{log_level}' to a valid logging level, using INFO")
             log_level = logging.INFO
         else:
             log_level = level_value
-            temp_logger.error(f"Converted to {log_level}")
+            temp_logger.debug(f"Converted to {log_level}")
     elif log_level is None:
-        temp_logger.error("No log level provided, defaulting to INFO")
+        temp_logger.debug("No log level provided, defaulting to INFO")
         log_level = logging.INFO
     else:
-        temp_logger.error(f"Using provided numeric level: {log_level}")
+        temp_logger.debug(f"Using provided numeric level: {log_level}")
     
     # Update all handlers to the same level
-    temp_logger.error(f"Updating {len(logger.handlers)} handlers to level {log_level}")
+    temp_logger.debug(f"Updating {len(logger.handlers)} handlers to level {log_level}")
     for i, handler in enumerate(logger.handlers):
-        temp_logger.error(f"Handler {i} ({handler.__class__.__name__}) level before: {handler.level}")
+        temp_logger.debug(f"Handler {i} ({handler.__class__.__name__}) level before: {handler.level}")
         handler.setLevel(log_level)
-        temp_logger.error(f"Handler {i} ({handler.__class__.__name__}) level after: {handler.level}")
+        temp_logger.debug(f"Handler {i} ({handler.__class__.__name__}) level after: {handler.level}")
     
     # Cleanup the temporary logger
     temp_logger.handlers.clear()
