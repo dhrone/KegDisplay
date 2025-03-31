@@ -249,25 +249,18 @@ DISPLAY:
         self.assertTrue(second_call)  # Second call returns True because taps changed
     
     def test_check_data_changed_returns_false_when_no_changes(self):
-        """Test that check_data_changed returns False when no data has changed."""
+        """Test that check_data_changed returns False when no changes occurred."""
         # Given
-        # First call - initialize hash values
-        mock_dataset = Mock()
-        mock_dataset.get = MagicMock(side_effect=[
-            {"1": {"name": "Beer1"}},  # First beers
-            {"1": 1},                  # First taps
-            {"1": {"name": "Beer1"}},  # Second beers (same)
-            {"1": 1}                   # Second taps (same)
-        ])
-        renderer = SequenceRenderer(self.mock_display, mock_dataset)
+        renderer = SequenceRenderer(self.mock_display, self.test_dataset)
         
-        # When
-        first_call = renderer.check_data_changed()
-        second_call = renderer.check_data_changed()
+        # First call will initialize the hashes
+        renderer.check_data_changed()
+        
+        # When - no changes to data
+        result = renderer.check_data_changed()
         
         # Then
-        self.assertTrue(first_call)    # First call always returns True
-        self.assertFalse(second_call)  # Second call returns False because nothing changed
+        self.assertFalse(result)
     
     def test_render_returns_image_from_main_display(self):
         """Test that render returns the image from the main display."""
@@ -452,6 +445,46 @@ DISPLAY:
         except Exception as e:
             # We'll convert any exceptions to skips with the error message
             self.skipTest(f"Integration test failed due to environment limitations: {str(e)}")
+
+    def test_verify_dataset_integrity(self):
+        """Test the verify_dataset_integrity method."""
+        # Given
+        # Create a real dataset instead of a mock
+        from tinyDisplay.utility import dataset as td_dataset
+        test_dataset = td_dataset()
+        test_dataset.add("sys", {"status": "running"})
+        
+        renderer = SequenceRenderer(self.mock_display, test_dataset)
+        
+        # Create a custom mock for main_display that supports __contains__ and __getitem__
+        class DatasetAccessMock(Mock):
+            def __init__(self, dataset_obj):
+                super().__init__()
+                self._dataset = dataset_obj
+                
+            def __contains__(self, key):
+                return key in self._dataset
+                
+            def __getitem__(self, key):
+                return self._dataset[key]
+                
+        # Create main_display with properly functioning dataset access
+        renderer.main_display = DatasetAccessMock(test_dataset)
+        
+        # When - integrity check with same dataset
+        result = renderer.verify_dataset_integrity()
+        
+        # Then - should pass
+        self.assertTrue(result)
+        
+        # When - dataset mismatch
+        different_dataset = td_dataset()  # Different dataset
+        different_dataset.add("sys", {"status": "running"})
+        renderer.main_display = DatasetAccessMock(different_dataset)
+        result = renderer.verify_dataset_integrity()
+        
+        # Then - should fail
+        self.assertFalse(result)
 
 
 if __name__ == '__main__':

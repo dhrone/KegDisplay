@@ -128,6 +128,18 @@ class DataManager:
             logger.error(f"Error updating data: {e}")
             return False
             
+    def load_all_data(self):
+        """Load all data from the database.
+        
+        This method performs an initial load of data from the database.
+        It's a convenience method that just calls update_data().
+        
+        Returns:
+            bool: True if data was loaded, False otherwise
+        """
+        logger.debug("Loading all data from database")
+        return self.update_data()
+            
     def cleanup(self):
         """Clean up resources."""
         if self.src:
