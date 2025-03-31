@@ -37,6 +37,7 @@ if not logger.handlers:
         # Ensure log directory exists
         os.makedirs(os.path.dirname(LOG_FILE), exist_ok=True)
         file_handler = logging.FileHandler(LOG_FILE)
+        file_handler.setLevel(logging.DEBUG)  # Ensure handlers don't filter debug messages
         file_handler.setFormatter(CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s'))
         logger.addHandler(file_handler)
     except Exception as e:
@@ -44,6 +45,7 @@ if not logger.handlers:
     
     # Create console handler
     stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.DEBUG)  # Ensure handlers don't filter debug messages
     stream_handler.setFormatter(CleanFormatter('%(asctime)s - %(levelname)-8s - %(message)s'))
     logger.addHandler(stream_handler)
     
@@ -58,6 +60,9 @@ def start():
     
     This function initializes and runs the KegDisplay application.
     """
+    # Add an early debug message
+    logger.debug("STARTUP DEBUG TEST - This should appear if debug logging is working")
+    
     # Move unhandled exception messages to log file
     def handle_uncaught_exceptions(exc_type, exc_value, exc_traceback):
         if issubclass(exc_type, KeyboardInterrupt):

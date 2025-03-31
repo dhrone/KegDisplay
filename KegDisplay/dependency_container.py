@@ -88,21 +88,32 @@ class DependencyContainer:
         # Set up logging
         log_level = config['log_level']
         logger.setLevel(getattr(logging, log_level))
+        logger.debug(f"Logging level set to {log_level}")
         
         # Create components
         try:
+            logger.debug("Starting component creation...")
+            
             # Use the factory interfaces to create components
+            logger.debug("Creating display using factory...")
             display = self.display_factory.create_display(config)
+            logger.debug(f"Display created: {type(display).__name__}")
             
             # Create initial dataset values for backward compatibility
             # In the new approach, the renderer will use tinyDisplay's dataset after loading the page
+            logger.debug("Creating dataset using factory...")
             dataset_obj = self.dataset_factory.create_dataset(config)
+            logger.debug(f"Dataset created: {type(dataset_obj).__name__}")
             
             # Create renderer with display and initial dataset values
+            logger.debug("Creating renderer using factory...")
             renderer = self.renderer_factory.create_renderer(display, dataset_obj, config)
+            logger.debug(f"Renderer created: {type(renderer).__name__}")
             
             # Create data manager
+            logger.debug("Creating data manager using factory...")
             data_manager = self.data_manager_factory.create_data_manager(config['db'], renderer)
+            logger.debug(f"Data manager created: {type(data_manager).__name__}")
             
             # Store for reuse
             self.config_manager = config_manager
@@ -110,6 +121,8 @@ class DependencyContainer:
             self.dataset_obj = dataset_obj  # Keep reference for backward compatibility
             self.renderer = renderer
             self.data_manager = data_manager
+            
+            logger.debug("All components created successfully")
             
             return config_manager, display, renderer, data_manager
         except Exception as e:
