@@ -103,6 +103,7 @@ class SequenceRenderer:
             # Pass our dataset to the loader to ensure initial values are copied
             logger.debug(f"Loading page template with dataset id={id(self._dataset)}")
             self.main_display = load(page_path, dataset=self._dataset)
+            logger.debug(f"Loaded page template with dataset id={id(self.main_display._dataset)}")
             
             # Log dataset IDs for debugging
             if hasattr(self.main_display, '_dataset'):
@@ -112,7 +113,7 @@ class SequenceRenderer:
             # Since tinyDisplay creates its own dataset, we need to ensure they stay synchronized
             self.sync_datasets()
             logger.debug("Initial dataset synchronization complete")
-            
+            logger.debug(f"Just past sync_datasets - Main display dataset id={id(self.main_display._dataset)}")
             # Recursively gather and sync data from all display elements
             self.force_dataset_sync(self.main_display)
             logger.debug("Completed bidirectional dataset synchronization across all display elements")
