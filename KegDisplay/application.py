@@ -114,6 +114,11 @@ class Application:
                     if self.renderer.check_data_changed():
                         logger.debug("Data changed - updating display")
                         
+                        # Ensure dataset is synchronized after data change
+                        if hasattr(self.renderer, 'force_dataset_sync') and self.renderer.main_display:
+                            self.renderer.force_dataset_sync(self.renderer.main_display)
+                            logger.debug("Forced dataset sync after data change")
+                        
                         # Show updating message
                         updating_image = self.renderer.render("update")
                         self.renderer.display.display(updating_image)
@@ -122,7 +127,6 @@ class Application:
                         self.renderer.image_sequence = self.renderer.generate_image_sequence()
                         self.renderer.sequence_index = 0
                         self.renderer.last_frame_time = current_time
-                        
                         
                         # Ensure status is set back to running
                         self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)

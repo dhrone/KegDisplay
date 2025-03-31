@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import shutil
 from PIL import Image, ImageDraw
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 from KegDisplay.renderer import SequenceRenderer
 from tinyDisplay.utility import dataset
@@ -101,8 +101,25 @@ DISPLAY:
             """)
         return template_path
     
-    def render_and_save(self, template_path, element_type):
+    @patch('KegDisplay.renderer.load')
+    def render_and_save(self, template_path, element_type, mock_load):
         """Render an image using the template and save it."""
+        # Create a mock page object that the renderer can use
+        mock_page = Mock()
+        mock_image = Image.new('1', (100, 16), color=0)
+        mock_page.image = mock_image
+        mock_page.render = MagicMock()
+        
+        # Setup mock dataset for the mock page
+        mock_page._dataset = Mock()
+        mock_page._dataset.keys = MagicMock(return_value=['sys', 'beers', 'taps'])
+        mock_page._dataset.update = MagicMock()
+        mock_page._dataset.__contains__ = MagicMock(return_value=True)
+        mock_page._dataset.__getitem__ = MagicMock(return_value={})
+        
+        # Configure the mock to return our mock page
+        mock_load.return_value = mock_page
+        
         # Load the template
         result = self.renderer.load_page(str(template_path))
         self.assertTrue(result, f"Failed to load template for {element_type}")

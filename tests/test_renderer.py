@@ -150,6 +150,13 @@ DISPLAY:
         """Test that load_page loads a page template from a YAML file."""
         # Given
         mock_page = Mock()
+        # Add a _dataset attribute that looks like a real dataset
+        mock_page._dataset = Mock()
+        mock_page._dataset.keys = MagicMock(return_value=['sys', 'beers', 'taps'])
+        mock_page._dataset.update = MagicMock()
+        mock_page._dataset.__contains__ = MagicMock(return_value=True)
+        mock_page._dataset.__getitem__ = MagicMock(return_value={})
+        
         mock_load.return_value = mock_page
         
         # When
@@ -268,6 +275,14 @@ DISPLAY:
         mock_image = Mock()
         mock_page = Mock()
         mock_page.image = mock_image
+        
+        # Add a _dataset attribute that looks like a real dataset
+        mock_page._dataset = Mock()
+        mock_page._dataset.keys = MagicMock(return_value=['sys', 'beers', 'taps'])
+        mock_page._dataset.update = MagicMock()
+        mock_page._dataset.__contains__ = MagicMock(return_value=True)
+        mock_page._dataset.__getitem__ = MagicMock(return_value={})
+        
         self.renderer.main_display = mock_page
         
         # When
@@ -283,6 +298,14 @@ DISPLAY:
         mock_image = Mock()
         mock_page = Mock()
         mock_page.image = mock_image
+        
+        # Add a _dataset attribute that looks like a real dataset
+        mock_page._dataset = Mock()
+        mock_page._dataset.keys = MagicMock(return_value=['sys', 'beers', 'taps'])
+        mock_page._dataset.update = MagicMock()
+        mock_page._dataset.__contains__ = MagicMock(return_value=True)
+        mock_page._dataset.__getitem__ = MagicMock(return_value={})
+        
         self.renderer.main_display = mock_page
         
         # When
@@ -310,6 +333,13 @@ DISPLAY:
         
         # Create a simple main display that changes on each render call
         mock_page = Mock()
+        # Setup mock dataset for the mock page
+        mock_page._dataset = Mock()
+        mock_page._dataset.keys = MagicMock(return_value=['sys', 'beers', 'taps'])
+        mock_page._dataset.update = MagicMock()
+        mock_page._dataset.__contains__ = MagicMock(return_value=True)
+        mock_page._dataset.__getitem__ = MagicMock(return_value={})
+        
         self.renderer.main_display = mock_page
         
         # Create test images for the sequence
@@ -373,6 +403,13 @@ DISPLAY:
         mock_image = Image.new('1', (100, 16), color=0)
         mock_page.image = mock_image
         mock_page.render = MagicMock()
+        
+        # Add a _dataset attribute that looks like a real dataset
+        mock_page._dataset = Mock()
+        mock_page._dataset.keys = MagicMock(return_value=['sys', 'beers', 'taps'])
+        mock_page._dataset.update = MagicMock()
+        mock_page._dataset.__contains__ = MagicMock(return_value=True)
+        mock_page._dataset.__getitem__ = MagicMock(return_value={})
         
         # Assign it to the renderer
         self.renderer.main_display = mock_page
@@ -485,6 +522,56 @@ DISPLAY:
         
         # Then - should fail
         self.assertFalse(result)
+        
+    def test_force_dataset_sync(self):
+        """Test the force_dataset_sync method."""
+        # Given - create real datasets
+        from tinyDisplay.utility import dataset as td_dataset
+        main_dataset = td_dataset()
+        main_dataset.add("sys", {"status": "running"})
+        
+        renderer = SequenceRenderer(self.mock_display, main_dataset)
+        
+        # Create a custom display item class (NOT a Mock) for testing
+        class CustomDisplayItem:
+            def __init__(self, dataset_obj=None):
+                self._dataset = dataset_obj or td_dataset()
+                self.items = []
+                self.sequence = []
+                
+        # Create a nested display structure
+        child1 = CustomDisplayItem(td_dataset())  # Different dataset
+        child2 = CustomDisplayItem(td_dataset())  # Different dataset
+        
+        # Create display with items
+        main_display = CustomDisplayItem(td_dataset())  # Different dataset
+        main_display.items = [child1, child2]
+        
+        # Sequence example
+        seq_item = CustomDisplayItem(td_dataset())  # Different dataset
+        main_display.sequence = [seq_item]
+        
+        # Record original IDs to verify changes
+        orig_main_id = id(main_display._dataset)
+        orig_child1_id = id(child1._dataset)
+        orig_child2_id = id(child2._dataset)
+        orig_seq_id = id(seq_item._dataset)
+        renderer_id = id(renderer._dataset)
+        
+        # When - force dataset sync
+        renderer.force_dataset_sync(main_display)
+        
+        # Then - all datasets should be the same as renderer's dataset
+        self.assertEqual(id(main_display._dataset), renderer_id)
+        self.assertEqual(id(child1._dataset), renderer_id)
+        self.assertEqual(id(child2._dataset), renderer_id)
+        self.assertEqual(id(seq_item._dataset), renderer_id)
+        
+        # Original IDs should be different from renderer's dataset
+        self.assertNotEqual(orig_main_id, renderer_id)
+        self.assertNotEqual(orig_child1_id, renderer_id)
+        self.assertNotEqual(orig_child2_id, renderer_id)
+        self.assertNotEqual(orig_seq_id, renderer_id)
 
 
 if __name__ == '__main__':
