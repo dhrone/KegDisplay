@@ -272,16 +272,15 @@ class SequenceRenderer:
             beer_id = 1
             self.update_dataset('beers', {
                 beer_id: {
-                    'Name': 'Sample Beer',
+                    'Name': 'Check Database',
                     'ABV': 5.0,
-                    'Description': 'Sample beer description for testing'
+                    'Description': 'There does not appear to be any beer data associated with this tap.  Check the database.'
                 }
             }, merge=True)
             self.update_dataset('taps', {tapnr: beer_id}, merge=True)
         
         # Update status to indicate we're in 'running' mode
         self.update_dataset('sys', {'status': 'running'}, merge=True)
-        logger.debug("Set status to 'running' in generate_image_sequence")
         
         # Initialize variables
         image_sequence = []
@@ -304,10 +303,6 @@ class SequenceRenderer:
             # Add to raw frames collection
             raw_frames.append(current_bytes)
             
-            # For diagnostic purposes, periodically log image content
-            if i % 10 == 0:
-                logger.debug(f"Frame {i} generated - checking for changes")
-                logger.debug(f"{self.main_display}")
             
             # Process the frame
             if last_image is not None:
