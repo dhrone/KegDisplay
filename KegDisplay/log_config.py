@@ -98,43 +98,24 @@ def update_log_level(log_level):
     Args:
         log_level: The new log level as a string or logging constant
     """
-    # Create a temporary basic logger to trace the process
-    temp_logger = logging.getLogger("temp")
-    temp_logger.setLevel(logging.DEBUG)
-    if not temp_logger.handlers:
-        temp_handler = logging.StreamHandler()
-        temp_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
-        temp_logger.addHandler(temp_handler)
-    
-    temp_logger.debug(f"update_log_level called with log_level={log_level} (type: {type(log_level)})")
     
     # Get the logger
     logger = logging.getLogger(LOGGER_NAME)
     
     # Convert string level to logging constant if needed
     if isinstance(log_level, str):
-        temp_logger.debug(f"Converting string '{log_level}' to logging level")
         level_value = getattr(logging, log_level.upper(), None)
         if level_value is None:
-            temp_logger.debug(f"Could not convert '{log_level}' to a valid logging level, using INFO")
+            logger.debug(f"Could not convert '{log_level}' to a valid logging level, using INFO")
             log_level = logging.INFO
         else:
             log_level = level_value
-            temp_logger.debug(f"Converted to {log_level}")
     elif log_level is None:
-        temp_logger.debug("No log level provided, defaulting to INFO")
         log_level = logging.INFO
-    else:
-        temp_logger.debug(f"Using provided numeric level: {log_level}")
-    
+
     # Update all handlers to the same level
-    temp_logger.debug(f"Updating {len(logger.handlers)} handlers to level {log_level}")
+    logger.debug(f"Updating {len(logger.handlers)} handlers to level {log_level}")
     for i, handler in enumerate(logger.handlers):
-        temp_logger.debug(f"Handler {i} ({handler.__class__.__name__}) level before: {handler.level}")
         handler.setLevel(log_level)
-        temp_logger.debug(f"Handler {i} ({handler.__class__.__name__}) level after: {handler.level}")
-    
-    # Cleanup the temporary logger
-    temp_logger.handlers.clear()
-            
+
     logger.debug(f"All handler log levels updated to: {logging.getLevelName(log_level)}") 
