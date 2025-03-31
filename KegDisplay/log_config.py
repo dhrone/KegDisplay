@@ -61,6 +61,9 @@ def configure_logging(log_level=None):
     else:
         logger.debug(f"Using provided numeric level: {effective_level}")
     
+    # Set the logger's level
+    logger.setLevel(effective_level)
+    
     # Create console handler
     console_handler = logging.StreamHandler()
     console_handler.setLevel(effective_level)
@@ -113,6 +116,9 @@ def update_log_level(log_level):
     elif log_level is None:
         log_level = logging.INFO
 
+    # Set the logger's level
+    logger.setLevel(log_level)
+    
     # Update all handlers to the same level
     logger.debug(f"Updating {len(logger.handlers)} handlers to level {log_level}")
     for i, handler in enumerate(logger.handlers):
