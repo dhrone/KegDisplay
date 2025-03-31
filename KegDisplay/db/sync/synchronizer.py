@@ -203,7 +203,7 @@ class DatabaseSynchronizer:
             self.peers[peer_ip] = (peer_version, time.time(), peer_sync_port)
             
             if old_version != peer_version:
-                logger.info(f"Updated peer {peer_ip} version to {peer_version}")
+                logger.debug(f"Updated peer {peer_ip} version to {peer_version}")
     
     def _handle_update(self, message, addr):
         """Handle update notification messages
