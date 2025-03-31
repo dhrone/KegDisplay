@@ -51,6 +51,9 @@ class Application:
         
     def run(self):
         """Run the main application loop."""
+        logger.debug("RUN() Debug Test")
+        logger.warning("RUN() Warning Test")
+        logger.error("RUN() Error Test")
         self.running = True
         splash_time = self.config_manager.get_config('splash_time')
     
