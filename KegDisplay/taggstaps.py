@@ -19,7 +19,7 @@ LOGGER_NAME = "KegDisplay"
 
 # Set up logger
 logger = logging.getLogger(LOGGER_NAME)
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)  # Set to DEBUG initially, will be adjusted by command line args later
 
 # Create handlers if they don't exist already
 if not logger.handlers:
