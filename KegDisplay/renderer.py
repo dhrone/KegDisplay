@@ -60,6 +60,18 @@ class SequenceRenderer:
         self.beers_hash = None
         self.taps_hash = None
         
+        # Add frame rate monitoring variables
+        self.frame_count = 0
+        self.fps_start_time = time.time()
+        self.current_fps = 0
+        self.frames_since_last_check = 0
+        self.last_stats_time = time.time()
+        
+        # Dynamic timing adjustment variables
+        self.timing_adjustment = 0  # Adjustment factor in seconds
+        self.last_adjustment_time = time.time()
+        self.frame_timing_history = deque(maxlen=30)  # Keep history of last 30 frames for smoothing
+        
         # Get tap number if available in the initial dataset
         tapnr = None
         if dataset_obj and hasattr(dataset_obj, 'get'):
@@ -186,13 +198,12 @@ class SequenceRenderer:
         beer_data = {current_beer_id: beers.get(current_beer_id)} if current_beer_id and current_beer_id in beers else {}
         current_beer_hash = self.dict_hash(beer_data, '__timestamp__')
         
-        logger.debug(f"Hash check - Current tap {current_tapnr}, beer ID {current_beer_id}")
-        logger.debug(f"Hash check - Beer hash: stored={self.beers_hash}, current={current_beer_hash}")
-        logger.debug(f"Hash check - Tap hash: stored={self.taps_hash}, current={current_tap_hash}")
-        
         # Check if this is the first check
         if self.beers_hash is None or self.taps_hash is None:
             logger.debug("First data check - initializing hashes")
+            logger.debug(f"Hash check - Current tap {current_tapnr}, beer ID {current_beer_id}")
+            logger.debug(f"Hash check - Beer hash: initial={current_beer_hash}")
+            logger.debug(f"Hash check - Tap hash: initial={current_tap_hash}")
             self.beers_hash = current_beer_hash
             self.taps_hash = current_tap_hash
             return True
@@ -202,15 +213,17 @@ class SequenceRenderer:
             changed_elements = []
             if current_beer_hash != self.beers_hash:
                 changed_elements.append("beer data")
+                logger.debug(f"Hash check - Beer hash changed: stored={self.beers_hash}, current={current_beer_hash}")
             if current_tap_hash != self.taps_hash:
                 changed_elements.append("tap mapping")
+                logger.debug(f"Hash check - Tap hash changed: stored={self.taps_hash}, current={current_tap_hash}")
             
-            logger.debug(f"Data changed - {', '.join(changed_elements)} for tap {current_tapnr}")
+            logger.debug(f"Data changed - {', '.join(changed_elements)} for tap {current_tapnr}, beer ID {current_beer_id}")
             self.beers_hash = current_beer_hash
             self.taps_hash = current_tap_hash
             return True
             
-        logger.debug(f"No relevant data changes for tap {current_tapnr}")
+        # No changes, don't log hash details
         return False
     
     def render(self, status=None):
@@ -296,13 +309,21 @@ class SequenceRenderer:
         tapnr = sys_data.get('tapnr', 1)
         beer_id = taps.get(tapnr)
         
-        # Only log data at startup or when something changes
-        if not hasattr(self, '_data_logged'):
+        # Track current beer for change detection
+        current_beer_key = f"{tapnr}:{beer_id}"
+        
+        # Only log data at startup or when beer/tap changes
+        if not hasattr(self, '_last_logged_beer'):
+            # First time initialization
+            self._last_logged_beer = current_beer_key
             logger.debug(f"Display for tap {tapnr}, showing beer ID {beer_id}")
             logger.debug(f"Current beer data: {str(beers)[:80]}")
             logger.debug(f"Current tap data: {str(taps)[:80]}")
             logger.debug(f"Current system data: {str(sys_data)[:80]}")
-            self._data_logged = True
+        elif self._last_logged_beer != current_beer_key:
+            # Log only when tap or beer ID changes
+            self._last_logged_beer = current_beer_key
+            logger.debug(f"Display for tap {tapnr}, showing new beer ID {beer_id}")
         
         # Make sure we have valid beer data for the current tap
         if tapnr not in taps or len(beers) == 0 or taps[tapnr] not in beers:
@@ -318,9 +339,11 @@ class SequenceRenderer:
             }, merge=True)
             self.update_dataset('taps', {tapnr: beer_id}, merge=True)
         else:
-            # Log the beer details being displayed
+            # Log the beer details being displayed only if we haven't already
             beer_name = beers.get(beer_id, {}).get('Name', 'Unknown')
-            logger.debug(f"Generating sequence for tap {tapnr}, beer: {beer_name} (ID: {beer_id})")
+            if not hasattr(self, '_sequence_beer_log') or self._sequence_beer_log != current_beer_key:
+                logger.debug(f"Generating sequence for tap {tapnr}, beer: {beer_name} (ID: {beer_id})")
+                self._sequence_beer_log = current_beer_key
         
         # Update status to indicate we're in 'running' mode
         self.update_dataset('sys', {'status': 'running'}, merge=True)
@@ -419,6 +442,20 @@ class SequenceRenderer:
         if not self.image_sequence:
             logger.debug("No image sequence available")
             return False
+        
+        # Get config values
+        target_fps = 30  # Default value
+        debug_mode = False
+        
+        # If we have access to the config, get the actual values
+        if hasattr(self, '_dataset') and self._dataset:
+            sys_data = self._dataset.get('sys', {})
+            if isinstance(sys_data, dict):
+                target_fps = sys_data.get('target_fps', 30)
+                debug_mode = sys_data.get('debug', False)
+        
+        # Target frame time in seconds
+        target_frame_time = 1.0 / target_fps
             
         current_time = time.time()
         current_image, duration = self.image_sequence[self.sequence_index]
@@ -432,11 +469,23 @@ class SequenceRenderer:
         self._debug_counter = (self._debug_counter + 1) % 250  # Log every 250th frame
         
         if self._debug_counter == 0:
-            logger.debug(f"Frame {self.sequence_index}: time since last frame: {time_since_last:.3f}s, duration: {duration:.3f}s")
+            logger.debug(f"Frame {self.sequence_index}: time since last frame: {time_since_last:.3f}s, target: {target_frame_time:.3f}s, adjustment: {self.timing_adjustment:.3f}s")
         
-        if time_since_last >= duration:
+        # Apply dynamic timing adjustment - adjust using target_frame_time with dynamic correction
+        adjusted_target_time = max(0.001, target_frame_time + self.timing_adjustment)
+        
+        # Check if it's time to display the next frame
+        if time_since_last >= adjusted_target_time:
+            frame_start = time.time()
+            
             # Display the current frame
             self.display.display(current_image)
+            
+            # Record actual frame timing for adjustment calculations
+            frame_duration = time.time() - frame_start
+            self.frame_timing_history.append(frame_duration)
+            
+            # Capture timestamp after displaying the frame
             self.last_frame_time = current_time
             
             # Advance to next frame
@@ -446,9 +495,67 @@ class SequenceRenderer:
             # Only log frame advances on the same interval as timing info
             if self._debug_counter == 0:
                 logger.debug(f"Advanced from frame {prev_index} to frame {self.sequence_index}/{len(self.image_sequence)-1}")
+            
+            # Update frame rate statistics
+            self.frame_count += 1
+            self.frames_since_last_check += 1
+            
+            # Calculate current FPS
+            elapsed = current_time - self.fps_start_time
+            if elapsed > 0:
+                self.current_fps = self.frame_count / elapsed
+            
+            # Adjust timing every 10 frames to better match target FPS
+            if self.frame_count % 10 == 0:
+                # Calculate average frame rendering time
+                avg_frame_time = sum(self.frame_timing_history) / len(self.frame_timing_history) if self.frame_timing_history else 0
+                
+                # Calculate how much time we're actually spending per frame (including wait time)
+                if elapsed > 0 and self.frame_count > 0:
+                    actual_frame_time = elapsed / self.frame_count
+                    
+                    # Calculate error between target and actual
+                    error = target_frame_time - actual_frame_time
+                    
+                    # Adjust timing factor using a dampened approach (25% of the error)
+                    # Negative adjustment means we need to wait less (speed up)
+                    # Positive adjustment means we need to wait more (slow down)
+                    self.timing_adjustment += error * 0.25
+                    
+                    # Limit adjustment to reasonable bounds
+                    # Don't adjust more than 50% of target frame time in either direction
+                    max_adjustment = target_frame_time * 0.5
+                    self.timing_adjustment = max(-max_adjustment, min(self.timing_adjustment, max_adjustment))
+                    
+                    # Ensure we don't go below minimum frame rendering time
+                    if target_frame_time + self.timing_adjustment < avg_frame_time:
+                        self.timing_adjustment = avg_frame_time - target_frame_time
+                    
+                    if debug_mode and self._debug_counter == 0:
+                        logger.debug(f"FPS adjustment: target={target_fps:.2f}, actual={1/actual_frame_time:.2f}, " +
+                                    f"avg_render_time={avg_frame_time:.3f}s, adjustment={self.timing_adjustment:.3f}s")
+            
+            # In debug mode, log FPS stats every 60 seconds
+            if debug_mode and (current_time - self.last_stats_time >= 60):
+                elapsed_since_last = current_time - self.last_stats_time
+                fps_since_last = self.frames_since_last_check / elapsed_since_last if elapsed_since_last > 0 else 0
+                
+                # Check if we're significantly below target
+                fps_ratio = fps_since_last / target_fps
+                if fps_ratio < 0.9:  # 10% below target is considered significant
+                    logger.warning(f"Performance alert: Average FPS is {fps_since_last:.2f}, " 
+                                  f"which is {(1-fps_ratio)*100:.1f}% below target of {target_fps}")
+                else:
+                    logger.info(f"Performance stats: Average FPS is {fps_since_last:.2f} " 
+                               f"(target: {target_fps}), timing adjustment: {self.timing_adjustment:.3f}s")
+                
+                # Reset counters for the next check period
+                self.frames_since_last_check = 0
+                self.last_stats_time = current_time
+                
             return True
             
-        return False 
+        return False
         
     def verify_dataset_integrity(self):
         """Verify that we have a valid dataset.

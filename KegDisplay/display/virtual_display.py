@@ -55,7 +55,7 @@ class VirtualDisplay(DisplayBase):
             return False
             
     def display(self, image):
-        """Display an image on the virtual screen.
+        """Display an image on the virtual display.
         
         Args:
             image: PIL image to display
@@ -65,9 +65,6 @@ class VirtualDisplay(DisplayBase):
             return False
             
         try:
-            # Log the original image details
-            logger.debug(f"Original image: mode={image.mode}, size={image.size}")
-            
             # For binary images, check the pixel values before conversion
             if image.mode == "1":
                 pixels = image.load()
@@ -76,7 +73,6 @@ class VirtualDisplay(DisplayBase):
                     for y in range(image.height):
                         if pixels[x, y] == 1:
                             white_pixels += 1
-                logger.debug(f"Binary image has {white_pixels} white pixels out of {image.width * image.height} total")
             
             # Convert image to RGB if needed
             if image.mode != "RGB":
@@ -94,7 +90,6 @@ class VirtualDisplay(DisplayBase):
                                 rgb_pixels[x, y] = (255, 255, 255)  # Make it white
                                 white_pixels += 1
                     
-                    logger.debug(f"Converted binary image: {white_pixels} white pixels out of {image.width * image.height} total")
                     image = rgb_image
                 elif image.mode == "RGBA":
                     # Convert RGBA to RGB with black background
@@ -104,7 +99,7 @@ class VirtualDisplay(DisplayBase):
                 else:
                     # Convert other modes to RGB
                     image = image.convert('RGB')
-                
+            
             # Resize the image according to zoom
             if self.zoom != 1:
                 image = image.resize(

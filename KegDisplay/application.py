@@ -55,6 +55,20 @@ class Application:
         logger.debug("Starting application main loop")
         self.running = True
         splash_time = self.config_manager.get_config('splash_time')
+        
+        # Get FPS and debug settings
+        target_fps = self.config_manager.get_config('target_fps')
+        debug_mode = self.config_manager.get_config('debug')
+        
+        # Update renderer with FPS and debug settings
+        if hasattr(self.renderer, '_dataset') and self.renderer._dataset:
+            self.renderer.update_dataset('sys', {
+                'target_fps': target_fps,
+                'debug': debug_mode
+            }, merge=True)
+            
+            if debug_mode:
+                logger.info(f"Debug mode enabled. Target FPS: {target_fps}")
     
         # Initialize display with splash screen
         logger.info("Initializing display with splash screen...")

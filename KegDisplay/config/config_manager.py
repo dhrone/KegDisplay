@@ -29,6 +29,8 @@ class ConfigManager:
             'splash_time': 4,
             'resolution': (256, 64),
             'zoom': 3,
+            'target_fps': 30,
+            'debug': False,
         }
         
     def parse_args(self, args=None):
@@ -89,6 +91,13 @@ class ConfigManager:
                            type=int,
                            default=3,
                            help='Zoom factor for virtual display')
+        parser.add_argument('--fps',
+                           type=int,
+                           default=30,
+                           help='Target frames per second')
+        parser.add_argument('--debug',
+                           action='store_true',
+                           help='Enable debug mode for performance monitoring')
                            
         parsed_args = parser.parse_args(args)
         
@@ -97,6 +106,8 @@ class ConfigManager:
             if value is not None:
                 if key == 'resolution':
                     self.config[key] = tuple(value)
+                elif key == 'fps':
+                    self.config['target_fps'] = value
                 else:
                     self.config[key] = value
         
