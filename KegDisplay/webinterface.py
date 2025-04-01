@@ -47,6 +47,18 @@ def parse_args():
                        choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
                        type=str.upper,
                        help='Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
+    # Add SSL-related arguments
+    parser.add_argument('--ssl-cert', type=str,
+                       help='Path to SSL certificate file')
+    parser.add_argument('--ssl-key', type=str,
+                       help='Path to SSL private key file')
+    parser.add_argument('--workers', type=int, default=2,
+                       help='Number of Gunicorn worker processes (default: 2)')
+    parser.add_argument('--worker-class', type=str, default='sync',
+                       choices=['sync', 'eventlet', 'gevent'],
+                       help='Gunicorn worker class (default: sync)')
+    parser.add_argument('--timeout', type=int, default=30,
+                       help='Worker timeout in seconds (default: 30)')
     return parser.parse_args()
 
 # Parse arguments once at module level
@@ -1020,9 +1032,67 @@ def start():
         # The SyncedDatabase already starts the synchronizer in its constructor
         logger.info(f"Database synchronization active on ports {args.broadcast_port} (UDP) and {args.sync_port} (TCP)")
     
-    # Start the web server
-    logger.info(f"Starting web server on {args.host}:{args.port}, debug mode: {args.debug}")
-    app.run(host=args.host, port=args.port, debug=args.debug)
+    # Import Gunicorn here to avoid importing it when not needed
+    try:
+        from gunicorn.app.base import BaseApplication
+    except ImportError:
+        logger.error("Gunicorn is not installed. Please install it with: pip install gunicorn")
+        sys.exit(1)
+    
+    class KegDisplayApplication(BaseApplication):
+        def __init__(self, app, options=None):
+            self.options = options or {}
+            self.application = app
+            super().__init__()
+        
+        def load_config(self):
+            for key, value in self.options.items():
+                self.cfg.set(key, value)
+        
+        def load(self):
+            return self.application
+    
+    # Configure Gunicorn options optimized for Raspberry Pi Zero 2W
+    options = {
+        'bind': f"{args.host}:{args.port}",
+        'workers': args.workers,
+        'worker_class': args.worker_class,
+        'timeout': args.timeout,
+        'worker_connections': 100,  # Conservative limit for Pi Zero 2W
+        'max_requests': 1000,  # Restart workers periodically to prevent memory leaks
+        'max_requests_jitter': 50,  # Add jitter to prevent all workers restarting at once
+        'keepalive': 2,  # Short keepalive timeout to free resources quickly
+        'graceful_timeout': 30,  # Time to wait for workers to finish their requests
+        'accesslog': '-',  # Log to stdout
+        'errorlog': '-',   # Log to stderr
+        'loglevel': args.log_level.lower(),
+        'capture_output': True,
+        'enable_stdio_inheritance': True,
+        'daemon': False,  # Run in foreground for systemd
+        'pidfile': None,  # Don't create pidfile (systemd handles this)
+        'umask': 0,  # Default umask
+        'user': None,  # Let systemd handle user
+        'group': None,  # Let systemd handle group
+        'tmp_upload_dir': None,  # Use system default
+        'reload': args.debug,  # Enable auto-reload in debug mode
+    }
+    
+    # Add SSL configuration if certificates are provided
+    if args.ssl_cert and args.ssl_key:
+        if not os.path.exists(args.ssl_cert):
+            logger.error(f"SSL certificate file not found: {args.ssl_cert}")
+            sys.exit(1)
+        if not os.path.exists(args.ssl_key):
+            logger.error(f"SSL private key file not found: {args.ssl_key}")
+            sys.exit(1)
+        options['certfile'] = args.ssl_cert
+        options['keyfile'] = args.ssl_key
+        logger.info(f"SSL enabled with certificate: {args.ssl_cert}")
+    
+    # Start the Gunicorn server
+    logger.info(f"Starting Gunicorn server on {args.host}:{args.port}")
+    logger.info(f"Worker configuration: {args.workers} workers, {args.worker_class} worker class")
+    KegDisplayApplication(app, options).run()
 
 if __name__ == '__main__':
     start() 

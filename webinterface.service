@@ -5,8 +5,16 @@ After=network.target
 [Service]
 Type=simple
 User=beer
-WorkingDirectory=/home/beer/Dev/KegDisplay/KegDisplay
-ExecStart=/home/beer/.local/bin/poetry run python -m KegDisplay.webinterface
+WorkingDirectory=/home/beer/Dev/KegDisplay
+Environment=PYTHONPATH=/home/beer/Dev/KegDisplay
+ExecStart=/home/beer/.local/bin/poetry run python -m KegDisplay.webinterface \
+    --host 0.0.0.0 \
+    --port 8080 \
+    --workers 2 \
+    --worker-class sync \
+    --timeout 30 \
+    --ssl-cert /etc/ssl/certs/kegdisplay.crt \
+    --ssl-key /etc/ssl/private/kegdisplay.key
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
