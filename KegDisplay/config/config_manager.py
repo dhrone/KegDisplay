@@ -27,6 +27,8 @@ class ConfigManager:
             'db': 'KegDisplay/beer.db',
             'log_level': 'INFO',
             'splash_time': 4,
+            'resolution': (256, 64),
+            'zoom': 3,
         }
         
     def parse_args(self, args=None):
@@ -49,9 +51,9 @@ class ConfigManager:
                            default=1,
                            help='Specify which tap number this server is displaying data for')
         parser.add_argument('--display',
-                           choices=['ws0010', 'ssd1322'],
+                           choices=['ws0010', 'ssd1322', 'virtual'],
                            default='ws0010',
-                           help='Select which display to use (ws0010 or ssd1322)')
+                           help='Select which display to use (ws0010, ssd1322, or virtual)')
         parser.add_argument('--RS', 
                            type=int,
                            help='Provide the RS pin if it is needed')
@@ -77,14 +79,26 @@ class ConfigManager:
         parser.add_argument('--splash',
                            type=int,
                            default=4,
-                           help='Number of seconds to display the splash screen')                  
+                           help='Number of seconds to display the splash screen')
+        parser.add_argument('--resolution',
+                           type=int,
+                           nargs=2,
+                           default=[256, 64],
+                           help='Resolution for virtual display (width height)')
+        parser.add_argument('--zoom',
+                           type=int,
+                           default=3,
+                           help='Zoom factor for virtual display')
                            
         parsed_args = parser.parse_args(args)
         
         # Update configuration with parsed arguments
         for key, value in vars(parsed_args).items():
             if value is not None:
-                self.config[key] = value
+                if key == 'resolution':
+                    self.config[key] = tuple(value)
+                else:
+                    self.config[key] = value
         
         return self.config
     

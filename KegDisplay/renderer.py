@@ -340,16 +340,15 @@ class SequenceRenderer:
         for i in range(max_iterations):
             # Generate next frame
             self.main_display.render()
-            current_image = self.main_display.image.convert("1")
-            current_bytes = current_image.tobytes()
+            current_image = self.main_display.image
+            current_bytes = current_image.convert("1").tobytes()  # Convert to binary only for comparison
             
             # Add to raw frames collection
             raw_frames.append(current_bytes)
             
-            
             # Process the frame
             if last_image is not None:
-                last_bytes = last_image.tobytes()
+                last_bytes = last_image.convert("1").tobytes()  # Convert to binary only for comparison
                 
                 if current_bytes == last_bytes:
                     # Frame hasn't changed
@@ -359,15 +358,15 @@ class SequenceRenderer:
                     frame_changes += 1
                     if static_count > 0:
                         # Store the previous static frame with its duration
-                        image_sequence.append((last_image, static_count / 20.0))  # 20 is render frequency
-                        logger.debug(f"Added static frame with duration {static_count / 20.0:.2f}s")
+                        image_sequence.append((last_image, static_count / 60.0))  # 60 is render frequency
+                        logger.debug(f"Added static frame with duration {static_count / 60.0:.2f}s")
                     static_count = 0
                     # Store the new frame
-                    image_sequence.append((current_image, 1 / 20.0))
+                    image_sequence.append((current_image, 1 / 60.0))
                     logger.debug(f"Added new frame {len(image_sequence)-1} (frame change #{frame_changes})")
             else:
                 # First frame
-                image_sequence.append((current_image, 1 / 20.0))
+                image_sequence.append((current_image, 1 / 60.0))
                 logger.debug("Added first frame to sequence")
                 
             last_image = current_image
@@ -396,8 +395,8 @@ class SequenceRenderer:
                         
                         # Add any remaining static frames
                         if static_count > 0:
-                            image_sequence.append((last_image, static_count / 20.0))
-                            logger.debug(f"Added final static frame with duration {static_count / 20.0:.2f}s")
+                            image_sequence.append((last_image, static_count / 60.0))
+                            logger.debug(f"Added final static frame with duration {static_count / 60.0:.2f}s")
                             
                         # Trim to one complete cycle
                         final_sequence = image_sequence[:sequence_length]
@@ -407,7 +406,7 @@ class SequenceRenderer:
         # If we reach max iterations without finding a pattern
         logger.warning(f"Reached maximum iterations ({max_iterations}) - using collected frames")
         if static_count > 0:
-            image_sequence.append((last_image, static_count / 20.0))
+            image_sequence.append((last_image, static_count / 60.0))
             
         return image_sequence
         

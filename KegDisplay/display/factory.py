@@ -5,6 +5,7 @@ Factory for creating display instances
 import logging
 from .ws0010_display import WS0010Display
 from .ssd1322_display import SSD1322Display
+from .virtual_display import VirtualDisplay
 from .base import DisplayBase
 
 logger = logging.getLogger("KegDisplay")
@@ -18,7 +19,7 @@ class DisplayFactory:
         """Create a display instance based on the specified type.
         
         Args:
-            display_type: Type of display ('ws0010' or 'ssd1322')
+            display_type: Type of display ('ws0010', 'ssd1322', or 'virtual')
             interface_type: Type of interface ('bitbang' or 'spi')
             **kwargs: Additional parameters for the display
             
@@ -44,6 +45,11 @@ class DisplayFactory:
         elif display_type.lower() == 'ssd1322':
             logger.debug(f"Creating SSD1322 display with {interface_type} interface")
             return SSD1322Display(interface_type=interface_type, pins=pins)
+        elif display_type.lower() == 'virtual':
+            logger.debug("Creating virtual display")
+            resolution = kwargs.get('resolution', (256, 64))
+            zoom = kwargs.get('zoom', 3)
+            return VirtualDisplay(resolution=resolution, zoom=zoom)
         else:
             logger.error(f"Unsupported display type: {display_type}")
             raise ValueError(f"Unsupported display type: {display_type}") 
