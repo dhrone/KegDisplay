@@ -49,9 +49,11 @@ def parse_args():
                        help='Set the logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)')
     # Add SSL-related arguments
     parser.add_argument('--ssl-cert', type=str,
-                       help='Path to SSL certificate file')
+                       default=os.path.join(BASE_DIR, 'ssl', 'kegdisplay.crt'),
+                       help='Path to SSL certificate file (default: development certificate)')
     parser.add_argument('--ssl-key', type=str,
-                       help='Path to SSL private key file')
+                       default=os.path.join(BASE_DIR, 'ssl', 'kegdisplay.key'),
+                       help='Path to SSL private key file (default: development certificate)')
     parser.add_argument('--workers', type=int, default=2,
                        help='Number of Gunicorn worker processes (default: 2)')
     parser.add_argument('--worker-class', type=str, default='sync',
