@@ -386,7 +386,6 @@ class SequenceRenderer:
                     static_count = 0
                     # Store the new frame
                     image_sequence.append((current_image, 1 / 60.0))
-                    logger.debug(f"Added new frame {len(image_sequence)-1} (frame change #{frame_changes})")
             else:
                 # First frame
                 image_sequence.append((current_image, 1 / 60.0))

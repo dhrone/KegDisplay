@@ -81,15 +81,16 @@ class Application:
         
         # Perform initial data load while showing splash
         logger.info("Loading initial data...")
-        update_result = self.data_manager.update_data()
+        while time.time() - current_time < 2:  # Wait for 2 seconds to ensure data is loaded
+            update_result = self.data_manager.update_data()
+            beer_data = self.renderer._dataset.get('beers', {})
+            tap_data = self.renderer._dataset.get('taps', {})
+            if len(beer_data) > 0 and len(tap_data) > 0:
+                break
 
         # Check if data has changed and initialize the check_data_changed hashes
         if not self.renderer.check_data_changed():
             logger.warning("On initial load, no data was received from the database")
-        
-        # Get current data for diagnostics
-        beer_data = self.renderer._dataset.get('beers', {})
-        tap_data = self.renderer._dataset.get('taps', {})
 
         # Check if we have any data to display.  If not, log a warning and set default values
         if len(beer_data) == 0:
@@ -98,7 +99,7 @@ class Application:
                 "1": {
                     'Name': 'No Beer Data',
                     'ABV': 0.0,
-                    'Description': 'Check the database.  It does not appear to have any beers.'
+                    'Description': 'Check the database'
                 }
             }, merge=True)
             

@@ -1,0 +1,127 @@
+         2174347 function calls (2144104 primitive calls) in 0.615 seconds
+
+   Ordered by: cumulative time
+   List reduced from 76 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+        5    0.004    0.001    0.618    0.124 /Users/rritchey/Development/KegDisplay/KegDisplay/renderer.py:288(generate_image_sequence)
+21348/1779    0.026    0.000    0.560    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:578(render)
+7116/1779    0.005    0.000    0.529    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/collection.py:183(_render)
+7116/1779    0.019    0.000    0.515    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/collection.py:113(_renderWidgets)
+    21348    0.055    0.000    0.206    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:246(_evalAll)
+    21348    0.040    0.000    0.172    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:277(_fixColors)
+   286419    0.079    0.000    0.137    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/utility.py:1349(eval)
+    21348    0.125    0.000    0.125    0.000 {built-in method builtins.dir}
+     1779    0.002    0.000    0.063    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:1302(_render)
+   628677    0.036    0.000    0.056    0.000 {built-in method builtins.hasattr}
+    66891    0.030    0.000    0.036    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:287(__getattr__)
+     3553    0.006    0.000    0.035    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:940(convert)
+     5103    0.007    0.000    0.030    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:541(_place)
+     6748    0.010    0.000    0.027    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:1761(paste)
+    10659    0.025    0.000    0.025    0.000 {method 'convert' of 'ImagingCore' objects}
+   286419    0.024    0.000    0.024    0.000 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/collections/__init__.py:1003(__init__)
+     1275    0.001    0.000    0.023    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:1589(_paintScrolledWidget)
+    21348    0.011    0.000    0.020    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:342(_computeLocalDB)
+    14232    0.002    0.000    0.017    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/utility.py:1321(<lambda>)
+     3553    0.006    0.000    0.017    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:772(tobytes)
+    14232    0.003    0.000    0.015    0.000 {built-in method builtins.eval}
+     1275    0.004    0.000    0.012    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:1554(_computeShadowPlacements)
+     3827    0.001    0.000    0.011    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:367(clear)
+    88234    0.009    0.000    0.011    0.000 {built-in method builtins.getattr}
+     3827    0.003    0.000    0.010    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:3053(new)
+    21348    0.005    0.000    0.009    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:463(_updateTimers)
+    39138    0.008    0.000    0.008    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:394(active)
+    23127    0.006    0.000    0.008    0.000 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/collections/__init__.py:1013(__getitem__)
+    27350    0.005    0.000    0.007    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:885(load)
+    74515    0.005    0.000    0.005    0.000 {built-in method builtins.isinstance}
+     7380    0.004    0.000    0.005    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:571(_new)
+     6748    0.004    0.000    0.004    0.000 {method 'paste' of 'ImagingCore' objects}
+    99979    0.004    0.000    0.004    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:563(size)
+     8895    0.003    0.000    0.004    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:875(_render)
+    20244    0.002    0.000    0.003    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:136(isImageType)
+     3553    0.002    0.000    0.003    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:449(_getencoder)
+     3553    0.003    0.000    0.003    0.000 {method 'encode' of 'ImagingEncoder' objects}
+     6748    0.001    0.000    0.003    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:637(_ensure_mutable)
+    27350    0.003    0.000    0.003    0.000 {method 'pixel_access' of 'ImagingCore' objects}
+    32200    0.002    0.000    0.002    0.000 {built-in method builtins.len}
+    22499    0.002    0.000    0.002    0.000 {method 'append' of 'list' objects}
+    39917    0.002    0.000    0.002    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:567(mode)
+    21348    0.002    0.000    0.002    0.000 {method 'items' of 'dict' objects}
+     3827    0.002    0.000    0.002    0.000 {built-in method PIL._imaging.fill}
+     1779    0.001    0.000    0.002    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:1490(_shouldIMove)
+    21348    0.002    0.000    0.002    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/utility.py:548(__getitem__)
+     3827    0.001    0.000    0.002    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:3034(_check_size)
+    21348    0.002    0.000    0.002    0.000 {built-in method time.monotonic}
+    12473    0.001    0.000    0.001    0.000 {method 'get' of 'dict' objects}
+    10206    0.001    0.000    0.001    0.000 {built-in method builtins.round}
+
+
+
+
+==== Time Spent ====
+         2174347 function calls (2144104 primitive calls) in 0.615 seconds
+
+   Ordered by: internal time
+   List reduced from 76 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+    21348    0.125    0.000    0.125    0.000 {built-in method builtins.dir}
+   286419    0.079    0.000    0.137    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/utility.py:1349(eval)
+    21348    0.055    0.000    0.206    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:246(_evalAll)
+    21348    0.040    0.000    0.172    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:277(_fixColors)
+   628677    0.036    0.000    0.056    0.000 {built-in method builtins.hasattr}
+    66891    0.030    0.000    0.036    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:287(__getattr__)
+21348/1779    0.026    0.000    0.560    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:578(render)
+    10659    0.025    0.000    0.025    0.000 {method 'convert' of 'ImagingCore' objects}
+   286419    0.024    0.000    0.024    0.000 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/collections/__init__.py:1003(__init__)
+7116/1779    0.019    0.000    0.515    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/collection.py:113(_renderWidgets)
+    21348    0.011    0.000    0.020    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:342(_computeLocalDB)
+     6748    0.010    0.000    0.027    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:1761(paste)
+    88234    0.009    0.000    0.011    0.000 {built-in method builtins.getattr}
+    39138    0.008    0.000    0.008    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:394(active)
+     5103    0.007    0.000    0.030    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:541(_place)
+     3553    0.006    0.000    0.017    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:772(tobytes)
+     3553    0.006    0.000    0.035    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:940(convert)
+    23127    0.006    0.000    0.008    0.000 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/collections/__init__.py:1013(__getitem__)
+    74515    0.005    0.000    0.005    0.000 {built-in method builtins.isinstance}
+7116/1779    0.005    0.000    0.529    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/collection.py:183(_render)
+    21348    0.005    0.000    0.009    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:463(_updateTimers)
+    27350    0.005    0.000    0.007    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:885(load)
+        5    0.004    0.001    0.618    0.124 /Users/rritchey/Development/KegDisplay/KegDisplay/renderer.py:288(generate_image_sequence)
+     6748    0.004    0.000    0.004    0.000 {method 'paste' of 'ImagingCore' objects}
+    99979    0.004    0.000    0.004    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:563(size)
+     1275    0.004    0.000    0.012    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:1554(_computeShadowPlacements)
+     7380    0.004    0.000    0.005    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:571(_new)
+    14232    0.003    0.000    0.015    0.000 {built-in method builtins.eval}
+     3827    0.003    0.000    0.010    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:3053(new)
+     3553    0.003    0.000    0.003    0.000 {method 'encode' of 'ImagingEncoder' objects}
+     8895    0.003    0.000    0.004    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:875(_render)
+    27350    0.003    0.000    0.003    0.000 {method 'pixel_access' of 'ImagingCore' objects}
+    14232    0.002    0.000    0.017    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/utility.py:1321(<lambda>)
+    20244    0.002    0.000    0.003    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:136(isImageType)
+     3553    0.002    0.000    0.003    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:449(_getencoder)
+    32200    0.002    0.000    0.002    0.000 {built-in method builtins.len}
+    22499    0.002    0.000    0.002    0.000 {method 'append' of 'list' objects}
+    39917    0.002    0.000    0.002    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:567(mode)
+    21348    0.002    0.000    0.002    0.000 {method 'items' of 'dict' objects}
+     3827    0.002    0.000    0.002    0.000 {built-in method PIL._imaging.fill}
+    21348    0.002    0.000    0.002    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/utility.py:548(__getitem__)
+     1779    0.002    0.000    0.063    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:1302(_render)
+    21348    0.002    0.000    0.002    0.000 {built-in method time.monotonic}
+     3827    0.001    0.000    0.011    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:367(clear)
+    12473    0.001    0.000    0.001    0.000 {method 'get' of 'dict' objects}
+     3827    0.001    0.000    0.002    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:3034(_check_size)
+     6748    0.001    0.000    0.003    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:637(_ensure_mutable)
+    10206    0.001    0.000    0.001    0.000 {built-in method builtins.round}
+    11207    0.001    0.000    0.001    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:543(__init__)
+     1275    0.001    0.000    0.023    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:1589(_paintScrolledWidget)
+
+
+
+
+==== Performance Summary ====
+Average sequence size: 258.0 frames
+Average sequence generation time: 0.124s
+Average render rate: 2085.5 frames per second
+Average time per frame: 0.48ms
+Estimated memory usage for sequence: 0.50 MB

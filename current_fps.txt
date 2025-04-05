@@ -1,0 +1,1 @@
+2025-04-05 08:22:54,792 - FullAppProfiler - INFO - Final performance: 428 frames in 14.43s, FPS: 29.65

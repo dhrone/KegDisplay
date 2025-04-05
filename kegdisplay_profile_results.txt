@@ -1,0 +1,119 @@
+         2644282 function calls (2602705 primitive calls) in 15.040 seconds
+
+   Ordered by: cumulative time
+   List reduced from 3068 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      538    0.008    0.000   30.037    0.056 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:1960(_run_once)
+      537    0.028    0.000   14.739    0.027 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/selectors.py:540(select)
+     8993    0.056    0.000    3.767    0.000 /Users/rritchey/Development/KegDisplay/KegDisplay/renderer.py:436(display_next_frame)
+      429    0.009    0.000    3.582    0.008 /Users/rritchey/Development/KegDisplay/KegDisplay/display/virtual_display.py:57(display)
+     2581    3.529    0.001    3.529    0.001 {method 'call' of '_tkinter.tkapp' objects}
+      429    0.000    0.000    3.007    0.007 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/tkinter/__init__.py:1465(update)
+20216/1698    0.025    0.000    0.557    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:578(render)
+6736/1690    0.005    0.000    0.525    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/collection.py:183(_render)
+6736/1690    0.018    0.000    0.509    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/collection.py:113(_renderWidgets)
+      429    0.000    0.000    0.304    0.001 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/tkinter/__init__.py:2988(create_image)
+      429    0.002    0.000    0.304    0.001 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/tkinter/__init__.py:2968(_create)
+  430/429    0.013    0.000    0.205    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/ImageTk.py:99(__init__)
+    20236    0.052    0.000    0.197    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:246(_evalAll)
+      538    0.169    0.000    0.169    0.000 {method 'control' of 'select.kqueue' objects}
+    20228    0.038    0.000    0.165    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:277(_fixColors)
+        2    0.001    0.001    0.162    0.081 /Users/rritchey/Development/KegDisplay/KegDisplay/renderer.py:288(generate_image_sequence)
+    168/5    0.000    0.000    0.135    0.027 <frozen importlib._bootstrap>:1349(_find_and_load)
+    168/5    0.000    0.000    0.135    0.027 <frozen importlib._bootstrap>:1304(_find_and_load_unlocked)
+    166/6    0.000    0.000    0.133    0.022 <frozen importlib._bootstrap>:911(_load_unlocked)
+   404/10    0.000    0.000    0.133    0.013 <frozen importlib._bootstrap>:480(_call_with_frames_removed)
+    156/5    0.000    0.000    0.132    0.026 <frozen importlib._bootstrap_external>:1020(exec_module)
+   271487    0.075    0.000    0.131    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/utility.py:1349(eval)
+    343/7    0.005    0.000    0.131    0.019 {built-in method builtins.exec}
+        1    0.000    0.000    0.130    0.130 /Users/rritchey/Development/KegDisplay/KegDisplay/taggstaps.py:26(start)
+        1    0.000    0.000    0.130    0.130 /Users/rritchey/Development/KegDisplay/KegDisplay/tests/profile_full_app.py:120(patched_run)
+        1    0.000    0.000    0.127    0.127 /Users/rritchey/Development/KegDisplay/KegDisplay/factories.py:101(create_display)
+        1    0.000    0.000    0.127    0.127 /Users/rritchey/Development/KegDisplay/KegDisplay/display/virtual_display.py:31(initialize)
+        1    0.000    0.000    0.126    0.126 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/tkinter/__init__.py:2439(__init__)
+        1    0.126    0.126    0.126    0.126 {built-in method _tkinter.create}
+    20251    0.121    0.000    0.121    0.000 {built-in method builtins.dir}
+      429    0.001    0.000    0.116    0.000 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/tkinter/__init__.py:4282(__init__)
+      429    0.004    0.000    0.114    0.000 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/tkinter/__init__.py:4221(__init__)
+    99/40    0.000    0.000    0.110    0.003 {built-in method builtins.__import__}
+  740/260    0.000    0.000    0.102    0.000 <frozen importlib._bootstrap>:1390(_handle_fromlist)
+        1    0.000    0.000    0.082    0.082 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/sqlalchemy/__init__.py:1(<module>)
+      429    0.001    0.000    0.075    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/ImageTk.py:165(paste)
+     1685    0.002    0.000    0.069    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:1302(_render)
+        1    0.000    0.000    0.061    0.061 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/sqlalchemy/engine/__init__.py:1(<module>)
+   625709    0.040    0.000    0.061    0.000 {built-in method builtins.hasattr}
+        1    0.000    0.000    0.055    0.055 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/sqlalchemy/engine/events.py:1(<module>)
+        1    0.000    0.000    0.054    0.054 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/sqlalchemy/engine/base.py:1(<module>)
+        1    0.000    0.000    0.053    0.053 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/sqlalchemy/engine/interfaces.py:1(<module>)
+      429    0.000    0.000    0.052    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/ImageTk.py:62(_pyimagingtkcall)
+      660    0.001    0.000    0.045    0.000 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/events.py:87(_run)
+        1    0.000    0.000    0.044    0.044 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/sqlalchemy/sql/__init__.py:1(<module>)
+      660    0.002    0.000    0.043    0.000 {method 'run' of '_contextvars.Context' objects}
+1127/1095    0.010    0.000    0.043    0.000 {built-in method builtins.__build_class__}
+      429    0.002    0.000    0.043    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:2222(resize)
+      156    0.000    0.000    0.042    0.000 <frozen importlib._bootstrap_external>:1093(get_code)
+        1    0.000    0.000    0.041    0.041 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/sqlalchemy/ext/asyncio/__init__.py:1(<module>)
+
+
+
+
+==== Time Spent ====
+         2644282 function calls (2602705 primitive calls) in 15.040 seconds
+
+   Ordered by: internal time
+   List reduced from 3068 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   8994/1   10.156    0.001    0.000    0.000 {built-in method time.sleep}
+     2581    3.529    0.001    3.529    0.001 {method 'call' of '_tkinter.tkapp' objects}
+      538    0.169    0.000    0.169    0.000 {method 'control' of 'select.kqueue' objects}
+        1    0.126    0.126    0.126    0.126 {built-in method _tkinter.create}
+    20251    0.121    0.000    0.121    0.000 {built-in method builtins.dir}
+   271487    0.075    0.000    0.131    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/utility.py:1349(eval)
+     8993    0.056    0.000    3.767    0.000 /Users/rritchey/Development/KegDisplay/KegDisplay/renderer.py:436(display_next_frame)
+    20236    0.052    0.000    0.197    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:246(_evalAll)
+   625709    0.040    0.000    0.061    0.000 {built-in method builtins.hasattr}
+      429    0.040    0.000    0.040    0.000 {method 'resize' of 'ImagingCore' objects}
+    20228    0.038    0.000    0.165    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:277(_fixColors)
+    66404    0.029    0.000    0.036    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:287(__getattr__)
+      537    0.028    0.000   14.739    0.027 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/selectors.py:540(select)
+20216/1698    0.025    0.000    0.557    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:578(render)
+    10627    0.025    0.000    0.025    0.000 {method 'convert' of 'ImagingCore' objects}
+      228    0.024    0.000    0.024    0.000 {method 'read' of '_io.BufferedReader' objects}
+   271487    0.024    0.000    0.024    0.000 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/collections/__init__.py:1003(__init__)
+6736/1690    0.018    0.000    0.509    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/collection.py:113(_renderWidgets)
+     8533    0.015    0.000    0.040    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:1761(paste)
+      429    0.015    0.000    0.015    0.000 {method 'new_block' of 'ImagingCore' objects}
+  430/429    0.013    0.000    0.205    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/ImageTk.py:99(__init__)
+      156    0.013    0.000    0.013    0.000 {built-in method marshal.loads}
+    20228    0.011    0.000    0.019    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:342(_computeLocalDB)
+   119878    0.011    0.000    0.011    0.000 {built-in method builtins.isinstance}
+1127/1095    0.010    0.000    0.043    0.000 {built-in method builtins.__build_class__}
+    95908    0.010    0.000    0.012    0.000 {built-in method builtins.getattr}
+       10    0.010    0.001    0.010    0.001 {built-in method _imp.create_dynamic}
+      429    0.009    0.000    3.582    0.008 /Users/rritchey/Development/KegDisplay/KegDisplay/display/virtual_display.py:57(display)
+     5941    0.008    0.000    0.035    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:541(_place)
+      538    0.008    0.000   30.037    0.056 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/base_events.py:1960(_run_once)
+    11642    0.008    0.000    0.011    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:571(_new)
+    37049    0.008    0.000    0.008    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:394(active)
+      429    0.007    0.000    0.007    0.000 {method 'convert2' of 'ImagingCore' objects}
+     8533    0.007    0.000    0.007    0.000 {method 'paste' of 'ImagingCore' objects}
+     4985    0.007    0.000    0.023    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:3053(new)
+     4985    0.007    0.000    0.007    0.000 {built-in method PIL._imaging.fill}
+    49/47    0.006    0.000    0.006    0.000 {method 'acquire' of '_thread.lock' objects}
+    34718    0.006    0.000    0.010    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:885(load)
+     3915    0.006    0.000    0.038    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:940(convert)
+     3356    0.006    0.000    0.017    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:772(tobytes)
+    32823    0.006    0.000    0.006    0.000 {method 'get' of 'dict' objects}
+    21925    0.006    0.000    0.007    0.000 /opt/homebrew/Cellar/python@3.13/3.13.2/Frameworks/Python.framework/Versions/3.13/lib/python3.13/collections/__init__.py:1013(__getitem__)
+6736/1690    0.005    0.000    0.525    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/collection.py:183(_render)
+55560/55371    0.005    0.000    0.005    0.000 {built-in method builtins.len}
+    19509    0.005    0.000    0.005    0.000 {built-in method time.time}
+   112442    0.005    0.000    0.005    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/PIL/Image.py:563(size)
+    343/7    0.005    0.000    0.131    0.019 {built-in method builtins.exec}
+     1460    0.005    0.000    0.013    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:1554(_computeShadowPlacements)
+    20216    0.005    0.000    0.009    0.000 /Users/rritchey/Library/Caches/pypoetry/virtualenvs/kegdisplay-LBrQDqVU-py3.13/lib/python3.13/site-packages/tinyDisplay/render/widget.py:463(_updateTimers)
+      429    0.004    0.000    0.004    0.000 {method 'split' of 'ImagingCore' objects}
+
+
