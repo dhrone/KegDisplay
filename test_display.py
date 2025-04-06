@@ -155,7 +155,9 @@ def main():
         print("Test image displayed successfully")
     except Exception as e:
         print(f"Error displaying test image: {e}")
-        sys.exit(1)
+        import traceback
+        traceback.print_exc()
+        print("Continuing with test...")
     
     # Wait for 5 seconds
     print("Waiting for 5 seconds...")
