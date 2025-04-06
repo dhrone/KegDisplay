@@ -131,18 +131,6 @@ apt-get install -y python3 git gcc vim-tiny sqlite3 python3-dev python3-rpi.gpio
     exit 1;
 }
 
-# Install Rust
-log "Installing Rust..."
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y || {
-    error "Failed to install Rust.";
-    exit 1;
-}
-
-# Source Rust environment
-source "$HOME/.cargo/env" || {
-    error "Failed to source Rust environment.";
-    exit 1;
-}
 
 # Create beer user account
 log "Creating beer user account..."
@@ -187,6 +175,12 @@ EOF
 log "Installing Rust for beer user..."
 sudo -u beer bash -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y" || {
     error "Failed to install Rust for beer user.";
+    exit 1;
+}
+
+# Source Rust environment
+source "$HOME/.cargo/env" || {
+    error "Failed to source Rust environment.";
     exit 1;
 }
 
