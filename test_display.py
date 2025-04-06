@@ -65,7 +65,21 @@ def create_test_image(width, height):
     
     # Add text to the image
     text = "KegDisplay Test"
-    text_width, text_height = draw.textsize(text, font=font) if hasattr(draw, 'textsize') else font.getsize(text)
+    
+    # Get text size - handle both older and newer Pillow versions
+    try:
+        # For newer Pillow versions
+        text_bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
+    except AttributeError:
+        try:
+            # For older Pillow versions with textsize
+            text_width, text_height = draw.textsize(text, font=font)
+        except AttributeError:
+            # For very old Pillow versions with getsize
+            text_width, text_height = font.getsize(text)
+    
     x = (width - text_width) // 2
     y = (height - text_height) // 2
     draw.text((x, y), text, fill=1, font=font)
