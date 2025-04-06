@@ -43,22 +43,28 @@ def parse_arguments():
                         help='Resolution for virtual display (default: 256 64)')
     parser.add_argument('--zoom', type=int, default=3, help='Zoom factor for virtual display (default: 3)')
     
+    # Display size and color mode
+    parser.add_argument('--width', type=int, default=100, help='Display width in pixels (default: 100)')
+    parser.add_argument('--height', type=int, default=16, help='Display height in pixels (default: 16)')
+    parser.add_argument('--mode', type=str, default='1', choices=['1', 'L', 'RGB'],
+                        help='Display color mode: 1 (binary), L (grayscale), RGB (default: 1)')
+    
     return parser.parse_args()
 
-def create_test_image(width, height):
+def create_test_image(width, height, mode='1'):
     """Create a test image with text."""
     # Create a new image with a black background
-    image = Image.new('1', (width, height), 0)
+    image = Image.new(mode, (width, height), 0)
     draw = ImageDraw.Draw(image)
     
     # Try to load a font, fall back to default if not available
     try:
         # Try to use a system font
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
+        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", min(16, height-2))
     except IOError:
         try:
             # Try another common font location
-            font = ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", 16)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf", min(16, height-2))
         except IOError:
             # Fall back to default font
             font = ImageFont.load_default()
@@ -96,6 +102,7 @@ def main():
     print("Testing display with the following configuration:")
     print(f"Display type: {args.display}")
     print(f"Interface type: {args.interface}")
+    print(f"Display size: {args.width}x{args.height}, mode: {args.mode}")
     
     if args.interface == 'bitbang':
         print(f"RS pin: {args.RS}")
@@ -143,7 +150,7 @@ def main():
     
     # Create test image
     try:
-        image = create_test_image(256, 64)
+        image = create_test_image(args.width, args.height, args.mode)
     except Exception as e:
         print(f"Error creating test image: {e}")
         sys.exit(1)
@@ -166,13 +173,14 @@ def main():
     try:
         print("Displaying test pattern...")
         # Create a simple test pattern
-        pattern = Image.new('1', (256, 64), 0)
+        pattern = Image.new(args.mode, (args.width, args.height), 0)
         draw = ImageDraw.Draw(pattern)
         # Draw a checkerboard pattern
-        for y in range(0, 64, 8):
-            for x in range(0, 256, 8):
-                if (x // 8 + y // 8) % 2 == 0:
-                    draw.rectangle([(x, y), (x+7, y+7)], fill=1)
+        block_size = max(1, min(args.width, args.height) // 8)
+        for y in range(0, args.height, block_size):
+            for x in range(0, args.width, block_size):
+                if (x // block_size + y // block_size) % 2 == 0:
+                    draw.rectangle([(x, y), (x+block_size-1, y+block_size-1)], fill=1)
         # Display the pattern
         display.display(pattern)
         print("Test pattern displayed successfully")
