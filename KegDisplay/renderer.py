@@ -82,6 +82,10 @@ class SequenceRenderer:
         else:
             logger.debug("Renderer initialized without initial tap information")
         
+        # Target frame time in seconds
+        target_frame_time = 1.0 / 30  # Default to 30 FPS
+        self.target_frame_time = target_frame_time  # Store for external access
+        
     def load_page(self, page_path):
         """Load a page template from a YAML file.
         
@@ -455,6 +459,7 @@ class SequenceRenderer:
         
         # Target frame time in seconds
         target_frame_time = 1.0 / target_fps
+        self.target_frame_time = target_frame_time  # Store for external access
             
         current_time = time.time()
         current_image, duration = self.image_sequence[self.sequence_index]
@@ -471,11 +476,20 @@ class SequenceRenderer:
             logger.debug(f"Frame {self.sequence_index}: time since last frame: {time_since_last:.3f}s, target: {target_frame_time:.3f}s, adjustment: {self.timing_adjustment:.3f}s")
         
         # Apply dynamic timing adjustment - adjust using target_frame_time with dynamic correction
-        adjusted_target_time = max(0.001, target_frame_time + self.timing_adjustment)
+        adjusted_target_time = max(0.005, target_frame_time + self.timing_adjustment)
         
         # Check if it's time to display the next frame
         if time_since_last >= adjusted_target_time:
             frame_start = time.time()
+            
+            # Check if we're falling behind and need to skip frames
+            if time_since_last > adjusted_target_time * 2 and len(self.image_sequence) > 1:
+                # We're more than 2 frames behind, skip ahead
+                frames_to_skip = min(int(time_since_last / adjusted_target_time) - 1, len(self.image_sequence) - 1)
+                if frames_to_skip > 0:
+                    self.sequence_index = (self.sequence_index + frames_to_skip) % len(self.image_sequence)
+                    if self._debug_counter == 0:
+                        logger.debug(f"Skipped {frames_to_skip} frames to catch up")
             
             # Display the current frame
             self.display.display(current_image)
@@ -519,7 +533,7 @@ class SequenceRenderer:
                     # Adjust timing factor using a dampened approach (25% of the error)
                     # Negative adjustment means we need to wait less (speed up)
                     # Positive adjustment means we need to wait more (slow down)
-                    self.timing_adjustment += error * 0.25
+                    self.timing_adjustment += error * 0.5
                     
                     # Limit adjustment to reasonable bounds
                     # Don't adjust more than 50% of target frame time in either direction

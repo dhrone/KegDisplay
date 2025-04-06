@@ -178,10 +178,18 @@ class Application:
                         self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)
                 
                 # Display current frame
-                self.renderer.display_next_frame()
+                frame_displayed = self.renderer.display_next_frame()
                 
-                # Short sleep to prevent CPU overload
-                time.sleep(0.01)
+                # Adaptive sleep based on frame timing
+                if hasattr(self.renderer, 'target_frame_time') and hasattr(self.renderer, 'last_frame_time'):
+                    # Calculate time until next frame
+                    next_frame_time = self.renderer.last_frame_time + self.renderer.target_frame_time
+                    sleep_time = max(0, next_frame_time - time.time())
+                    if sleep_time > 0:
+                        time.sleep(sleep_time)
+                else:
+                    # Fallback to a short sleep if timing info isn't available
+                    time.sleep(0.001)
                 
             except KeyboardInterrupt:
                 logger.info("KeyboardInterrupt received, initiating shutdown")
