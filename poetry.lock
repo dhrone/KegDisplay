@@ -1469,7 +1469,10 @@ MarkupSafe = ">=2.1.1"
 [package.extras]
 watchdog = ["watchdog (>=2.3)"]
 
+[extras]
+virtual-display = []
+
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "29f83b97688b92cd720fa870041ee63069128f18695f9a6339570a0c91a82309"
+content-hash = "744124e1d607d6d975c064c9e166d6d3151ad539e4a1acfd933c196f21be7906"
