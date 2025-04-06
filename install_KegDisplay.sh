@@ -194,6 +194,51 @@ id -u beer &>/dev/null || useradd -m -s /bin/bash beer || {
     exit 1;
 }
 
+# Set up GPIO permissions
+log "Setting up GPIO permissions..."
+# Add beer user to gpio group if it exists
+if getent group gpio > /dev/null; then
+    usermod -a -G gpio beer || {
+        error "Failed to add beer user to gpio group.";
+        exit 1;
+    }
+    log "Added beer user to gpio group."
+else
+    log "gpio group not found. Creating udev rules for GPIO access."
+fi
+
+# Create udev rules for GPIO access
+log "Creating udev rules for GPIO access..."
+cat > /etc/udev/rules.d/99-gpio.rules << 'EOF'
+SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"
+SUBSYSTEM=="gpio", KERNEL=="gpio*", GROUP="gpio", MODE="0660"
+SUBSYSTEM=="gpio", KERNEL=="gpio*", RUN+="/bin/chgrp gpio /dev/gpio%n"
+SUBSYSTEM=="gpio", KERNEL=="gpio*", RUN+="/bin/chmod g+rw /dev/gpio%n"
+EOF
+
+# Create gpio group if it doesn't exist
+if ! getent group gpio > /dev/null; then
+    groupadd gpio || {
+        error "Failed to create gpio group.";
+        exit 1;
+    }
+    usermod -a -G gpio beer || {
+        error "Failed to add beer user to gpio group.";
+        exit 1;
+    }
+    log "Created gpio group and added beer user to it."
+fi
+
+# Reload udev rules
+udevadm control --reload-rules || {
+    error "Failed to reload udev rules.";
+    exit 1;
+}
+udevadm trigger || {
+    error "Failed to trigger udev rules.";
+    exit 1;
+}
+
 # Create log directory
 log "Creating log directory..."
 mkdir -p /var/log/KegDisplay || {
@@ -279,12 +324,45 @@ sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && mkdir -p KegDisplay" || {
     exit 1;
 }
 
-# Initialize the database using the repository's create script
-log "Initializing database..."
-sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && /home/beer/.poetry/bin/poetry run python -m KegDisplay.db.createDB" || {
-    error "Failed to initialize database.";
-    exit 1;
-}
+# Check if the database already exists
+if [ -f "/home/beer/Dev/KegDisplay/KegDisplay/beer.db" ]; then
+    log "Database already exists at /home/beer/Dev/KegDisplay/KegDisplay/beer.db"
+    read -p "Do you want to reinitialize the database? This will overwrite the existing database. (y/n): " REINIT_DB
+    REINIT_DB=$(echo "$REINIT_DB" | tr '[:upper:]' '[:lower:]')
+    if [ "$REINIT_DB" != "y" ]; then
+        log "Skipping database initialization. Using existing database."
+    else
+        # Initialize the database using the repository's create script
+        log "Reinitializing database..."
+        sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && /home/beer/.poetry/bin/poetry run python -m KegDisplay.db.createDB" || {
+            error "Failed to initialize database.";
+            exit 1;
+        }
+        log "Database reinitialized successfully."
+    fi
+else
+    # Initialize the database using the repository's create script
+    log "Initializing database..."
+    sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && /home/beer/.poetry/bin/poetry run python -m KegDisplay.db.createDB" || {
+        error "Failed to initialize database.";
+        exit 1;
+    }
+    log "Database initialized successfully."
+fi
+
+# Verify the database was created in the correct location
+if [ ! -f "/home/beer/Dev/KegDisplay/KegDisplay/beer.db" ]; then
+    log "Database not found in the expected location. Checking if it exists elsewhere..."
+    # Check if the database exists in the parent directory
+    if [ -f "/home/beer/Dev/KegDisplay/beer.db" ]; then
+        log "Database exists in the parent directory. This is fine if you're using a custom configuration."
+    else
+        error "Database was not created. Please check the application logs for more information.";
+        exit 1;
+    fi
+fi
+
+log "Database initialization completed."
 
 # Create systemd service files
 log "Creating systemd service files..."
