@@ -151,6 +151,9 @@ def main():
     # Display test image
     try:
         print("Displaying test image...")
+        # Add debug information about the image
+        print(f"Image size: {image.size}, mode: {image.mode}")
+        # Try to display the image
         display.display(image)
         print("Test image displayed successfully")
     except Exception as e:
@@ -158,6 +161,25 @@ def main():
         import traceback
         traceback.print_exc()
         print("Continuing with test...")
+    
+    # Add a simple test pattern
+    try:
+        print("Displaying test pattern...")
+        # Create a simple test pattern
+        pattern = Image.new('1', (256, 64), 0)
+        draw = ImageDraw.Draw(pattern)
+        # Draw a checkerboard pattern
+        for y in range(0, 64, 8):
+            for x in range(0, 256, 8):
+                if (x // 8 + y // 8) % 2 == 0:
+                    draw.rectangle([(x, y), (x+7, y+7)], fill=1)
+        # Display the pattern
+        display.display(pattern)
+        print("Test pattern displayed successfully")
+    except Exception as e:
+        print(f"Error displaying test pattern: {e}")
+        import traceback
+        traceback.print_exc()
     
     # Wait for 5 seconds
     print("Waiting for 5 seconds...")
