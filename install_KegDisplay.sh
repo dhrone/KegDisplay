@@ -21,6 +21,43 @@ success() {
     echo -e "\033[1;32m[SUCCESS]\033[0m $1"
 }
 
+# Function to handle Poetry installation with lock file recovery
+install_poetry_dependencies() {
+    local directory=$1
+    local max_attempts=3
+    local attempt=1
+    
+    while [ $attempt -le $max_attempts ]; do
+        log "Installing Python dependencies (attempt $attempt of $max_attempts)..."
+        
+        # Try to install dependencies
+        if sudo -u beer bash -c "cd $directory && source /home/beer/.cargo/env && /home/beer/.poetry/bin/poetry install"; then
+            success "Python dependencies installed successfully!"
+            return 0
+        fi
+        
+        # Check if the error is related to the lock file
+        if sudo -u beer bash -c "cd $directory && /home/beer/.poetry/bin/poetry lock --no-update" 2>&1 | grep -q "Lock file is out of date"; then
+            log "Lock file is out of date. Updating lock file..."
+            if sudo -u beer bash -c "cd $directory && /home/beer/.poetry/bin/poetry lock --no-update"; then
+                log "Lock file updated successfully. Retrying installation..."
+                attempt=$((attempt + 1))
+                continue
+            else
+                error "Failed to update lock file."
+                return 1
+            fi
+        else
+            # If the error is not related to the lock file, don't retry
+            error "Failed to install Python dependencies."
+            return 1
+        fi
+    done
+    
+    error "Failed to install Python dependencies after $max_attempts attempts."
+    return 1
+}
+
 # Verify the script is run as root
 if [ "$(id -u)" -ne 0 ]; then
     error "This script must be run as root"
@@ -67,6 +104,16 @@ while [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "spi" ]; do
     INTERFACE_TYPE=$(echo "$INTERFACE_TYPE" | tr '[:upper:]' '[:lower:]')
     if [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "spi" ]; then
         error "Invalid choice. Please enter 'bitbang' or 'spi'."
+    fi
+done
+
+# Ask if tkinter is needed for testing
+INSTALL_TKINTER=""
+while [ "$INSTALL_TKINTER" != "y" ] && [ "$INSTALL_TKINTER" != "n" ]; do
+    read -p "Do you need tkinter for testing? (y/n): " INSTALL_TKINTER
+    INSTALL_TKINTER=$(echo "$INSTALL_TKINTER" | tr '[:upper:]' '[:lower:]')
+    if [ "$INSTALL_TKINTER" != "y" ] && [ "$INSTALL_TKINTER" != "n" ]; then
+        error "Invalid choice. Please enter 'y' or 'n'."
     fi
 done
 
@@ -131,16 +178,7 @@ apt-get install -y python3 git gcc vim-tiny sqlite3 python3-dev python3-rpi.gpio
     exit 1;
 }
 
-# Ask if tkinter is needed for testing
-INSTALL_TKINTER=""
-while [ "$INSTALL_TKINTER" != "y" ] && [ "$INSTALL_TKINTER" != "n" ]; do
-    read -p "Do you need tkinter for testing? (y/n): " INSTALL_TKINTER
-    INSTALL_TKINTER=$(echo "$INSTALL_TKINTER" | tr '[:upper:]' '[:lower:]')
-    if [ "$INSTALL_TKINTER" != "y" ] && [ "$INSTALL_TKINTER" != "n" ]; then
-        error "Invalid choice. Please enter 'y' or 'n'."
-    fi
-done
-
+# Install tkinter if requested
 if [ "$INSTALL_TKINTER" = "y" ]; then
     log "Installing tkinter..."
     apt-get install -y python3-tk || {
@@ -229,10 +267,10 @@ fi
 
 # Install Python dependencies using Poetry
 log "Installing Python dependencies..."
-sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && source /home/beer/.cargo/env && /home/beer/.poetry/bin/poetry install" || {
-    error "Failed to install Python dependencies.";
-    exit 1;
-}
+if ! install_poetry_dependencies "/home/beer/Dev/KegDisplay"; then
+    error "Failed to install Python dependencies. Installation aborted."
+    exit 1
+fi
 
 # Initialize the database
 log "Initializing the database..."
