@@ -197,7 +197,7 @@ fi
 
 # Install Python dependencies using Poetry
 log "Installing Python dependencies..."
-sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && $HOME/.local/bin/poetry install" || {
+sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && /home/beer/.poetry/bin/poetry install" || {
     error "Failed to install Python dependencies.";
     exit 1;
 }
@@ -211,7 +211,7 @@ sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && mkdir -p KegDisplay" || {
 
 # Initialize the database using the repository's create script
 log "Initializing database..."
-sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && $HOME/.local/bin/poetry run python -m KegDisplay.db.createDB" || {
+sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && /home/beer/.poetry/bin/poetry run python -m KegDisplay.db.createDB" || {
     error "Failed to initialize database.";
     exit 1;
 }
