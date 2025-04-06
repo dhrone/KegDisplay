@@ -186,7 +186,8 @@ class Application:
                 if sleep_time > 0:
                     # Only sleep if we have enough time to make it worthwhile
                     if sleep_time > 0.001:
-                        time.sleep(sleep_time)
+                        # time.sleep(sleep_time)  # Commented out to maximize display_next_frame speed
+                        pass  # Added to fix linter error
                 
             except KeyboardInterrupt:
                 logger.info("KeyboardInterrupt received, initiating shutdown")
@@ -194,6 +195,8 @@ class Application:
             except Exception as e:
                 logger.error(f"Unexpected error: {e}", exc_info=True)
                 # Continue running despite errors
+        
+        logger.info("Main loop exited, running flag set to False")
         
         # Clean up
         self.cleanup()

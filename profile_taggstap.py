@@ -110,17 +110,29 @@ def run_profiled_session(args):
         # Create the application
         app = Application(renderer, data_manager, config_manager)
         
-        # Run for specified duration or until interrupted
-        start_time = time.time()
-        while profiling_active and time.time() - start_time < args.duration:
-            app.run()
-            time.sleep(0.1)  # Small sleep to prevent CPU overload
-            
+        # Set a timeout for the application run
+        # We'll use a custom signal handler to stop the application after the specified duration
+        def timeout_handler(signum, frame):
+            logger.info(f"Timeout reached ({args.duration} seconds), stopping application...")
+            if app:
+                app.running = False
+        
+        # Set up a timer to stop the application after the specified duration
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(args.duration)
+        
+        # Run the application directly
+        logger.info(f"Running application for {args.duration} seconds...")
+        app.run()
+        
     except KeyboardInterrupt:
         logger.info("Profiling session interrupted by user")
     except Exception as e:
         logger.error(f"Error during profiling: {e}")
     finally:
+        # Disable the alarm
+        signal.alarm(0)
+        
         # Stop profiling
         profiler.disable()
         
