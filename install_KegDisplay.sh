@@ -122,7 +122,10 @@ apt-get update || { error "Failed to update package lists."; exit 1; }
 # Install system dependencies
 log "Installing system dependencies..."
 apt-get install -y python3 git gcc vim-tiny sqlite3 python3-dev python3-rpi.gpio python3-spidev \
-    libjpeg-dev zlib1g-dev libfreetype6-dev python3-pip logrotate || {
+    libjpeg-dev zlib1g-dev libfreetype6-dev python3-pip logrotate libffi-dev \
+    build-essential python3-venv python3-distutils python3-setuptools \
+    libssl-dev libncurses5-dev libsqlite3-dev libreadline-dev libtk8.6 \
+    libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev || {
     error "Failed to install system dependencies.";
     exit 1;
 }
@@ -168,13 +171,13 @@ EOF
 
 # Install Poetry
 log "Installing Poetry..."
-sudo -u beer bash -c "curl -sSL https://install.python-poetry.org | python3 -" || {
+sudo -u beer bash -c "curl -sSL https://install.python-poetry.org | POETRY_HOME=/home/beer/.poetry python3 -" || {
     error "Failed to install Poetry.";
     exit 1;
 }
 
 # Add Poetry bin directory to PATH for beer user
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/beer/.bashrc
+echo 'export PATH="/home/beer/.poetry/bin:$PATH"' >> /home/beer/.bashrc
 
 # Clone the KegDisplay repository
 log "Cloning KegDisplay repository..."
