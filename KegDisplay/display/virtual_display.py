@@ -4,8 +4,15 @@ This display is useful for testing and development on desktop systems.
 """
 
 import logging
-import tkinter as tk
 from PIL import Image, ImageTk
+
+# Try to import tkinter, but don't fail if it's not available
+try:
+    import tkinter as tk
+    TKINTER_AVAILABLE = True
+except ImportError:
+    TKINTER_AVAILABLE = False
+    logging.getLogger("KegDisplay").warning("tkinter not available. Virtual display will not be functional.")
 
 from .base import DisplayBase
 
@@ -30,6 +37,10 @@ class VirtualDisplay(DisplayBase):
         
     def initialize(self):
         """Initialize the virtual display window."""
+        if not TKINTER_AVAILABLE:
+            logger.error("Cannot initialize virtual display: tkinter is not available")
+            return False
+            
         try:
             # Create the main window
             self.window = tk.Tk()

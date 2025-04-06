@@ -124,13 +124,30 @@ log "Installing system dependencies..."
 apt-get install -y python3 git gcc vim-tiny sqlite3 python3-dev python3-rpi.gpio python3-spidev \
     libjpeg-dev zlib1g-dev libfreetype6-dev python3-pip logrotate libffi-dev \
     build-essential python3-venv python3-distutils python3-setuptools \
-    libssl-dev libncurses5-dev libsqlite3-dev libreadline-dev libtk8.6 \
+    libssl-dev libncurses5-dev libsqlite3-dev libreadline-dev \
     libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev \
     gfortran libopenblas-dev liblapack-dev || {
     error "Failed to install system dependencies.";
     exit 1;
 }
 
+# Ask if tkinter is needed for testing
+INSTALL_TKINTER=""
+while [ "$INSTALL_TKINTER" != "y" ] && [ "$INSTALL_TKINTER" != "n" ]; do
+    read -p "Do you need tkinter for testing? (y/n): " INSTALL_TKINTER
+    INSTALL_TKINTER=$(echo "$INSTALL_TKINTER" | tr '[:upper:]' '[:lower:]')
+    if [ "$INSTALL_TKINTER" != "y" ] && [ "$INSTALL_TKINTER" != "n" ]; then
+        error "Invalid choice. Please enter 'y' or 'n'."
+    fi
+done
+
+if [ "$INSTALL_TKINTER" = "y" ]; then
+    log "Installing tkinter..."
+    apt-get install -y python3-tk || {
+        error "Failed to install tkinter.";
+        exit 1;
+    }
+fi
 
 # Create beer user account
 log "Creating beer user account..."

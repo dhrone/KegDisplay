@@ -5,8 +5,15 @@ Factory for creating display instances
 import logging
 from .ws0010_display import WS0010Display
 from .ssd1322_display import SSD1322Display
-from .virtual_display import VirtualDisplay
 from .base import DisplayBase
+
+# Try to import VirtualDisplay, but don't fail if it's not available
+try:
+    from .virtual_display import VirtualDisplay
+    VIRTUAL_DISPLAY_AVAILABLE = True
+except ImportError:
+    VIRTUAL_DISPLAY_AVAILABLE = False
+    logging.getLogger("KegDisplay").warning("Virtual display not available. This is normal if tkinter is not installed.")
 
 logger = logging.getLogger("KegDisplay")
 
@@ -46,6 +53,9 @@ class DisplayFactory:
             logger.debug(f"Creating SSD1322 display with {interface_type} interface")
             return SSD1322Display(interface_type=interface_type, pins=pins)
         elif display_type.lower() == 'virtual':
+            if not VIRTUAL_DISPLAY_AVAILABLE:
+                logger.error("Virtual display requested but not available. Install tkinter to use this feature.")
+                raise ValueError("Virtual display is not available. Install tkinter to use this feature.")
             logger.debug("Creating virtual display")
             resolution = kwargs.get('resolution', (256, 64))
             zoom = kwargs.get('zoom', 3)
