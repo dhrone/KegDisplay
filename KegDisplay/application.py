@@ -180,16 +180,13 @@ class Application:
                 # Display current frame
                 frame_displayed = self.renderer.display_next_frame()
                 
-                # Adaptive sleep based on frame timing
-                if hasattr(self.renderer, 'target_frame_time') and hasattr(self.renderer, 'last_frame_time'):
-                    # Calculate time until next frame
-                    next_frame_time = self.renderer.last_frame_time + self.renderer.target_frame_time
-                    sleep_time = max(0, next_frame_time - time.time())
-                    if sleep_time > 0:
+                # Calculate time until next frame more accurately
+                next_frame_time = self.renderer.last_frame_time + self.renderer.target_frame_time
+                sleep_time = max(0, next_frame_time - time.time())
+                if sleep_time > 0:
+                    # Only sleep if we have enough time to make it worthwhile
+                    if sleep_time > 0.001:
                         time.sleep(sleep_time)
-                else:
-                    # Fallback to a short sleep if timing info isn't available
-                    time.sleep(0.001)
                 
             except KeyboardInterrupt:
                 logger.info("KeyboardInterrupt received, initiating shutdown")
