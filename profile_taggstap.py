@@ -12,6 +12,7 @@ import logging
 import sys
 import os
 import argparse
+import signal
 from datetime import datetime
 
 # Add the parent directory to the path so we can import KegDisplay modules
@@ -23,6 +24,15 @@ from KegDisplay.dependency_container import DependencyContainer
 
 # Configure logging
 logger = configure_logging()
+
+# Global flag to track if profiling should stop
+profiling_active = True
+
+def signal_handler(sig, frame):
+    """Handle signals for graceful shutdown."""
+    global profiling_active
+    logger.info(f"Received signal {sig}, stopping profiling...")
+    profiling_active = False
 
 def parse_arguments():
     """Parse command line arguments similar to taggstaps.py."""
@@ -59,11 +69,19 @@ def run_profiled_session(args):
     Args:
         args: Parsed command line arguments
     """
+    global profiling_active
+    
+    # Set up signal handlers
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+    
     # Create a profiler
     profiler = cProfile.Profile()
     
     # Start profiling
     profiler.enable()
+    
+    app = None
     
     try:
         # Create dependency container
@@ -89,12 +107,12 @@ def run_profiled_session(args):
         # Initialize components with the same arguments as taggstaps
         config_manager, display, renderer, data_manager = container.create_application_components(args=cmd_args)
         
-        # Create and run the application
+        # Create the application
         app = Application(renderer, data_manager, config_manager)
         
-        # Run for specified duration
+        # Run for specified duration or until interrupted
         start_time = time.time()
-        while time.time() - start_time < args.duration:
+        while profiling_active and time.time() - start_time < args.duration:
             app.run()
             time.sleep(0.1)  # Small sleep to prevent CPU overload
             
@@ -105,6 +123,11 @@ def run_profiled_session(args):
     finally:
         # Stop profiling
         profiler.disable()
+        
+        # Clean up application if it was created
+        if app:
+            logger.info("Cleaning up application...")
+            app.cleanup()
         
         # Create stats object
         s = io.StringIO()
