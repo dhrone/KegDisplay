@@ -4,8 +4,8 @@ Runs without frame rate limiting to determine system capabilities.
 """
 
 import time
+import random
 from PIL import Image, ImageDraw
-import numpy as np
 from ..display.virtual_display import VirtualDisplay
 
 
@@ -40,8 +40,8 @@ def create_test_frames(width=256, height=64, num_frames=1000):
             draw.rectangle([bar_pos, 0, bar_pos+20, height-1], fill=1)
         else:  # Random pixels
             for _ in range(50):
-                x = np.random.randint(0, width)
-                y = np.random.randint(0, height)
+                x = random.randint(0, width-1)
+                y = random.randint(0, height-1)
                 draw.point([x, y], fill=1)
                 
         frames.append(frame)

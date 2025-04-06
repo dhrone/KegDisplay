@@ -1,1 +1,13 @@
-import logging; import sys; from KegDisplay.log_config import configure_logging; print("Python version:", sys.version); logger = configure_logging(logging.INFO); print("Logger level:", logger.level); print("Logger handlers:", len(logger.handlers)); for h in logger.handlers: print("Handler level:", h.level); logger.info("Test info message"); logger.debug("Test debug message")
+import logging
+import sys
+from KegDisplay.log_config import configure_logging
+
+def test_logging():
+    print("Python version:", sys.version)
+    logger = configure_logging(logging.INFO)
+    print("Logger level:", logger.level)
+    print("Logger handlers:", len(logger.handlers))
+    for h in logger.handlers:
+        print("Handler level:", h.level)
+    logger.info("Test info message")
+    logger.debug("Test debug message")

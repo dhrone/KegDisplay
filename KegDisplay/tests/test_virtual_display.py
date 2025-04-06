@@ -5,7 +5,6 @@ Demonstrates the display with a bouncing ball animation.
 
 import time
 from PIL import Image, ImageDraw
-import numpy as np
 import argparse
 from ..display.virtual_display import VirtualDisplay
 
@@ -58,14 +57,12 @@ def create_bouncing_ball_frames(width=256, height=64, num_frames=500, ball_radiu
 
 def test_virtual_display():
     """Test the virtual display with a bouncing ball animation."""
-    # Parse command line arguments if running directly
-    parser = argparse.ArgumentParser(description='Test the virtual display with a bouncing ball animation')
-    parser.add_argument('--fps', type=int, default=30, help='Target frames per second')
-    parser.add_argument('--zoom', type=int, default=3, help='Zoom factor for better visibility')
-    args = parser.parse_args()
+    # Use default values instead of command line arguments
+    fps = 30
+    zoom = 3
     
     # Create virtual display with zoom factor for better visibility
-    vd = VirtualDisplay(resolution=(256, 64), zoom=args.zoom)
+    vd = VirtualDisplay(resolution=(256, 64), zoom=zoom)
     
     # Initialize the display
     if not vd.initialize():
@@ -78,10 +75,10 @@ def test_virtual_display():
         frames = create_bouncing_ball_frames()
         
         # Target frame time for specified FPS
-        target_frame_time = 1.0 / args.fps
+        target_frame_time = 1.0 / fps
         
         # Display frames
-        print(f"Starting animation at {args.fps} FPS...")
+        print(f"Starting animation at {fps} FPS...")
         start_time = time.time()
         next_frame_time = start_time
         
@@ -115,4 +112,14 @@ def test_virtual_display():
 
 
 if __name__ == "__main__":
+    # Only use argparse when running as a script
+    parser = argparse.ArgumentParser(description='Test the virtual display with a bouncing ball animation')
+    parser.add_argument('--fps', type=int, default=30, help='Target frames per second')
+    parser.add_argument('--zoom', type=int, default=3, help='Zoom factor for better visibility')
+    args = parser.parse_args()
+    
+    # Override default values with command line arguments
+    fps = args.fps
+    zoom = args.zoom
+    
     test_virtual_display() 

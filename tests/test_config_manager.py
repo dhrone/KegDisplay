@@ -130,7 +130,7 @@ class TestConfigManager(unittest.TestCase):
         config = self.config_manager.get_config()
         
         # Then
-        self.assertEqual(10, len(config))  # 10 config items
+        self.assertEqual(14, len(config))  # Updated to match current config items
         self.assertEqual(1, config['tap'])
     
     def test_get_config_returns_specific_key(self):
