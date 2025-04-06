@@ -183,6 +183,13 @@ cat > /etc/logrotate.d/kegdisplay << 'EOF'
 }
 EOF
 
+# Install Rust for the beer user
+log "Installing Rust for beer user..."
+sudo -u beer bash -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y" || {
+    error "Failed to install Rust for beer user.";
+    exit 1;
+}
+
 # Install Poetry
 log "Installing Poetry..."
 sudo -u beer bash -c "curl -sSL https://install.python-poetry.org | POETRY_HOME=/home/beer/.poetry python3 -" || {
@@ -211,7 +218,7 @@ fi
 
 # Install Python dependencies using Poetry
 log "Installing Python dependencies..."
-sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && /home/beer/.poetry/bin/poetry install" || {
+sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && source /home/beer/.cargo/env && /home/beer/.poetry/bin/poetry install" || {
     error "Failed to install Python dependencies.";
     exit 1;
 }
