@@ -35,7 +35,7 @@ class WS0010Display(DisplayBase):
                 data_pins = self.pins.get('PINS', [25, 5, 6, 12])
                 
                 # Create the interface
-                interface = bitbang_6800(RS=rs_pin, E=e_pin, PINS=data_pins)
+                interface = bitbang_6800(RS=rs_pin, E=e_pin, PINS=data_pins, pulse_time=1e-6 * 5.0)
                 logger.debug(f"Initialized bitbang interface with RS={rs_pin}, E={e_pin}, PINS={data_pins}")
             elif self.interface_type == 'spi':
                 from luma.core.interface.serial import spi
