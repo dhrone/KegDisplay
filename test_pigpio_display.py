@@ -10,11 +10,6 @@ import sys
 import os
 import logging
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG, 
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-logger = logging.getLogger("KegDisplay")
-
 # Add the parent directory to the path so we can import KegDisplay modules
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '.')))
 
@@ -46,6 +41,10 @@ def parse_arguments():
     
     # Pulse time
     parser.add_argument('--pulse_time', type=int, default=50, help='Pulse time in microseconds (default: 50)')
+    
+    # Log level
+    parser.add_argument('--log-level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                        default='DEBUG', help='Set the logging level (default: DEBUG)')
     
     return parser.parse_args()
 
@@ -81,6 +80,13 @@ def main():
     """Main function."""
     args = parse_arguments()
     
+    # Configure logging based on the specified log level
+    log_level = getattr(logging, args.log_level)
+    logging.basicConfig(level=log_level, 
+                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logger = logging.getLogger("KegDisplay")
+    logger.info(f"Log level set to {args.log_level}")
+    
     print("Testing display with the following configuration:")
     print(f"Display type: {args.display}")
     print(f"Interface type: {args.interface}")
@@ -99,50 +105,50 @@ def main():
             PINS=args.PINS
         )
     except Exception as e:
-        print(f"Error creating display: {e}")
+        logger.error(f"Error creating display: {e}")
         sys.exit(1)
     
     # Initialize display
     try:
         if not display.initialize():
-            print("Failed to initialize display")
+            logger.error("Failed to initialize display")
             sys.exit(1)
     except Exception as e:
-        print(f"Error initializing display: {e}")
+        logger.error(f"Error initializing display: {e}")
         sys.exit(1)
     
-    print("Display initialized successfully")
+    logger.info("Display initialized successfully")
     
     # Create test pattern
     try:
         image = create_test_pattern(display.width, display.height)
-        print(f"Created test pattern with size {image.size}")
+        logger.info(f"Created test pattern with size {image.size}")
     except Exception as e:
-        print(f"Error creating test pattern: {e}")
+        logger.error(f"Error creating test pattern: {e}")
         sys.exit(1)
     
     # Display test pattern
     try:
-        print("Displaying test pattern...")
+        logger.info("Displaying test pattern...")
         display.display(image)
-        print("Test pattern displayed successfully")
+        logger.info("Test pattern displayed successfully")
     except Exception as e:
-        print(f"Error displaying test pattern: {e}")
+        logger.error(f"Error displaying test pattern: {e}")
         import traceback
-        traceback.print_exc()
+        logger.error(traceback.format_exc())
     
     # Wait for 5 seconds
-    print("Waiting for 5 seconds...")
+    logger.info("Waiting for 5 seconds...")
     time.sleep(5)
     
     # Clean up
     try:
         display.cleanup()
-        print("Display cleaned up successfully")
+        logger.info("Display cleaned up successfully")
     except Exception as e:
-        print(f"Error cleaning up display: {e}")
+        logger.error(f"Error cleaning up display: {e}")
     
-    print("Test completed successfully")
+    logger.info("Test completed successfully")
 
 if __name__ == "__main__":
     main() 

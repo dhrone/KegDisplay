@@ -14,7 +14,7 @@ Default amount of time to wait for a pulse to complete if the device the
 interface is connected to requires a pin to be 'pulsed' from low to high to
 low for it to accept data or a command.  Value is in microseconds.
 """
-PULSE_TIME = 100
+PULSE_TIME = 50
 
 
 class bitbang_6800_pigpio(object):
@@ -141,8 +141,14 @@ class bitbang_6800_pigpio(object):
                     pin_off |= (1 << self._PINS[i])
             
             # Add a pulse to the E pin
-            pulses.append(pigpio.pulse(pin_on | rs_on | (1 << self._E), pin_off | rs_off, int(self._pulse_time)))
-            pulses.append(pigpio.pulse(0, 1 << self._E, int(self._pulse_time)))
+            # First, set the data pins and RS pin
+            pulses.append(pigpio.pulse(pin_on | rs_on, pin_off | rs_off, 0))
+            
+            # Then, pulse the E pin high
+            pulses.append(pigpio.pulse(1 << self._E, 0, int(self._pulse_time)))
+            
+            # Finally, set the E pin low
+            pulses.append(pigpio.pulse(0, 1 << self._E, 0))
         
         # If not in batch mode, send the pulse immediately
         if not self._batch:
