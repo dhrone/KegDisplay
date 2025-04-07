@@ -173,7 +173,7 @@ apt-get install -y python3 git gcc vim-tiny sqlite3 python3-dev python3-rpi.gpio
     build-essential python3-venv python3-distutils python3-setuptools \
     libssl-dev libncurses5-dev libsqlite3-dev libreadline-dev \
     libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev \
-    gfortran libopenblas-dev liblapack-dev || {
+    gfortran libopenblas-dev liblapack-dev pigpio python3-pigpio || {
     error "Failed to install system dependencies.";
     exit 1;
 }
@@ -206,6 +206,40 @@ if getent group gpio > /dev/null; then
 else
     log "gpio group not found. Creating udev rules for GPIO access."
 fi
+
+# Configure pigpio daemon
+log "Configuring pigpio daemon..."
+# Create systemd service file for pigpiod
+cat > /etc/systemd/system/pigpiod.service << 'EOF'
+[Unit]
+Description=pigpio daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/pigpiod -l
+Type=forking
+PIDFile=/run/pigpio.pid
+ExecStop=/bin/systemctl kill -s SIGKILL pigpiod
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start pigpiod service
+systemctl daemon-reload
+systemctl enable pigpiod || {
+    error "Failed to enable pigpiod service.";
+    exit 1;
+}
+systemctl start pigpiod || {
+    error "Failed to start pigpiod service.";
+    exit 1;
+}
+
+# Ensure pigpio socket has correct permissions
+chmod 666 /var/run/pigpio.sock || {
+    log "Note: pigpio socket permissions could not be set. This might be because the service hasn't created it yet.";
+}
 
 # Create udev rules for GPIO access
 log "Creating udev rules for GPIO access..."
