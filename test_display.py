@@ -32,6 +32,9 @@ def parse_arguments():
     parser.add_argument('--interface', type=str, choices=['bitbang', 'spi'],
                         default='bitbang', help='Type of interface (default: bitbang)')
     
+    # Pulse time
+    parser.add_argument('--pulse_time', type=int, default=2, help='Pulse time for bitbang interface (default: 2)')
+    
     # Bitbang specific pins
     parser.add_argument('--RS', type=int, default=7, help='RS pin for bitbang interface (default: 7)')
     parser.add_argument('--E', type=int, default=8, help='E pin for bitbang interface (default: 8)')

@@ -13,7 +13,7 @@ logger = logging.getLogger("KegDisplay")
 class WS0010PigpioDisplay(DisplayBase):
     """Implementation for the WS0010 display using pigpio.  Assumes a bitbang interface."""
     
-    def __init__(self, pins=None, interface_type='bitbang'):
+    def __init__(self, pins=None, interface_type='bitbang', pulse_time = 2):
         """Initialize the WS0010 display.
         
         Args:
@@ -23,7 +23,7 @@ class WS0010PigpioDisplay(DisplayBase):
         self.pins = pins or {}
         self.interface_type = interface_type
         self.device = None
-        
+        self.pulse_time = pulse_time
     def initialize(self):
         """Initialize the display interface."""
         try:
@@ -37,7 +37,7 @@ class WS0010PigpioDisplay(DisplayBase):
                 RS=rs_pin, 
                 E=e_pin, 
                 PINS=data_pins, 
-                pulse_time=1e-6 * 5.0,
+                pulse_time=self.pulse_time,
                 batch=True
             )
             logger.debug(f"Initialized bitbang_6800_pigpio interface with RS={rs_pin}, E={e_pin}, PINS={data_pins}")
