@@ -31,17 +31,13 @@ class bitbang_6800_pigpio(bitbang_6800):
     """
 
     def __init__(self, gpio=None, pulse_time=PULSE_TIME, batch=False, **kwargs):
-        # Initialize the parent class with a dummy gpio object
-        # We'll override the _gpio attribute with our pigpio instance
-        super(bitbang_6800_pigpio, self).__init__(gpio=None, pulse_time=pulse_time, **kwargs)
-        
-        # Initialize pigpio
+        # Initialize pigpio first
         self._pi = gpio if gpio is not None else pigpio.pi()
         if not self._pi.connected:
             raise RuntimeError("Failed to connect to pigpio daemon")
         
-        # Override the _gpio attribute with our pigpio instance
-        self._gpio = self._pi
+        # Initialize the parent class with our pigpio instance
+        super(bitbang_6800_pigpio, self).__init__(gpio=self._pi, pulse_time=pulse_time, **kwargs)
         
         # Store the batch mode setting
         self._batch = batch
