@@ -3,6 +3,7 @@ Implementation for the WS0010 display using pigpio
 """
 
 import logging
+import time
 from luma.oled.device import ws0010
 from .bitbang_6800_pigpio import bitbang_6800_pigpio
 from .base import DisplayBase
@@ -23,7 +24,8 @@ class WS0010PigpioDisplay(DisplayBase):
         self.pins = pins or {}
         self.interface_type = interface_type
         self.device = None
-        self.pulse_time = 100
+        self.interface = None
+        self.pulse_time = 50  # Match the PULSE_TIME in bitbang_6800_pigpio
 
     def initialize(self):
         """Initialize the display interface."""
@@ -34,7 +36,7 @@ class WS0010PigpioDisplay(DisplayBase):
             data_pins = self.pins.get('PINS', [25, 5, 6, 12])
             
             # Create the interface
-            interface = bitbang_6800_pigpio(
+            self.interface = bitbang_6800_pigpio(
                 RS=rs_pin, 
                 E=e_pin, 
                 PINS=data_pins, 
@@ -44,11 +46,17 @@ class WS0010PigpioDisplay(DisplayBase):
             logger.debug(f"Initialized bitbang_6800_pigpio interface with RS={rs_pin}, E={e_pin}, PINS={data_pins}")
             
             # Create the device
-            self.device = ws0010(interface)
-
+            self.device = ws0010(self.interface)
+            
+            # Ensure the display is properly initialized
+            time.sleep(0.5)  # Give the display time to initialize
+            
             # Flush the display to ensure it's initialized
-            if hasattr(interface, 'flush'):
-                interface.flush()
+            if hasattr(self.interface, 'flush'):
+                self.interface.flush()
+
+            # Ensure the display is properly initialized
+            time.sleep(0.5)  # Give the display time to initialize
                  
             logger.debug("Initialized WS0010 display")
             return True
@@ -72,8 +80,8 @@ class WS0010PigpioDisplay(DisplayBase):
                 self.device.display(image)
                 
                 # Flush after displaying
-                if hasattr(self.device._serial_interface, 'flush'):
-                    self.device._serial_interface.flush()
+                if hasattr(self.interface, 'flush'):
+                    self.interface.flush()
                 return True
             except Exception as e:
                 logger.error(f"Error displaying image: {e}")
@@ -84,8 +92,8 @@ class WS0010PigpioDisplay(DisplayBase):
             
     def cleanup(self):
         """Clean up resources."""
-        if self.device and hasattr(self.device._serial_interface, 'cleanup'):
-            self.device._serial_interface.cleanup()
+        if self.interface and hasattr(self.interface, 'cleanup'):
+            self.interface.cleanup()
     
     @property
     def width(self):

@@ -14,7 +14,7 @@ Default amount of time to wait for a pulse to complete if the device the
 interface is connected to requires a pin to be 'pulsed' from low to high to
 low for it to accept data or a command.  Value is in microseconds.
 """
-PULSE_TIME = 100
+PULSE_TIME = 50
 
 
 class bitbang_6800_pigpio(object):
@@ -115,28 +115,33 @@ class bitbang_6800_pigpio(object):
         :type data: list, bytearray, etc.
         :param mode: either high for data or low for command
         """
-        
+        # Set RS pin to the appropriate mode
         rs_on = (1 << self._RS) if mode else 0
         rs_off = 0 if mode else (1 << self._RS)
-
-
+        
+        # Create a list of pulses for all data values
+        pulses = []
+        
+        # Insert a pulse to ensure the enable pin is low at the start of the wave
+        pulses.append(pigpio.pulse(0, 1 << self._E, 0))
+        
         # For each value in data, create a pulse sequence
         for value in data:
-            # Create a list of pulses for this value
-            pulses = []
-            
             # Set data pins based on the value
+            pin_on = 0
+            pin_off = 0
+            
             for i in range(self._datalines):
                 bit_value = (value >> i) & 0x01
-                pin_on = (1 << self._PINS[i]) if bit_value else 0
-                pin_off = 0 if bit_value else (1 << self._PINS[i])
- 
-            pulses.append(pigpio.pulse(pin_on | rs_on | 1 << self._E, pin_off | rs_off, int(self._pulse_time)))
+                if bit_value:
+                    pin_on |= (1 << self._PINS[i])
+                else:
+                    pin_off |= (1 << self._PINS[i])
+            
+            # Add a pulse to the E pin
+            pulses.append(pigpio.pulse(pin_on | rs_on | (1 << self._E), pin_off | rs_off, int(self._pulse_time)))
             pulses.append(pigpio.pulse(0, 1 << self._E, int(self._pulse_time)))
-
-        # Insert a pulse to ensure the enable pin is low at the start of the wave
-        pulses.insert(0, pigpio.pulse(0, 1 << self._E, 0))
-
+        
         # If not in batch mode, send the pulse immediately
         if not self._batch:
             try:
