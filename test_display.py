@@ -25,7 +25,7 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Test program for KegDisplay displays')
     
     # Display type
-    parser.add_argument('--display', type=str, choices=['ws0010', 'ssd1322', 'virtual'],
+    parser.add_argument('--display', type=str, choices=['ws0010', 'ws0010_pigpio', 'ssd1322', 'virtual'],
                         default='ws0010', help='Type of display (default: ws0010)')
     
     # Interface type
@@ -114,7 +114,7 @@ def main():
     
     # Create display
     try:
-        if args.interface == 'bitbang':
+        if args.display in ['ws0010', 'ws0010_pigpio'] and args.interface == 'bitbang':
             display = DisplayFactory.create_display(
                 args.display,
                 interface_type=args.interface,

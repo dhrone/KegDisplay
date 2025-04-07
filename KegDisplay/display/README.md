@@ -11,7 +11,7 @@ The WS0010 is a monochrome OLED display that supports both 4-bit and 8-bit paral
 #### Implementations
 
 1. **WS0010Display** - Standard implementation using the luma.oled library
-2. **WS0010PigpioDisplay** - Enhanced implementation using pigpio for GPIO control
+2. **WS0010PigpioDisplay** - Enhanced implementation using pigpio for GPIO control with mandatory batch mode for efficient communication
 
 ### SSD1322 Display
 
@@ -41,8 +41,7 @@ display = DisplayFactory.create_display(
         'RS': 17,
         'E': 27,
         'PINS': [22, 23, 24, 25, 8, 7, 12, 16]
-    },
-    batch=True
+    }
 )
 
 # Initialize the display
@@ -64,7 +63,6 @@ The display factory supports the following parameters:
 - `display_type`: Type of display ('ws0010', 'ws0010_pigpio', 'ssd1322')
 - `interface_type`: Type of interface ('bitbang', 'spi')
 - `pins`: Dictionary of GPIO pin assignments
-- `batch`: Enable/disable batch mode for pigpio implementation
 
 ## Dependencies
 
