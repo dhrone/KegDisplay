@@ -23,8 +23,8 @@ class WS0010PigpioDisplay(DisplayBase):
         self.pins = pins or {}
         self.interface_type = interface_type
         self.device = None
-        self.pulse_time = 10
-        
+        self.pulse_time = 100
+
     def initialize(self):
         """Initialize the display interface."""
         try:
