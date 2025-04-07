@@ -13,7 +13,7 @@ logger = logging.getLogger("KegDisplay")
 class WS0010PigpioDisplay(DisplayBase):
     """Implementation for the WS0010 display using pigpio.  Assumes a bitbang interface."""
     
-    def __init__(self, pins=None, interface_type='bitbang', pulse_time = 2):
+    def __init__(self, pins=None, interface_type='bitbang'):
         """Initialize the WS0010 display.
         
         Args:
@@ -23,7 +23,8 @@ class WS0010PigpioDisplay(DisplayBase):
         self.pins = pins or {}
         self.interface_type = interface_type
         self.device = None
-        self.pulse_time = pulse_time
+        self.pulse_time = 10
+        
     def initialize(self):
         """Initialize the display interface."""
         try:

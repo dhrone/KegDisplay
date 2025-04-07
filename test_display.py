@@ -171,6 +171,8 @@ def main():
         import traceback
         traceback.print_exc()
         print("Continuing with test...")
+
+    time.sleep(2)
     
     # Add a simple test pattern
     try:

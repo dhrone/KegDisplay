@@ -14,7 +14,7 @@ Default amount of time to wait for a pulse to complete if the device the
 interface is connected to requires a pin to be 'pulsed' from low to high to
 low for it to accept data or a command.  Value is in microseconds.
 """
-PULSE_TIME = 2
+PULSE_TIME = 10
 
 
 class bitbang_6800_pigpio(object):

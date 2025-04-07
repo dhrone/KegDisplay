@@ -45,10 +45,7 @@ class DisplayFactory:
             pins['E'] = kwargs['E']
         if 'PINS' in kwargs:
             pins['PINS'] = kwargs['PINS']
-        if 'pulse_time' in kwargs:
-            pulse_time = kwargs['pulse_time']
-        else:
-            pulse_time = 2
+
             
         # Create the appropriate display instance
         if display_type.lower() == 'ws0010':
@@ -56,7 +53,7 @@ class DisplayFactory:
             return WS0010Display(interface_type=interface_type, pins=pins)
         elif display_type.lower() == 'ws0010_pigpio':
             logger.debug(f"Creating WS0010PigpioDisplay with {interface_type} interface")
-            return WS0010PigpioDisplay(interface_type=interface_type, pins=pins, pulse_time=pulse_time)
+            return WS0010PigpioDisplay(interface_type=interface_type, pins=pins)
         elif display_type.lower() == 'ssd1322':
             logger.debug(f"Creating SSD1322 display with {interface_type} interface")
             return SSD1322Display(interface_type=interface_type, pins=pins)
