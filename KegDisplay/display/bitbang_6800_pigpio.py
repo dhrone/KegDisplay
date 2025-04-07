@@ -14,7 +14,7 @@ Default amount of time to wait for a pulse to complete if the device the
 interface is connected to requires a pin to be 'pulsed' from low to high to
 low for it to accept data or a command.  Value is in microseconds.
 """
-PULSE_TIME = 50
+PULSE_TIME = 100
 
 
 class bitbang_6800_pigpio(object):
@@ -42,6 +42,8 @@ class bitbang_6800_pigpio(object):
         self._pi = gpio if gpio is not None else pigpio.pi()
         if not self._pi.connected:
             raise RuntimeError("Failed to connect to pigpio daemon")
+        
+        logger.debug(f"Initialized bitbang_6800_pigpio with pulse_time={pulse_time}, batch={batch}")
         
         # Store the batch mode setting
         self._batch = batch
