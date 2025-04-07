@@ -10,7 +10,7 @@ from luma.core.interface.parallel import bitbang_6800, PULSE_TIME
 logger = logging.getLogger("KegDisplay")
 
 
-class bitbang_6800_pigpio(bitbang_6800):
+class bitbang_6800_pigpio(object):
     """
     Implements a 6800 style parallel-bus interface that provides :py:func:`data`
     and :py:func:`command` methods using pigpio for GPIO control. The default pin assignments provided are
@@ -35,9 +35,6 @@ class bitbang_6800_pigpio(bitbang_6800):
         self._pi = gpio if gpio is not None else pigpio.pi()
         if not self._pi.connected:
             raise RuntimeError("Failed to connect to pigpio daemon")
-        
-        # Initialize the parent class with our pigpio instance
-        super(bitbang_6800_pigpio, self).__init__(gpio=self._pi, pulse_time=pulse_time, **kwargs)
         
         # Store the batch mode setting
         self._batch = batch
@@ -68,6 +65,37 @@ class bitbang_6800_pigpio(bitbang_6800):
             self._pi.set_mode(p, pigpio.OUTPUT)
         return pin
 
+   def command(self, *cmd):
+        """
+        Sends a command or sequence of commands through the bus.
+
+        If the bus is in 4-bit mode, only the lowest 4 bits of the data
+        value will be sent.
+
+        This means that the device needs to send high and low bits separately
+        if the device is operating using a 4-bit bus; to send a ``0x32`` in
+        4-bit mode the device would use: ``command(0x03, 0x02)``
+
+        :param cmd: A spread of commands.
+        :type cmd: int
+        """
+        self._write(list(cmd), self._cmd_mode)
+
+    def data(self, data):
+        """
+        Sends a data byte or sequence of data bytes through to the bus.
+
+        If the bus is in 4-bit mode, only the lowest 4 bits of the data
+        value will be sent.
+
+        This means that the device needs to send high and low bits separately
+        if the device is operating using a 4-bit bus; to send a ``0x32`` in
+        4-bit mode the device would use: ``data([0x03, 0x02])``
+
+        :param data: A data sequence.
+        :type data: list, bytearray
+        """
+        self._write(data, self._data_mode)
 
     def _write(self, data, mode):
         """
