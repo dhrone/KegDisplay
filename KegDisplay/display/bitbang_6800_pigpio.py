@@ -65,7 +65,7 @@ class bitbang_6800_pigpio(object):
             self._pi.set_mode(p, pigpio.OUTPUT)
         return pin
 
-   def command(self, *cmd):
+    def command(self, *cmd):
         """
         Sends a command or sequence of commands through the bus.
 
