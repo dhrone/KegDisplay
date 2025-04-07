@@ -25,7 +25,7 @@ class WS0010PigpioDisplay(DisplayBase):
         self.interface_type = interface_type
         self.device = None
         self.interface = None
-        self.pulse_time = 100  # Match the PULSE_TIME in bitbang_6800_pigpio
+        self.pulse_time = 2  # Match the PULSE_TIME in bitbang_6800_pigpio
 
     def initialize(self):
         """Initialize the display interface."""
