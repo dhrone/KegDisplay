@@ -92,8 +92,21 @@ class WS0010PigpioDisplay(DisplayBase):
             
     def cleanup(self):
         """Clean up resources."""
-        if self.interface and hasattr(self.interface, 'cleanup'):
-            self.interface.cleanup()
+        if self.device and self.interface:
+            try:
+                # Clear the screen
+                self.device.clear()
+                logger.debug("Screen cleared")
+                
+                # Flush to ensure the clear command is sent
+                if hasattr(self.interface, 'flush'):
+                    self.interface.flush()
+                
+                # Clean up the interface
+                self.interface.cleanup()
+                logger.debug("Interface cleaned up")
+            except Exception as e:
+                logger.error(f"Error during cleanup: {e}")
     
     @property
     def width(self):
