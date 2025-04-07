@@ -5,9 +5,16 @@ Implementation of a pigpio-based 6800 style parallel interface for displays.
 import logging
 import time
 import pigpio
-from luma.core.interface.parallel import bitbang_6800, PULSE_TIME
+from luma.core.interface.parallel import bitbang_6800
 
 logger = logging.getLogger("KegDisplay")
+
+"""
+Default amount of time to wait for a pulse to complete if the device the
+interface is connected to requires a pin to be 'pulsed' from low to high to
+low for it to accept data or a command.  Value is in microseconds.
+"""
+PULSE_TIME = 2
 
 
 class bitbang_6800_pigpio(object):
@@ -38,7 +45,10 @@ class bitbang_6800_pigpio(object):
         
         # Store the batch mode setting
         self._batch = batch
-        
+
+        # Store pulse time
+        self._pulse_time = pulse_time
+
         # Initialize wave cache
         self._wave_cache = []
         self._wave_id = None
@@ -105,12 +115,11 @@ class bitbang_6800_pigpio(object):
         :type data: list, bytearray, etc.
         :param mode: either high for data or low for command
         """
-        # Set RS pin to the appropriate mode
-        self._pi.write(self._RS, mode)
         
-        # Set E pin low
-        self._pi.write(self._E, 0)
-        
+        rs_on = (1 << self._RS) if mode else 0
+        rs_off = 0 if mode else (1 << self._RS)
+
+
         # For each value in data, create a pulse sequence
         for value in data:
             # Create a list of pulses for this value
@@ -119,25 +128,28 @@ class bitbang_6800_pigpio(object):
             # Set data pins based on the value
             for i in range(self._datalines):
                 bit_value = (value >> i) & 0x01
-                self._pi.write(self._PINS[i], bit_value)
-            
-            # Add a pulse to the E pin
-            pulses.append(pigpio.pulse(1 << self._E, 0, int(self._pulse_time * 1000000)))
-            pulses.append(pigpio.pulse(0, 1 << self._E, 0))
-            
-            # If not in batch mode, send the pulse immediately
-            if not self._batch:
-                try:
-                    self._pi.wave_add_new()
-                    self._pi.wave_add_generic(pulses)
-                    wave_id = self._pi.wave_create()
-                    self._pi.wave_send_once(wave_id)
-                    self._pi.wave_delete(wave_id)
-                except Exception as e:
-                    logger.error(f"Error creating or sending wave: {e}")
-            else:
-                # Add the pulses to the wave cache
-                self._wave_cache.extend(pulses)
+                pin_on = (1 << self._PINS[i]) if bit_value else 0
+                pin_off = 0 if bit_value else (1 << self._PINS[i])
+ 
+            pulses.append(pigpio.pulse(pin_on | rs_on | 1 << self._E, pin_off | rs_off, int(self._pulse_time)))
+            pulses.append(pigpio.pulse(0, 1 << self._E, int(self._pulse_time)))
+
+        # Insert a pulse to ensure the enable pin is low at the start of the wave
+        pulses.insert(0, pigpio.pulse(0, 1 << self._E, 0))
+
+        # If not in batch mode, send the pulse immediately
+        if not self._batch:
+            try:
+                self._pi.wave_add_new()
+                self._pi.wave_add_generic(pulses)
+                wave_id = self._pi.wave_create()
+                self._pi.wave_send_once(wave_id)
+                self._pi.wave_delete(wave_id)
+            except Exception as e:
+                logger.error(f"Error creating or sending wave: {e}")
+        else:
+            # Add the pulses to the wave cache
+            self._wave_cache.extend(pulses)
 
     def flush(self, save=None, replay=None):
         """
