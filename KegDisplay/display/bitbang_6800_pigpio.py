@@ -144,6 +144,8 @@ class bitbang_6800_pigpio(object):
                 self._pi.wave_add_generic(pulses)
                 wave_id = self._pi.wave_create()
                 self._pi.wave_send_once(wave_id)
+                while self._pi.wave_tx_busy():
+                    time.sleep(0.001)
                 self._pi.wave_delete(wave_id)
             except Exception as e:
                 logger.error(f"Error creating or sending wave: {e}")
@@ -189,6 +191,8 @@ class bitbang_6800_pigpio(object):
             else:
                 # Send the wave and then delete it
                 self._pi.wave_send_once(wave_id)
+                while self._pi.wave_tx_busy():
+                    time.sleep(0.001)
                 self._pi.wave_delete(wave_id)
                 logger.debug(f"Sent and deleted wave {wave_id}")
         except Exception as e:
