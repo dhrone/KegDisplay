@@ -218,6 +218,10 @@ class bitbang_6800_pigpio(object):
         """
         Clean up GPIO resources.
         """
+
+        # Flush any pending waves
+        self.flush()
+
         # Delete any saved waves
         for wave_id in self._saved_waves.values():
             try:

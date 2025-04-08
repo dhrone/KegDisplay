@@ -50,7 +50,11 @@ class DisplayFactory:
         # Create the appropriate display instance
         if display_type.lower() == 'ws0010':
             logger.debug(f"Creating WS0010 display with {interface_type} interface")
-            return WS0010Display(interface_type=interface_type, pins=pins)
+            if interface_type.lower() == 'pigpio':
+                logger.debug("Using pigpio interface for WS0010 display")
+                return WS0010PigpioDisplay(interface_type='bitbang', pins=pins)
+            else:
+                return WS0010Display(interface_type=interface_type, pins=pins)
         elif display_type.lower() == 'ws0010_pigpio':
             logger.debug(f"Creating WS0010PigpioDisplay with {interface_type} interface")
             return WS0010PigpioDisplay(interface_type=interface_type, pins=pins)

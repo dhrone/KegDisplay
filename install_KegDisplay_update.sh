@@ -62,11 +62,11 @@ done
 
 # Get interface type
 INTERFACE_TYPE=""
-while [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "spi" ]; do
-    read -p "What type of interface is being used? (bitbang/spi): " INTERFACE_TYPE
+while [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "spi" ] && [ "$INTERFACE_TYPE" != "pigpio" ]; do
+    read -p "What type of interface is being used? (bitbang/spi/pigpio): " INTERFACE_TYPE
     INTERFACE_TYPE=$(echo "$INTERFACE_TYPE" | tr '[:upper:]' '[:lower:]')
-    if [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "spi" ]; then
-        error "Invalid choice. Please enter 'bitbang' or 'spi'."
+    if [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "spi" ] && [ "$INTERFACE_TYPE" != "pigpio" ]; then
+        error "Invalid choice. Please enter 'bitbang', 'spi', or 'pigpio'."
     fi
 done
 

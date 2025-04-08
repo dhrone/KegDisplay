@@ -67,9 +67,9 @@ class ConfigManager:
                            nargs='+',
                            help='Provide a list of data pins if they are needed')
         parser.add_argument('--interface',
-                           choices=['bitbang', 'spi'],
+                           choices=['bitbang', 'spi', 'pigpio'],
                            default='bitbang',
-                           help='Type of interface the display is using (bitbang or spi)')
+                           help='Type of interface the display is using (bitbang, spi, or pigpio)')
         parser.add_argument('--page',
                            type=str,
                            default='KegDisplay/page.yaml',
@@ -132,7 +132,7 @@ class ConfigManager:
             return False
             
         # Validate display-specific settings
-        if self.config['interface'] == 'bitbang':
+        if self.config['interface'] in ['bitbang', 'pigpio']:
             # Make sure pins are provided for bitbang interface
             if self.config['display'] == 'ws0010' and (
                 self.config['RS'] is None or 
