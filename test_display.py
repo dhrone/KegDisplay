@@ -25,12 +25,15 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='Test program for KegDisplay displays')
     
     # Display type
-    parser.add_argument('--display', type=str, choices=['ws0010', 'ssd1322', 'virtual'],
+    parser.add_argument('--display', type=str, choices=['ws0010', 'ws0010_pigpio', 'ssd1322', 'virtual'],
                         default='ws0010', help='Type of display (default: ws0010)')
     
     # Interface type
     parser.add_argument('--interface', type=str, choices=['bitbang', 'spi'],
                         default='bitbang', help='Type of interface (default: bitbang)')
+    
+    # Pulse time
+    parser.add_argument('--pulse_time', type=int, default=2, help='Pulse time for bitbang interface (default: 2)')
     
     # Bitbang specific pins
     parser.add_argument('--RS', type=int, default=7, help='RS pin for bitbang interface (default: 7)')
@@ -114,7 +117,7 @@ def main():
     
     # Create display
     try:
-        if args.interface == 'bitbang':
+        if args.display in ['ws0010', 'ws0010_pigpio'] and args.interface == 'bitbang':
             display = DisplayFactory.create_display(
                 args.display,
                 interface_type=args.interface,
@@ -168,6 +171,8 @@ def main():
         import traceback
         traceback.print_exc()
         print("Continuing with test...")
+
+    time.sleep(2)
     
     # Add a simple test pattern
     try:

@@ -4,6 +4,7 @@ Factory for creating display instances
 
 import logging
 from .ws0010_display import WS0010Display
+from .ws0010_pigpio_display import WS0010PigpioDisplay
 from .ssd1322_display import SSD1322Display
 from .base import DisplayBase
 
@@ -26,7 +27,7 @@ class DisplayFactory:
         """Create a display instance based on the specified type.
         
         Args:
-            display_type: Type of display ('ws0010', 'ssd1322', or 'virtual')
+            display_type: Type of display ('ws0010', 'ws0010_pigpio', 'ssd1322', or 'virtual')
             interface_type: Type of interface ('bitbang' or 'spi')
             **kwargs: Additional parameters for the display
             
@@ -44,11 +45,19 @@ class DisplayFactory:
             pins['E'] = kwargs['E']
         if 'PINS' in kwargs:
             pins['PINS'] = kwargs['PINS']
+
             
         # Create the appropriate display instance
         if display_type.lower() == 'ws0010':
             logger.debug(f"Creating WS0010 display with {interface_type} interface")
-            return WS0010Display(interface_type=interface_type, pins=pins)
+            if interface_type.lower() == 'pigpio':
+                logger.debug("Using pigpio interface for WS0010 display")
+                return WS0010PigpioDisplay(interface_type='bitbang', pins=pins)
+            else:
+                return WS0010Display(interface_type=interface_type, pins=pins)
+        elif display_type.lower() == 'ws0010_pigpio':
+            logger.debug(f"Creating WS0010PigpioDisplay with {interface_type} interface")
+            return WS0010PigpioDisplay(interface_type=interface_type, pins=pins)
         elif display_type.lower() == 'ssd1322':
             logger.debug(f"Creating SSD1322 display with {interface_type} interface")
             return SSD1322Display(interface_type=interface_type, pins=pins)
