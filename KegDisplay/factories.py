@@ -122,19 +122,20 @@ class DefaultDisplayFactory(DisplayFactoryInterface):
                 'E': config['E'],
                 'PINS': config['PINS']
             })
+            display = DisplayFactory.create_display(
+                config['display'],
+                **display_params
+            )
         # Add pin parameters if using pigpio interface
         elif config['interface'] == 'pigpio':
-            display_params.update({
-                'gpio': None,  # Let the display create its own pigpio instance
-                'RS': config['RS'],
-                'E': config['E'],
-                'PINS': config['PINS']
-            })
-            
-        display = DisplayFactory.create_display(
-            config['display'],
-            **display_params
-        )
+            from .display.ws0010_pigpio_display import WS0010PigpioDisplay
+            display = WS0010PigpioDisplay(
+                RS=config['RS'],
+                E=config['E'],
+                PINS=config['PINS']
+            )
+        else:
+            raise ValueError(f"Unsupported interface type: {config['interface']}")
         
         if not display.initialize():
             raise Exception(f"Failed to initialize {config['display']} display")
