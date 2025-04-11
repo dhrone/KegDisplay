@@ -110,12 +110,30 @@ class DefaultDisplayFactory(DisplayFactoryInterface):
         Raises:
             Exception: If display creation fails
         """
+        # Create display parameters based on interface type
+        display_params = {
+            'interface_type': config['interface']
+        }
+        
+        # Add pin parameters if using bitbang interface
+        if config['interface'] == 'bitbang':
+            display_params.update({
+                'RS': config['RS'],
+                'E': config['E'],
+                'PINS': config['PINS']
+            })
+        # Add pin parameters if using pigpio interface
+        elif config['interface'] == 'pigpio':
+            display_params.update({
+                'gpio': None,  # Let the display create its own pigpio instance
+                'RS': config['RS'],
+                'E': config['E'],
+                'PINS': config['PINS']
+            })
+            
         display = DisplayFactory.create_display(
             config['display'],
-            interface_type=config['interface'],
-            RS=config['RS'],
-            E=config['E'],
-            PINS=config['PINS']
+            **display_params
         )
         
         if not display.initialize():
