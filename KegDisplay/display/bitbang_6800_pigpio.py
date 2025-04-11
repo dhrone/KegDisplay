@@ -71,7 +71,22 @@ class bitbang_6800_pigpio(object):
         self._e_mask = 1 << self._E
         self._pin_masks = [1 << pin for pin in self._PINS]
         
+        # Initialize wave templates for common operations
+        self._init_wave_templates()
+        
         logger.debug(f"Initialized bitbang_6800_pigpio with RS={self._RS}, E={self._E}, PINS={self._PINS}, batch={batch}")
+
+    def _init_wave_templates(self):
+        """Initialize wave templates for common operations."""
+        # Create a template for the enable pulse
+        self._enable_pulse = [
+            pigpio.pulse(self._e_mask, 0, int(self._pulse_time)),  # E high
+            pigpio.pulse(0, self._e_mask, 0)  # E low
+        ]
+        
+        # Create templates for RS high and low
+        self._rs_high = pigpio.pulse(self._rs_mask, 0, 0)
+        self._rs_low = pigpio.pulse(0, self._rs_mask, 0)
 
     def _configure(self, pin):
         """Configure a pin or list of pins for output."""
@@ -121,8 +136,7 @@ class bitbang_6800_pigpio(object):
         :param mode: either high for data or low for command
         """
         # Set RS pin to the appropriate mode
-        rs_on = self._rs_mask if mode else 0
-        rs_off = 0 if mode else self._rs_mask
+        rs_pulse = self._rs_high if mode else self._rs_low
         
         # Create a list of pulses for all data values
         pulses = []
@@ -142,15 +156,12 @@ class bitbang_6800_pigpio(object):
                 else:
                     pin_off |= mask
             
-            # Add a pulse to the E pin
-            # First, set the data pins and RS pin
-            pulses.append(pigpio.pulse(pin_on | rs_on, pin_off | rs_off, 0))
+            # Add the data pins and RS pin
+            pulses.append(pigpio.pulse(pin_on, pin_off, 0))
+            pulses.append(rs_pulse)
             
-            # Then, pulse the E pin high
-            pulses.append(pigpio.pulse(self._e_mask, 0, int(self._pulse_time)))
-            
-            # Finally, set the E pin low
-            pulses.append(pigpio.pulse(0, self._e_mask, 0))
+            # Add the enable pulse
+            pulses.extend(self._enable_pulse)
         
         # If not in batch mode, send the pulse immediately
         if not self._batch:
@@ -220,10 +231,6 @@ class bitbang_6800_pigpio(object):
         """
         Clean up GPIO resources.
         """
-
-        # Flush any pending waves
-        self.flush()
-
         # Delete any saved waves
         for wave_id in self._saved_waves.values():
             try:
