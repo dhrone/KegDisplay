@@ -14,7 +14,7 @@ Default amount of time to wait for a pulse to complete if the device the
 interface is connected to requires a pin to be 'pulsed' from low to high to
 low for it to accept data or a command.  Value is in microseconds.
 """
-PULSE_TIME = 2
+PULSE_TIME = 2  # Reduced from 50 to 2 microseconds for faster transmission
 
 
 class bitbang_6800_pigpio(object):
@@ -43,8 +43,6 @@ class bitbang_6800_pigpio(object):
         if not self._pi.connected:
             raise RuntimeError("Failed to connect to pigpio daemon")
         
-        logger.debug(f"Initialized bitbang_6800_pigpio with pulse_time={pulse_time}, batch={batch}")
-        
         # Store the batch mode setting
         self._batch = batch
 
@@ -67,6 +65,11 @@ class bitbang_6800_pigpio(object):
         
         self._cmd_mode = 0  # Command mode = Hold low
         self._data_mode = 1  # Data mode = Pull high
+        
+        # Pre-calculate pin masks for faster operation
+        self._rs_mask = 1 << self._RS
+        self._e_mask = 1 << self._E
+        self._pin_masks = [1 << pin for pin in self._PINS]
         
         logger.debug(f"Initialized bitbang_6800_pigpio with RS={self._RS}, E={self._E}, PINS={self._PINS}, batch={batch}")
 
@@ -118,14 +121,14 @@ class bitbang_6800_pigpio(object):
         :param mode: either high for data or low for command
         """
         # Set RS pin to the appropriate mode
-        rs_on = (1 << self._RS) if mode else 0
-        rs_off = 0 if mode else (1 << self._RS)
+        rs_on = self._rs_mask if mode else 0
+        rs_off = 0 if mode else self._rs_mask
         
         # Create a list of pulses for all data values
         pulses = []
         
         # Insert a pulse to ensure the enable pin is low at the start of the wave
-        pulses.append(pigpio.pulse(0, 1 << self._E, 0))
+        pulses.append(pigpio.pulse(0, self._e_mask, 0))
         
         # For each value in data, create a pulse sequence
         for value in data:
@@ -133,22 +136,21 @@ class bitbang_6800_pigpio(object):
             pin_on = 0
             pin_off = 0
             
-            for i in range(self._datalines):
-                bit_value = (value >> i) & 0x01
-                if bit_value:
-                    pin_on |= (1 << self._PINS[i])
+            for i, mask in enumerate(self._pin_masks):
+                if (value >> i) & 0x01:
+                    pin_on |= mask
                 else:
-                    pin_off |= (1 << self._PINS[i])
+                    pin_off |= mask
             
             # Add a pulse to the E pin
             # First, set the data pins and RS pin
             pulses.append(pigpio.pulse(pin_on | rs_on, pin_off | rs_off, 0))
             
             # Then, pulse the E pin high
-            pulses.append(pigpio.pulse(1 << self._E, 0, int(self._pulse_time)))
+            pulses.append(pigpio.pulse(self._e_mask, 0, int(self._pulse_time)))
             
             # Finally, set the E pin low
-            pulses.append(pigpio.pulse(0, 1 << self._E, 0))
+            pulses.append(pigpio.pulse(0, self._e_mask, 0))
         
         # If not in batch mode, send the pulse immediately
         if not self._batch:
