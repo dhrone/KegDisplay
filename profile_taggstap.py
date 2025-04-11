@@ -43,7 +43,7 @@ def parse_arguments():
                         default='ws0010', help='Type of display (default: ws0010)')
     
     # Interface type
-    parser.add_argument('--interface', type=str, choices=['bitbang', 'spi'],
+    parser.add_argument('--interface', type=str, choices=['bitbang', 'spi', 'pigpio'],
                         default='bitbang', help='Type of interface (default: bitbang)')
     
     # Bitbang specific pins
