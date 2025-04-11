@@ -21,19 +21,21 @@ class WS0010PigpioDisplay(ws0010):
     Raspberry Pi systems.
     """
     
-    def __init__(self, gpio=None, **kwargs):
+    def __init__(self, RS=None, E=None, PINS=None, **kwargs):
         """
         Initialize the display with pigpio interface.
         
-        :param gpio: Optional pigpio instance. If not provided, a new one will be created.
+        :param RS: Register Select pin
+        :param E: Enable pin
+        :param PINS: List of data pins
         :param kwargs: Additional arguments passed to the base class.
         """
         try:
             # Initialize the pigpio interface
-            interface = bitbang_6800_pigpio(gpio=gpio, **kwargs)
+            interface = bitbang_6800_pigpio(RS=RS, E=E, PINS=PINS)
             
             # Initialize the base class with our interface
-            super().__init__(interface, **kwargs)
+            super().__init__(interface)
             
             logger.info("Initialized WS0010 display with pigpio interface")
         except ImportError as e:
@@ -64,7 +66,8 @@ class WS0010PigpioDisplay(ws0010):
         """Clean up resources."""
         try:
             # Clean up the interface
-            self._interface.cleanup()
+            if hasattr(self, '_interface'):
+                self._interface.cleanup()
             logger.info("Cleaned up WS0010 display resources")
         except Exception as e:
             logger.error("Error during cleanup: %s", e)
@@ -72,9 +75,9 @@ class WS0010PigpioDisplay(ws0010):
     @property
     def width(self):
         """Get the width of the display."""
-        return 100 if self.device else 0
+        return 100 if hasattr(self, 'device') and self.device else 0
     
     @property
     def height(self):
         """Get the height of the display."""
-        return 16 if self.device else 0 
+        return 16 if hasattr(self, 'device') and self.device else 0 
