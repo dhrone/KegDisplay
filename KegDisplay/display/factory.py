@@ -3,6 +3,7 @@ Factory for creating display instances
 """
 
 import logging
+from typing import Dict, Any, Optional
 from .ws0010_display import WS0010Display
 from .ws0010_pigpio_display import WS0010PigpioDisplay
 from .ssd1322_display import SSD1322Display
@@ -20,55 +21,54 @@ logger = logging.getLogger("KegDisplay")
 
 
 class DisplayFactory:
-    """Factory class for creating display instances."""
+    """
+    Factory class for creating display instances.
+    
+    This class provides a centralized way to create display instances
+    based on the specified type and interface.
+    """
     
     @staticmethod
-    def create_display(display_type, interface_type='bitbang', **kwargs):
-        """Create a display instance based on the specified type.
-        
-        Args:
-            display_type: Type of display ('ws0010', 'ws0010_pigpio', 'ssd1322', or 'virtual')
-            interface_type: Type of interface ('bitbang' or 'spi')
-            **kwargs: Additional parameters for the display
-            
-        Returns:
-            DisplayBase: An instance of the specified display
-            
-        Raises:
-            ValueError: If the display type is not supported
+    def create_display(display_type: str, interface: str = 'bitbang', **kwargs) -> Optional[Any]:
         """
-        pins = {}
-        # Extract pin configurations if provided
-        if 'RS' in kwargs:
-            pins['RS'] = kwargs['RS']
-        if 'E' in kwargs:
-            pins['E'] = kwargs['E']
-        if 'PINS' in kwargs:
-            pins['PINS'] = kwargs['PINS']
-
-            
-        # Create the appropriate display instance
-        if display_type.lower() == 'ws0010':
-            logger.debug(f"Creating WS0010 display with {interface_type} interface")
-            if interface_type.lower() == 'pigpio':
-                logger.debug("Using pigpio interface for WS0010 display")
-                return WS0010PigpioDisplay(interface_type='bitbang', pins=pins)
+        Create a display instance based on the specified type and interface.
+        
+        :param display_type: Type of display to create (e.g., 'ws0010', 'ssd1322')
+        :param interface: Interface type (e.g., 'bitbang', 'pigpio', 'spi'). Defaults to 'bitbang'
+        :param kwargs: Additional arguments passed to the display constructor
+        :return: Display instance or None if creation fails
+        """
+        try:
+            if display_type == 'ws0010':
+                if interface == 'bitbang':
+                    logger.debug("Creating WS0010 display with luma.core bitbang interface")
+                    return WS0010Display(**kwargs)
+                elif interface == 'pigpio':
+                    logger.debug("Creating WS0010 display with pigpio interface")
+                    return WS0010PigpioDisplay(**kwargs)
+                else:
+                    logger.error(f"Unsupported interface '{interface}' for WS0010 display")
+                    return None
+            elif display_type == 'ssd1322':
+                if interface == 'spi':
+                    return SSD1322Display(**kwargs)
+                else:
+                    logger.error(f"Unsupported interface '{interface}' for SSD1322 display")
+                    return None
+            elif display_type == 'virtual':
+                if not VIRTUAL_DISPLAY_AVAILABLE:
+                    logger.error("Virtual display requested but not available. Install tkinter to use this feature.")
+                    raise ValueError("Virtual display is not available. Install tkinter to use this feature.")
+                logger.debug("Creating virtual display")
+                resolution = kwargs.get('resolution', (256, 64))
+                zoom = kwargs.get('zoom', 3)
+                return VirtualDisplay(resolution=resolution, zoom=zoom)
             else:
-                return WS0010Display(interface_type=interface_type, pins=pins)
-        elif display_type.lower() == 'ws0010_pigpio':
-            logger.debug(f"Creating WS0010PigpioDisplay with {interface_type} interface")
-            return WS0010PigpioDisplay(interface_type=interface_type, pins=pins)
-        elif display_type.lower() == 'ssd1322':
-            logger.debug(f"Creating SSD1322 display with {interface_type} interface")
-            return SSD1322Display(interface_type=interface_type, pins=pins)
-        elif display_type.lower() == 'virtual':
-            if not VIRTUAL_DISPLAY_AVAILABLE:
-                logger.error("Virtual display requested but not available. Install tkinter to use this feature.")
-                raise ValueError("Virtual display is not available. Install tkinter to use this feature.")
-            logger.debug("Creating virtual display")
-            resolution = kwargs.get('resolution', (256, 64))
-            zoom = kwargs.get('zoom', 3)
-            return VirtualDisplay(resolution=resolution, zoom=zoom)
-        else:
-            logger.error(f"Unsupported display type: {display_type}")
-            raise ValueError(f"Unsupported display type: {display_type}") 
+                logger.error(f"Unsupported display type '{display_type}'")
+                return None
+        except ImportError as e:
+            logger.error(f"Failed to create display: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Unexpected error creating display: {e}")
+            return None 

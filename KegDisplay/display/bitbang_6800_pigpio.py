@@ -4,7 +4,6 @@ Implementation of a pigpio-based 6800 style parallel interface for displays.
 
 import logging
 import time
-import pigpio
 from luma.core.interface.parallel import bitbang_6800
 
 logger = logging.getLogger("KegDisplay")
@@ -44,8 +43,16 @@ class bitbang_6800_pigpio(object):
     """
 
     def __init__(self, gpio=None, pulse_time=PULSE_TIME, batch=False, **kwargs):
+        # Try to import pigpio, but don't fail if it's not available
+        try:
+            import pigpio
+            self.pigpio = pigpio
+        except ImportError:
+            logger.error("pigpio library not available. Please install it with 'pip install pigpio'")
+            raise ImportError("pigpio library not available. Please install it with 'pip install pigpio'")
+        
         # Initialize pigpio first
-        self._pi = gpio if gpio is not None else pigpio.pi()
+        self._pi = gpio if gpio is not None else self.pigpio.pi()
         if not self._pi.connected:
             raise RuntimeError("Failed to connect to pigpio daemon")
         
@@ -89,18 +96,18 @@ class bitbang_6800_pigpio(object):
             # Create wave for enable pulse
             self._pi.wave_add_new()
             self._pi.wave_add_generic([
-                pigpio.pulse(self._e_mask, 0, int(self._pulse_time)),  # E high
-                pigpio.pulse(0, self._e_mask, 0)  # E low
+                self.pigpio.pulse(self._e_mask, 0, int(self._pulse_time)),  # E high
+                self.pigpio.pulse(0, self._e_mask, 0)  # E low
             ])
             self._enable_wave = self._pi.wave_create()
             
             # Create waves for RS high and low
             self._pi.wave_add_new()
-            self._pi.wave_add_generic([pigpio.pulse(self._rs_mask, 0, 0)])
+            self._pi.wave_add_generic([self.pigpio.pulse(self._rs_mask, 0, 0)])
             self._rs_high_wave = self._pi.wave_create()
             
             self._pi.wave_add_new()
-            self._pi.wave_add_generic([pigpio.pulse(0, self._rs_mask, 0)])
+            self._pi.wave_add_generic([self.pigpio.pulse(0, self._rs_mask, 0)])
             self._rs_low_wave = self._pi.wave_create()
             
             # Create waves for data values (0-15 for 4-bit mode)
@@ -115,7 +122,7 @@ class bitbang_6800_pigpio(object):
                         pin_off |= mask
                 
                 self._pi.wave_add_new()
-                self._pi.wave_add_generic([pigpio.pulse(pin_on, pin_off, 0)])
+                self._pi.wave_add_generic([self.pigpio.pulse(pin_on, pin_off, 0)])
                 self._data_waves[value] = self._pi.wave_create()
             
             logger.debug("Created reusable waves for common operations")
@@ -127,7 +134,7 @@ class bitbang_6800_pigpio(object):
         """Configure a pin or list of pins for output."""
         pins = pin if isinstance(pin, list) else [pin] if pin else []
         for p in pins:
-            self._pi.set_mode(p, pigpio.OUTPUT)
+            self._pi.set_mode(p, self.pigpio.OUTPUT)
         return pin
 
     def command(self, *cmd):
@@ -247,41 +254,16 @@ class bitbang_6800_pigpio(object):
         self._wave_cache = []
 
     def cleanup(self):
-        """
-        Clean up GPIO resources.
-        """
+        """Clean up resources."""
         try:
-            # Flush any pending waves to ensure the display is updated
-            self.flush()
-            
-            # Delete all reusable waves
+            # Delete all waves
             for wave_id in self._data_waves.values():
-                try:
-                    self._pi.wave_delete(wave_id)
-                except Exception as e:
-                    logger.error(f"Error deleting data wave {wave_id}: {e}")
+                self._pi.wave_delete(wave_id)
+            self._pi.wave_delete(self._enable_wave)
+            self._pi.wave_delete(self._rs_high_wave)
+            self._pi.wave_delete(self._rs_low_wave)
             
-            try:
-                self._pi.wave_delete(self._enable_wave)
-                self._pi.wave_delete(self._rs_high_wave)
-                self._pi.wave_delete(self._rs_low_wave)
-            except Exception as e:
-                logger.error(f"Error deleting control waves: {e}")
-            
-            # Delete any saved waves
-            for wave_id in self._saved_waves.values():
-                try:
-                    self._pi.wave_delete(wave_id)
-                except Exception as e:
-                    logger.error(f"Error deleting saved wave {wave_id}: {e}")
-            
-            # Clear the wave cache
-            self._wave_cache = []
-            self._saved_waves = {}
-            self._data_waves = {}
-            
-            # Stop the pigpio interface if we created it
-            if self._pi is not None:
-                self._pi.stop()
+            # Stop pigpio
+            self._pi.stop()
         except Exception as e:
             logger.error(f"Error during cleanup: {e}") 

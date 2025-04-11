@@ -863,6 +863,18 @@ files = [
 ]
 
 [[package]]
+name = "pigpio"
+version = "1.78"
+description = "Raspberry Pi GPIO module"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "pigpio-1.78-py2.py3-none-any.whl", hash = "sha256:81e46f640c4e6342881fa9bbe290dbcd4fc179619dc6591e57a9d4a084dc49fa"},
+    {file = "pigpio-1.78.tar.gz", hash = "sha256:91efa50e4990649da97408a384782d6ccf58342fc59cdfe21ed7a42911569975"},
+]
+
+[[package]]
 name = "pillow"
 version = "10.4.0"
 description = "Python Imaging Library (Fork)"
@@ -1475,4 +1487,4 @@ virtual-display = []
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10, <4"
-content-hash = "744124e1d607d6d975c064c9e166d6d3151ad539e4a1acfd933c196f21be7906"
+content-hash = "49756d02adecc55eaf2775d8bd05f7af6514e2100027bf3f48dfb4fcd139695a"

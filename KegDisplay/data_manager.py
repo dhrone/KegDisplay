@@ -4,12 +4,13 @@ Data Manager for KegDisplay
 Handles database access and updates.
 """
 
+import sqlite3
 import logging
-from pyAttention.source import database
+import time
+from datetime import datetime, UTC
 
 # Use the pre-configured logger
 logger = logging.getLogger("KegDisplay")
-
 
 class DataManager:
     """Manages data access and updates for KegDisplay."""
@@ -25,117 +26,193 @@ class DataManager:
         self.db_path = db_path
         self.renderer = renderer
         self.update_frequency = update_frequency
-        self.src = None
+        self.conn = None
+        self.last_check_time = 0
+        self.current_tap = None
+        self.current_beer_id = None
+        self.last_version = None
         
     def initialize(self):
-        """Initialize the database connection.
+        """Initialize the database connection and load initial data.
         
         Returns:
             bool: True if initialization successful, False otherwise
         """
         try:
-            # Initialize database source
-            self.src = database(f'sqlite+aiosqlite:///{self.db_path}')
+            # Connect to the database
+            self.conn = sqlite3.connect(self.db_path)
+            self.conn.row_factory = sqlite3.Row  # Use row factory for named access
             
-            # Add queries for beer and tap data
-            self.src.add("SELECT idBeer, Name, Description, ABV from beers", name='beer', frequency=self.update_frequency)
-            self.src.add("SELECT idTap, idBeer from taps", name='taps', frequency=self.update_frequency)
+            # Get initial version
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT last_modified FROM version")
+            row = cursor.fetchone()
+            if row:
+                self.last_version = row['last_modified']
             
-            logger.debug(f"Initialized database source from {self.db_path}")
+            # Load initial data
+            if self.renderer:
+                # Get current tap number from renderer
+                sys_data = self.renderer._dataset.get('sys', {})
+                tapnr = sys_data.get('tapnr', 1)
+                
+                # Get all beers
+                cursor.execute("SELECT idBeer, Name, Description, ABV FROM beers")
+                beers = {}
+                for row in cursor.fetchall():
+                    beers[row['idBeer']] = {  # Keep beer_id as integer
+                        'Name': row['Name'],
+                        'ABV': row['ABV'],
+                        'Description': row['Description']
+                    }
+                self.renderer.update_dataset("beers", beers, merge=True)
+                
+                # Get tap assignments
+                cursor.execute("SELECT idTap, idBeer FROM taps")
+                taps = {}
+                for row in cursor.fetchall():
+                    taps[row['idTap']] = row['idBeer']
+                self.renderer.update_dataset("taps", taps, merge=True)
+                
+                # Get current beer ID for this tap
+                cursor.execute("SELECT idBeer FROM taps WHERE idTap = ?", (tapnr,))
+                row = cursor.fetchone()
+                if row:
+                    self.current_beer_id = row['idBeer']
+                    self.current_tap = tapnr
+                    logger.info(f"Initialized with tap {tapnr} assigned to beer {self.current_beer_id}")
+                else:
+                    logger.warning(f"No beer assigned to tap {tapnr}")
+            
+            logger.debug(f"Initialized database connection from {self.db_path}")
             return True
         except Exception as e:
             logger.error(f"Error initializing database: {e}")
             return False
-    
+            
+    def _beer_data_changed(self, beer_id, new_data):
+        """Check if beer data has changed from what's in the renderer.
+        
+        Args:
+            beer_id: ID of the beer to check
+            new_data: New beer data from database
+            
+        Returns:
+            bool: True if data has changed, False otherwise
+        """
+        current_data = self.renderer._dataset.get('beers', {}).get(beer_id, {})  # Keep beer_id as integer
+        
+        # Compare each field
+        for field in ['Name', 'ABV', 'Description']:
+            if str(current_data.get(field)) != str(new_data.get(field)):
+                logger.debug(f"Beer {beer_id} {field} changed: '{current_data.get(field)}' -> '{new_data.get(field)}'")
+                return True
+                
+        return False
+            
     def update_data(self):
-        """Update data from the database source.
+        """Update data from the database.
         
         Returns:
             bool: True if data was updated, False otherwise
         """
-        if not self.src or not self.renderer:
-            logger.error("Database source or renderer not initialized")
+        if not self.conn or not self.renderer:
+            logger.error("Database connection or renderer not initialized")
             return False
             
         try:
-            updates_found = False
-            items_processed = 0
+            current_time = time.time()
+            if current_time - self.last_check_time < self.update_frequency:
+                return False
+                
+            self.last_check_time = current_time
             
-            # Process all pending database updates
-            while True:
-                db_row = self.src.get(0.001)  # Small timeout to avoid blocking
-                if db_row is None:
-                    break
+            # Get current tap number from renderer
+            sys_data = self.renderer._dataset.get('sys', {})
+            tapnr = sys_data.get('tapnr', 1)
+            
+            # Get current beer ID for this tap from database
+            cursor = self.conn.cursor()
+            cursor.execute("SELECT idBeer FROM taps WHERE idTap = ?", (tapnr,))
+            row = cursor.fetchone()
+            if not row:
+                logger.warning(f"No beer assigned to tap {tapnr}")
+                return False
                 
-                items_processed += 1
-                db_row_str = str(db_row)
-                if len(db_row_str) > 80:
-                    db_row_str = db_row_str[:77] + "..."
-                # Only log detailed DB rows at trace level (which isn't used by default)
+            new_beer_id = row['idBeer']
+            
+            # Check if tap assignment changed for current tap
+            if new_beer_id != self.current_beer_id:
+                self.current_beer_id = new_beer_id
+                self.current_tap = tapnr
                 
-                for key, value in db_row.items():
-                    if key == 'beer':
-                        # Remove redundant logging of beer data processing
-                        if isinstance(value, dict):
-                            self.renderer.update_dataset("beers", value, merge=True)
-                            updates_found = True
-                        else:
-                            for item in value:
-                                if 'idBeer' in item:
-                                    beer_id = item['idBeer']
-                                    beer_data = {k: v for k, v in item.items() if k != 'idBeer'}
-                                    # Only log the first beer to avoid flooding the logs
-                                    if beer_id == 1:
-                                        beerstr = f"Adding beer {beer_id}: {beer_data}"
-                                        beerstr = beerstr[:80]
-                                        logger.debug(beerstr)
-                                    self.renderer.update_dataset(
-                                        "beers",
-                                        {beer_id: beer_data},
-                                        merge=True
-                                    )
-                                    updates_found = True
+                # Update tap mapping
+                current_taps = self.renderer._dataset.get('taps', {})
+                current_taps[tapnr] = new_beer_id
+                self.renderer.update_dataset("taps", current_taps, merge=True)
+                logger.debug(f"Updated tap mapping: tap {tapnr} -> beer {new_beer_id}")
+                
+                # Get beer data
+                cursor.execute(
+                    "SELECT idBeer, Name, Description, ABV FROM beers WHERE idBeer = ?",
+                    (new_beer_id,)
+                )
+                beer_row = cursor.fetchone()
+                if beer_row:
+                    beer_data = {
+                        new_beer_id: {  # Keep beer_id as integer
+                            'Name': beer_row['Name'],
+                            'ABV': beer_row['ABV'],
+                            'Description': beer_row['Description']
+                        }
+                    }
+                    self.renderer.update_dataset("beers", beer_data, merge=True)
+                    logger.info(f"Updated beer data for tap {tapnr}: {beer_row['Name']}")
                     
-                    if key == 'taps':
-                        # Only log significant tap changes
-                        if isinstance(value, dict):
-                            tap_id = value.get('idTap')
-                            beer_id = value.get('idBeer')
-                            if tap_id and beer_id:
-                                logger.debug(f"Updated tap {tap_id} with beer {beer_id}")
-                                self.renderer.update_dataset("taps", {tap_id: beer_id}, merge=True)
-                                updates_found = True
-                        else:
-                            for item in value:
-                                if 'idTap' in item:
-                                    tap_id = item['idTap']
-                                    beer_id = item['idBeer']
-                                    logger.debug(f"Updated tap {tap_id} with beer {beer_id}")
-                                    self.renderer.update_dataset("taps", {tap_id: beer_id}, merge=True)
-                                    updates_found = True
+                    # Force sequence regeneration
+                    self.renderer.image_sequence = self.renderer.generate_image_sequence()
+                    self.renderer.sequence_index = 0
+                    self.renderer.last_frame_time = current_time
+                    logger.info(f"Generated new sequence with {len(self.renderer.image_sequence)} frames")
+                    return True
+                    
+            # Check if current beer data changed
+            if self.current_beer_id:
+                cursor.execute(
+                    "SELECT idBeer, Name, Description, ABV FROM beers WHERE idBeer = ?",
+                    (self.current_beer_id,)
+                )
+                beer_row = cursor.fetchone()
+                if beer_row:
+                    new_beer_data = {
+                        'Name': beer_row['Name'],
+                        'ABV': beer_row['ABV'],
+                        'Description': beer_row['Description']
+                    }
+                    
+                    # Only update if data has actually changed
+                    if self._beer_data_changed(self.current_beer_id, new_beer_data):
+                        beer_data = {
+                            self.current_beer_id: new_beer_data  # Keep beer_id as integer
+                        }
+                        self.renderer.update_dataset("beers", beer_data, merge=True)
+                        logger.info(f"Updated beer data for beer {self.current_beer_id}: {beer_row['Name']}")
+                        
+                        # Force sequence regeneration
+                        self.renderer.image_sequence = self.renderer.generate_image_sequence()
+                        self.renderer.sequence_index = 0
+                        self.renderer.last_frame_time = current_time
+                        logger.info(f"Generated new sequence with {len(self.renderer.image_sequence)} frames")
+                        return True
+                    
+            return False
             
-            if updates_found:
-                logger.debug(f"Processed {items_processed} database updates")
-            
-            return updates_found
         except Exception as e:
             logger.error(f"Error updating data: {e}")
             return False
             
-    def load_all_data(self):
-        """Load all data from the database.
-        
-        This method performs an initial load of data from the database.
-        It's a convenience method that just calls update_data().
-        
-        Returns:
-            bool: True if data was loaded, False otherwise
-        """
-        logger.debug("Loading all data from database")
-        return self.update_data()
-            
     def cleanup(self):
         """Clean up resources."""
-        if self.src:
-            # Any cleanup needed for database source
-            pass 
+        if self.conn:
+            self.conn.close()
+            self.conn = None 

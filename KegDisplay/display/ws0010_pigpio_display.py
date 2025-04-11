@@ -1,100 +1,74 @@
 """
-Implementation for the WS0010 display using pigpio
+WS0010 display implementation using pigpio interface.
 """
 
 import logging
-import time
 from luma.oled.device import ws0010
+from luma.core.render import canvas
+from PIL import Image
+
 from .bitbang_6800_pigpio import bitbang_6800_pigpio
-from .base import DisplayBase
 
 logger = logging.getLogger("KegDisplay")
 
 
-class WS0010PigpioDisplay(DisplayBase):
-    """Implementation for the WS0010 display using pigpio.  Assumes a bitbang interface."""
+class WS0010PigpioDisplay(ws0010):
+    """
+    WS0010 display implementation using pigpio interface.
     
-    def __init__(self, pins=None, interface_type='bitbang'):
-        """Initialize the WS0010 display.
-        
-        Args:
-            pins: Dictionary of pin settings (for bitbang: RS, E, PINS)
-            interface_type: Type of interface (only 'bitbang' is supported for pigpio)
+    This class extends the base WS0010 class to use the pigpio interface
+    for GPIO control. It provides a more efficient implementation for
+    Raspberry Pi systems.
+    """
+    
+    def __init__(self, gpio=None, **kwargs):
         """
-        self.pins = pins or {}
-        self.interface_type = interface_type
-        self.device = None
-        self.interface = None
-        self.pulse_time = 2  # Match the PULSE_TIME in bitbang_6800_pigpio
-
-    def initialize(self):
-        """Initialize the display interface."""
+        Initialize the display with pigpio interface.
+        
+        :param gpio: Optional pigpio instance. If not provided, a new one will be created.
+        :param kwargs: Additional arguments passed to the base class.
+        """
         try:
-            # Extract pin configurations with defaults
-            rs_pin = self.pins.get('RS', 7)
-            e_pin = self.pins.get('E', 8)
-            data_pins = self.pins.get('PINS', [25, 5, 6, 12])
+            # Initialize the pigpio interface
+            interface = bitbang_6800_pigpio(gpio=gpio, **kwargs)
             
-            # Create the interface
-            self.interface = bitbang_6800_pigpio(
-                RS=rs_pin, 
-                E=e_pin, 
-                PINS=data_pins, 
-                pulse_time=self.pulse_time,
-                batch=True
-            )
-            logger.debug(f"Initialized bitbang_6800_pigpio interface with RS={rs_pin}, E={e_pin}, PINS={data_pins}")
+            # Initialize the base class with our interface
+            super().__init__(interface, **kwargs)
             
-            # Create the device
-            self.device = ws0010(self.interface)
-            
-            # Ensure the display is properly initialized
-            time.sleep(0.5)  # Give the display time to initialize
-            
-            # Flush the display to ensure it's initialized
-            if hasattr(self.interface, 'flush'):
-                self.interface.flush()
-
-            # Ensure the display is properly initialized
-            time.sleep(0.5)  # Give the display time to initialize
-                 
-            logger.debug("Initialized WS0010 display")
-            return True
+            logger.info("Initialized WS0010 display with pigpio interface")
+        except ImportError as e:
+            logger.error("Failed to initialize WS0010 display with pigpio interface: %s", e)
+            raise
         except Exception as e:
-            logger.error(f"Error initializing display: {e}")
-            return False
-            
+            logger.error("Unexpected error initializing WS0010 display: %s", e)
+            raise
+
     def display(self, image):
-        """Display an image on the screen.
-        
-        Args:
-            image: PIL image to display
         """
-        if self.device:
-            try:
-                # Convert to mode '1' (1-bit) if needed
-                if image.mode != "1":
-                    image = image.convert("1")
-                
-                # Display the image
-                self.device.display(image)
-                
-                # Flush after displaying
-                if hasattr(self.interface, 'flush'):
-                    self.interface.flush()
-                return True
-            except Exception as e:
-                logger.error(f"Error displaying image: {e}")
-                return False
-        else:
-            logger.error("Display not initialized")
-            return False
+        Display an image on the screen.
+        
+        :param image: PIL Image to display
+        """
+        try:
+            # Convert the image to the correct format for the display
+            if image.mode != self.mode:
+                image = image.convert(self.mode)
             
+            # Display the image
+            super().display(image)
+        except Exception as e:
+            logger.error("Error displaying image: %s", e)
+            raise
+
     def cleanup(self):
         """Clean up resources."""
-        # No specific cleanup needed for WS0010
-        pass
-    
+        try:
+            # Clean up the interface
+            self._interface.cleanup()
+            logger.info("Cleaned up WS0010 display resources")
+        except Exception as e:
+            logger.error("Error during cleanup: %s", e)
+
     @property
     def width(self):
         """Get the width of the display."""

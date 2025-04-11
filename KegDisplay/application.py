@@ -136,21 +136,20 @@ class Application:
         while time.time() - current_time < splash_time:
             time.sleep(0.1)
 
-        # Reset last_db_check_time to current time
-        last_db_check_time = time.time()
-
         # Main loop
         logger.info("Starting main loop...")
         frame_count = 0
+        last_data_check = time.time()
+        data_check_interval = 1.0  # Check for data changes every second
         
         while self.running:
             try:
                 current_time = time.time()
                 
-                # Check for database updates at specified frequency
-                if current_time - last_db_check_time >= self.data_manager.update_frequency:
+                # Check for database updates periodically
+                if current_time - last_data_check >= data_check_interval:
+                    last_data_check = current_time
                     update_result = self.data_manager.update_data()
-                    last_db_check_time = current_time
                     
                     # Only log if update was found
                     if update_result:

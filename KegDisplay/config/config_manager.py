@@ -125,11 +125,13 @@ class ConfigManager:
             logger.error(f"Page file {page_path} missing")
             return False
             
-        # Check if database file exists
+        # Check if database file exists and convert to absolute path
         db_path = Path(self.config['db'])
         if not db_path.exists():
             logger.error(f"Database file {db_path} missing")
             return False
+        self.config['db'] = str(db_path.absolute())
+        logger.debug(f"Using database at {self.config['db']}")
             
         # Validate display-specific settings
         if self.config['interface'] in ['bitbang', 'pigpio']:
