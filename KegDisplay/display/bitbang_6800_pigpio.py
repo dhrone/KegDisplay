@@ -71,22 +71,51 @@ class bitbang_6800_pigpio(object):
         self._e_mask = 1 << self._E
         self._pin_masks = [1 << pin for pin in self._PINS]
         
-        # Initialize wave templates for common operations
+        # Initialize wave templates and create reusable waves
         self._init_wave_templates()
         
         logger.debug(f"Initialized bitbang_6800_pigpio with RS={self._RS}, E={self._E}, PINS={self._PINS}, batch={batch}")
 
     def _init_wave_templates(self):
-        """Initialize wave templates for common operations."""
-        # Create a template for the enable pulse
-        self._enable_pulse = [
-            pigpio.pulse(self._e_mask, 0, int(self._pulse_time)),  # E high
-            pigpio.pulse(0, self._e_mask, 0)  # E low
-        ]
-        
-        # Create templates for RS high and low
-        self._rs_high = pigpio.pulse(self._rs_mask, 0, 0)
-        self._rs_low = pigpio.pulse(0, self._rs_mask, 0)
+        """Initialize wave templates and create reusable waves."""
+        # Create waves for common operations
+        try:
+            # Create wave for enable pulse
+            self._pi.wave_add_new()
+            self._pi.wave_add_generic([
+                pigpio.pulse(self._e_mask, 0, int(self._pulse_time)),  # E high
+                pigpio.pulse(0, self._e_mask, 0)  # E low
+            ])
+            self._enable_wave = self._pi.wave_create()
+            
+            # Create waves for RS high and low
+            self._pi.wave_add_new()
+            self._pi.wave_add_generic([pigpio.pulse(self._rs_mask, 0, 0)])
+            self._rs_high_wave = self._pi.wave_create()
+            
+            self._pi.wave_add_new()
+            self._pi.wave_add_generic([pigpio.pulse(0, self._rs_mask, 0)])
+            self._rs_low_wave = self._pi.wave_create()
+            
+            # Create waves for data values (0-15 for 4-bit mode)
+            self._data_waves = {}
+            for value in range(16):
+                pin_on = 0
+                pin_off = 0
+                for i, mask in enumerate(self._pin_masks):
+                    if (value >> i) & 0x01:
+                        pin_on |= mask
+                    else:
+                        pin_off |= mask
+                
+                self._pi.wave_add_new()
+                self._pi.wave_add_generic([pigpio.pulse(pin_on, pin_off, 0)])
+                self._data_waves[value] = self._pi.wave_create()
+            
+            logger.debug("Created reusable waves for common operations")
+        except Exception as e:
+            logger.error(f"Error creating wave templates: {e}")
+            raise
 
     def _configure(self, pin):
         """Configure a pin or list of pins for output."""
@@ -136,53 +165,39 @@ class bitbang_6800_pigpio(object):
         :param mode: either high for data or low for command
         """
         # Set RS pin to the appropriate mode
-        rs_pulse = self._rs_high if mode else self._rs_low
+        rs_wave = self._rs_high_wave if mode else self._rs_low_wave
         
-        # Create a list of pulses for all data values
-        pulses = []
+        # Create a wave chain for all data values
+        chain = []
         
-        # Insert a pulse to ensure the enable pin is low at the start of the wave
-        pulses.append(pigpio.pulse(0, self._e_mask, 0))
-        
-        # For each value in data, create a pulse sequence
+        # For each value in data, create a chain of waves
         for value in data:
-            # Set data pins based on the value
-            pin_on = 0
-            pin_off = 0
+            # Get the data wave for this value
+            data_wave = self._data_waves[value & 0x0F]  # Use only lower 4 bits for 4-bit mode
             
-            for i, mask in enumerate(self._pin_masks):
-                if (value >> i) & 0x01:
-                    pin_on |= mask
-                else:
-                    pin_off |= mask
-            
-            # Add the data pins and RS pin
-            pulses.append(pigpio.pulse(pin_on, pin_off, 0))
-            pulses.append(rs_pulse)
-            
-            # Add the enable pulse
-            pulses.extend(self._enable_pulse)
+            # Add waves to the chain in the correct order
+            chain.extend([
+                data_wave,  # Set data pins
+                rs_wave,    # Set RS pin
+                self._enable_wave  # Enable pulse
+            ])
         
-        # If not in batch mode, send the pulse immediately
+        # If not in batch mode, send the chain immediately
         if not self._batch:
             try:
-                self._pi.wave_add_new()
-                self._pi.wave_add_generic(pulses)
-                wave_id = self._pi.wave_create()
-                self._pi.wave_send_once(wave_id)
+                self._pi.wave_chain(chain)
                 while self._pi.wave_tx_busy():
                     time.sleep(0.001)
-                self._pi.wave_delete(wave_id)
             except Exception as e:
-                logger.error(f"Error creating or sending wave: {e}")
+                logger.error(f"Error sending wave chain: {e}")
         else:
-            # Add the pulses to the wave cache
-            self._wave_cache.extend(pulses)
+            # Add the chain to the wave cache
+            self._wave_cache.extend(chain)
 
     def flush(self, save=None, replay=None):
         """
         If there is any content that has been sent to command or data with batch True, 
-        send all of it as part of a single wave.
+        send all of it as part of a single wave chain.
         
         :param save: If save is assigned a value, use the value to store a reference to the wave.
         :type save: str
@@ -201,28 +216,16 @@ class bitbang_6800_pigpio(object):
                 return
         
         if not self._wave_cache:
-            logger.debug("No pulses to flush")
+            logger.debug("No waves to flush")
             return
         
-        # Create a new wave from the cached pulses
+        # Send the wave chain
         try:
-            self._pi.wave_add_new()
-            self._pi.wave_add_generic(self._wave_cache)
-            wave_id = self._pi.wave_create()
-            
-            if save is not None:
-                # Store the wave ID for later replay
-                self._saved_waves[save] = wave_id
-                logger.debug(f"Saved wave {wave_id} with key '{save}'")
-            else:
-                # Send the wave and then delete it
-                self._pi.wave_send_once(wave_id)
-                while self._pi.wave_tx_busy():
-                    time.sleep(0.001)
-                self._pi.wave_delete(wave_id)
-                logger.debug(f"Sent and deleted wave {wave_id}")
+            self._pi.wave_chain(self._wave_cache)
+            while self._pi.wave_tx_busy():
+                time.sleep(0.001)
         except Exception as e:
-            logger.error(f"Error creating or sending wave: {e}")
+            logger.error(f"Error sending wave chain: {e}")
         finally:
             # Clear the wave cache
             self._wave_cache = []
@@ -231,17 +234,38 @@ class bitbang_6800_pigpio(object):
         """
         Clean up GPIO resources.
         """
-        # Delete any saved waves
-        for wave_id in self._saved_waves.values():
+        try:
+            # Flush any pending waves to ensure the display is updated
+            self.flush()
+            
+            # Delete all reusable waves
+            for wave_id in self._data_waves.values():
+                try:
+                    self._pi.wave_delete(wave_id)
+                except Exception as e:
+                    logger.error(f"Error deleting data wave {wave_id}: {e}")
+            
             try:
-                self._pi.wave_delete(wave_id)
+                self._pi.wave_delete(self._enable_wave)
+                self._pi.wave_delete(self._rs_high_wave)
+                self._pi.wave_delete(self._rs_low_wave)
             except Exception as e:
-                logger.error(f"Error deleting wave {wave_id}: {e}")
-        
-        # Clear the wave cache
-        self._wave_cache = []
-        self._saved_waves = {}
-        
-        # Stop the pigpio interface if we created it
-        if self._pi is not None:
-            self._pi.stop() 
+                logger.error(f"Error deleting control waves: {e}")
+            
+            # Delete any saved waves
+            for wave_id in self._saved_waves.values():
+                try:
+                    self._pi.wave_delete(wave_id)
+                except Exception as e:
+                    logger.error(f"Error deleting saved wave {wave_id}: {e}")
+            
+            # Clear the wave cache
+            self._wave_cache = []
+            self._saved_waves = {}
+            self._data_waves = {}
+            
+            # Stop the pigpio interface if we created it
+            if self._pi is not None:
+                self._pi.stop()
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}") 
