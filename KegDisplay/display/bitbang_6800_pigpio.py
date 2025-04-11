@@ -16,6 +16,9 @@ low for it to accept data or a command.  Value is in microseconds.
 """
 PULSE_TIME = 2  # Reduced from 50 to 2 microseconds for faster transmission
 
+# Maximum number of waves that can be chained together
+MAX_CHAIN_LENGTH = 100  # Conservative estimate based on pigpio limitations
+
 
 class bitbang_6800_pigpio(object):
     """
@@ -156,6 +159,25 @@ class bitbang_6800_pigpio(object):
         """
         self._write(data, self._data_mode)
 
+    def _send_wave_chain(self, chain):
+        """
+        Send a wave chain in chunks if it's too long.
+        
+        :param chain: List of wave IDs to send
+        """
+        if not chain:
+            return
+        
+        # Split the chain into chunks of MAX_CHAIN_LENGTH
+        for i in range(0, len(chain), MAX_CHAIN_LENGTH):
+            chunk = chain[i:i + MAX_CHAIN_LENGTH]
+            try:
+                self._pi.wave_chain(chunk)
+                while self._pi.wave_tx_busy():
+                    time.sleep(0.001)
+            except Exception as e:
+                logger.error(f"Error sending wave chain chunk: {e}")
+
     def _write(self, data, mode):
         """
         Reimplements _write from the parent class to use pigpio calls instead of gpio.
@@ -184,12 +206,7 @@ class bitbang_6800_pigpio(object):
         
         # If not in batch mode, send the chain immediately
         if not self._batch:
-            try:
-                self._pi.wave_chain(chain)
-                while self._pi.wave_tx_busy():
-                    time.sleep(0.001)
-            except Exception as e:
-                logger.error(f"Error sending wave chain: {e}")
+            self._send_wave_chain(chain)
         else:
             # Add the chain to the wave cache
             self._wave_cache.extend(chain)
@@ -219,16 +236,11 @@ class bitbang_6800_pigpio(object):
             logger.debug("No waves to flush")
             return
         
-        # Send the wave chain
-        try:
-            self._pi.wave_chain(self._wave_cache)
-            while self._pi.wave_tx_busy():
-                time.sleep(0.001)
-        except Exception as e:
-            logger.error(f"Error sending wave chain: {e}")
-        finally:
-            # Clear the wave cache
-            self._wave_cache = []
+        # Send the wave chain in chunks
+        self._send_wave_chain(self._wave_cache)
+        
+        # Clear the wave cache
+        self._wave_cache = []
 
     def cleanup(self):
         """
