@@ -19,6 +19,9 @@ PULSE_TIME = 2  # Reduced from 50 to 2 microseconds for faster transmission
 # Maximum number of waves that can be chained together
 MAX_CHAIN_LENGTH = 100  # Conservative estimate based on pigpio limitations
 
+# Polling interval for wave completion (in seconds)
+WAVE_POLL_INTERVAL = 0.0001  # Reduced from 0.001 to 0.0001 for faster polling
+
 
 class bitbang_6800_pigpio(object):
     """
@@ -173,8 +176,9 @@ class bitbang_6800_pigpio(object):
             chunk = chain[i:i + MAX_CHAIN_LENGTH]
             try:
                 self._pi.wave_chain(chunk)
+                # Use a shorter polling interval for faster completion
                 while self._pi.wave_tx_busy():
-                    time.sleep(0.001)
+                    time.sleep(WAVE_POLL_INTERVAL)
             except Exception as e:
                 logger.error(f"Error sending wave chain chunk: {e}")
 

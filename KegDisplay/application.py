@@ -81,20 +81,34 @@ class Application:
         
         # Perform initial data load while showing splash
         logger.info("Loading initial data...")
-        while time.time() - current_time < 2:  # Wait for 2 seconds to ensure data is loaded
-            update_result = self.data_manager.update_data()
-            beer_data = self.renderer._dataset.get('beers', {})
-            tap_data = self.renderer._dataset.get('taps', {})
-            if len(beer_data) > 0 and len(tap_data) > 0:
-                break
+        max_wait_time = 5  # Increased from 2 to 5 seconds
+        retry_interval = 0.5  # Check every 0.5 seconds
+        data_loaded = False
+        
+        while time.time() - current_time < max_wait_time:
+            try:
+                update_result = self.data_manager.update_data()
+                beer_data = self.renderer._dataset.get('beers', {})
+                tap_data = self.renderer._dataset.get('taps', {})
+                
+                if len(beer_data) > 0 and len(tap_data) > 0:
+                    logger.info(f"Successfully loaded {len(beer_data)} beers and {len(tap_data)} taps")
+                    data_loaded = True
+                    break
+                
+                logger.debug(f"Waiting for data... (beers: {len(beer_data)}, taps: {len(tap_data)})")
+                time.sleep(retry_interval)
+            except Exception as e:
+                logger.error(f"Error loading initial data: {e}")
+                time.sleep(retry_interval)
 
         # Check if data has changed and initialize the check_data_changed hashes
         if not self.renderer.check_data_changed():
             logger.warning("On initial load, no data was received from the database")
 
         # Check if we have any data to display.  If not, log a warning and set default values
-        if len(beer_data) == 0:
-            logger.warning("No beers found in database")
+        if not data_loaded:
+            logger.warning("No beers found in database after waiting period")
             self.renderer.update_dataset("beers", {
                 "1": {
                     'Name': 'No Beer Data',
