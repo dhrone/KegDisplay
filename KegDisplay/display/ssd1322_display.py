@@ -83,7 +83,9 @@ class SSD1322Display(ssd1322):
             
     def cleanup(self):
         """Clean up resources."""
-        logger.debug("Cleaning up resources")
-        
-        # Calling the cleanup method of the parent class
-        super().cleanup()
+        try:
+            logger.debug("SSD1322Display cleanup started")
+            super().cleanup()
+            logger.debug("SSD1322Display cleanup completed")
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}\n{traceback.format_exc()}")
