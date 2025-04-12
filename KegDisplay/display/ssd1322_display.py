@@ -73,7 +73,6 @@ class SSD1322Display(ssd1322):
             
             # Display the image
             super().display(image)
-            logger.debug("Image displayed successfully")
             return True
         except AssertionError as e:
             logger.error(f"Image mode mismatch: Expected mode {self.mode}, got {image.mode}\n{traceback.format_exc()}")
@@ -82,8 +81,3 @@ class SSD1322Display(ssd1322):
             logger.error(f"Error displaying image: {e}\n{traceback.format_exc()}")
             return False
             
-    def cleanup(self):
-        """Clean up resources."""
-        # No specific cleanup needed for SSD1322
-        pass
-    

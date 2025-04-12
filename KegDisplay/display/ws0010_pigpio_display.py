@@ -22,16 +22,30 @@ class WS0010PigpioDisplay(ws0010):
     Raspberry Pi systems.
     """
     
-    def __init__(self, gpio=None, **kwargs):
+    def __init__(self, interface_type='pigpio', pins=None, **kwargs):
         """
         Initialize the display with pigpio interface.
         
-        :param gpio: Optional pigpio instance. If not provided, a new one will be created.
-        :param kwargs: Additional arguments passed to the base class.
+        Args:
+            interface_type: Type of interface ('pigpio')
+            pins: Dictionary of pin settings (RS, E, PINS)
+            **kwargs: Additional arguments passed to the base class.
         """
         try:
+            # Extract pin configurations
+            rs = pins.get('RS', 22)
+            e = pins.get('E', 17)
+            data_pins = pins.get('PINS', [25, 24, 23, 18])
+            
+            logger.debug(f"Initializing WS0010 display with RS={rs}, E={e}, PINS={data_pins}")
+            
             # Initialize the pigpio interface
-            interface = bitbang_6800_pigpio(gpio=gpio, **kwargs)
+            interface = bitbang_6800_pigpio(
+                RS=rs,
+                E=e,
+                PINS=data_pins,
+                **kwargs
+            )
             
             # Initialize the base class with our interface
             super().__init__(interface, width=100, height=16, **kwargs)
@@ -58,5 +72,5 @@ class WS0010PigpioDisplay(ws0010):
             # Display the image
             super().display(image)
         except Exception as e:
-            logger.error("Error displaying image: %s", e)
+            logger.error("Error displaying image: %s\n%s", e, traceback.format_exc())
             raise 
