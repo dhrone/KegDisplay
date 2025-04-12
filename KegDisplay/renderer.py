@@ -444,20 +444,12 @@ class SequenceRenderer:
             if duration <= self.target_frame_time:
                 self.frame_count += 1
                 self.frames_since_last_check += 1
-                
-                # Calculate current FPS based on actual frame display time
-                elapsed = frame_end - self.fps_start_time
-                if elapsed > 0:
-                    self.current_fps = self.frame_count / elapsed
-            else:
-                # For static periods, don't count the frame in FPS calculation
-                # but still update the last frame time
-                pass
+                self.current_fps = self.frame_count / (frame_end - self.fps_start_time)
             
             # In debug mode, log FPS stats every 60 seconds
             if debug_mode and (frame_end - self.last_stats_time >= 60):
                 elapsed_since_last = frame_end - self.last_stats_time
-                fps_since_last = self.frames_since_last_check / elapsed_since_last if elapsed_since_last > 0 else 0
+                fps_since_last = self.frames_since_last_check / elapsed_since_last
                 
                 # Check if we're significantly below target
                 fps_ratio = fps_since_last / target_fps
