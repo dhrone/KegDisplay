@@ -31,7 +31,6 @@ class DataManager:
         self.last_check_time = 0
         self.current_tap = None
         self.current_beer_id = None
-        self.last_version = None
         
     def initialize(self):
         """Initialize the database connection and load initial data.
@@ -49,13 +48,6 @@ class DataManager:
             self.conn = sqlite3.connect(self.db_path)
             self.conn.row_factory = sqlite3.Row  # Use row factory for named access
             
-            # Get initial version
-            cursor = self.conn.cursor()
-            cursor.execute("SELECT last_modified FROM version")
-            row = cursor.fetchone()
-            if row:
-                self.last_version = row['last_modified']
-            
             # Load initial data
             if self.renderer:
                 # Get current tap number from renderer
@@ -63,6 +55,7 @@ class DataManager:
                 tapnr = sys_data.get('tapnr', 1)
                 
                 # Get all beers
+                cursor = self.conn.cursor()
                 cursor.execute("SELECT idBeer, Name, Description, ABV FROM beers")
                 beers = {}
                 for row in cursor.fetchall():
