@@ -27,7 +27,7 @@ def create_database(db_path=None):
     try:
         # Create beers table
         cursor.execute('''
-        CREATE TABLE beers (
+        CREATE TABLE IF NOT EXISTS beers (
             'idBeer' integer primary key,
             'Name' tinytext NOT NULL,
             'ABV' float DEFAULT NULL,
@@ -45,7 +45,7 @@ def create_database(db_path=None):
         
         # Create taps table
         cursor.execute('''
-        CREATE TABLE taps (
+        CREATE TABLE IF NOT EXISTS taps (
             'idTap' integer primary key,
             'idBeer' integer
         )
@@ -53,7 +53,7 @@ def create_database(db_path=None):
         
         # Create change_log table
         cursor.execute('''
-        CREATE TABLE change_log (
+        CREATE TABLE IF NOT EXISTS change_log (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             table_name TEXT NOT NULL,
             operation TEXT NOT NULL,
@@ -65,26 +65,29 @@ def create_database(db_path=None):
         
         # Create version table
         cursor.execute('''
-        CREATE TABLE version (
+        CREATE TABLE IF NOT EXISTS version (
             last_modified TEXT
         )
         ''')
         
-        # Insert initial beer record
-        cursor.execute('''
-        INSERT INTO beers (Name, ABV, Description)
-        VALUES (?, ?, ?)
-        ''', ('Sync', 0.0, 'Waiting for first sync from peer'))
-        
-        # Insert initial tap record
-        cursor.execute('''
-        INSERT INTO taps (idTap, idBeer)
-        VALUES (?, ?)
-        ''', (1, 1))
+        # Check if we need to insert initial data
+        cursor.execute("SELECT COUNT(*) FROM beers")
+        if cursor.fetchone()[0] == 0:
+            # Insert initial beer record
+            cursor.execute('''
+            INSERT INTO beers (Name, ABV, Description)
+            VALUES (?, ?, ?)
+            ''', ('Sync', 0.0, 'Waiting for first sync from peer'))
+            
+            # Insert initial tap record
+            cursor.execute('''
+            INSERT INTO taps (idTap, idBeer)
+            VALUES (?, ?)
+            ''', (1, 1))
         
         # Commit the changes
         conn.commit()
-        print(f"Database created successfully at {db_path}")
+        print(f"Database created/updated successfully at {db_path}")
         
     except sqlite3.Error as e:
         print(f"Error creating database: {e}")
