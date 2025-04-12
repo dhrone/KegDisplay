@@ -7,7 +7,6 @@ from typing import Dict, Any, Optional
 from .ws0010_display import WS0010Display
 from .ws0010_pigpio_display import WS0010PigpioDisplay
 from .ssd1322_display import SSD1322Display
-from .base import DisplayBase
 import traceback
 
 # Try to import VirtualDisplay, but don't fail if it's not available

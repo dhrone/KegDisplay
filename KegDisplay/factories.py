@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
 
 from tinyDisplay.utility import dataset
-from .display import DisplayFactory, DisplayBase
+from .display import DisplayFactory
 from .renderer import SequenceRenderer
 from .data_manager import DataManager
 
@@ -21,7 +21,7 @@ class DisplayFactoryInterface(ABC):
     """Interface for display factories."""
     
     @abstractmethod
-    def create_display(self, config: Dict[str, Any]) -> DisplayBase:
+    def create_display(self, config: Dict[str, Any]) -> object:
         """Create a display based on configuration.
         
         Args:
@@ -40,7 +40,7 @@ class RendererFactoryInterface(ABC):
     """Interface for renderer factories."""
     
     @abstractmethod
-    def create_renderer(self, display: DisplayBase, dataset_obj: Any, config: Dict[str, Any]) -> SequenceRenderer:
+    def create_renderer(self, display: object, dataset_obj: Any, config: Dict[str, Any]) -> SequenceRenderer:
         """Create a renderer based on configuration.
         
         Args:
@@ -98,7 +98,7 @@ class DatasetFactoryInterface(ABC):
 class DefaultDisplayFactory(DisplayFactoryInterface):
     """Default implementation of the display factory."""
     
-    def create_display(self, config: Dict[str, Any]) -> DisplayBase:
+    def create_display(self, config: Dict[str, Any]) -> object:
         """Create a display based on configuration.
         
         Args:
@@ -122,6 +122,9 @@ class DefaultDisplayFactory(DisplayFactoryInterface):
                 **config
             )
             
+            if display is None:
+                raise Exception(f"Failed to create {display_type} display")
+            
             logger.info(f"Created {display_type} display")
             return display
             
@@ -133,7 +136,7 @@ class DefaultDisplayFactory(DisplayFactoryInterface):
 class DefaultRendererFactory(RendererFactoryInterface):
     """Default implementation of the renderer factory."""
     
-    def create_renderer(self, display: DisplayBase, dataset_obj: Any, config: Dict[str, Any]) -> SequenceRenderer:
+    def create_renderer(self, display: object, dataset_obj: Any, config: Dict[str, Any]) -> SequenceRenderer:
         """Create a renderer based on configuration.
         
         In the new approach, we don't need a pre-created dataset since we'll use

@@ -14,12 +14,10 @@ except ImportError:
     TKINTER_AVAILABLE = False
     logging.getLogger("KegDisplay").warning("tkinter not available. Virtual display will not be functional.")
 
-from .base import DisplayBase
-
 logger = logging.getLogger("KegDisplay")
 
 
-class VirtualDisplay(DisplayBase):
+class VirtualDisplay(object):
     """Implementation for a virtual display using tkinter."""
     
     def __init__(self, resolution=(256, 64), zoom=1):
@@ -34,6 +32,9 @@ class VirtualDisplay(DisplayBase):
         self.window = None
         self.canvas = None
         self.photo = None
+        
+        # Initialize the display
+        self.initialize()
         
     def initialize(self):
         """Initialize the virtual display window."""

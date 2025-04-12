@@ -6,12 +6,10 @@ import logging
 from luma.core.interface.serial import spi
 from luma.oled.device import ssd1322
 
-from .base import DisplayBase
-
 logger = logging.getLogger("KegDisplay")
 
 
-class SSD1322Display(DisplayBase):
+class SSD1322Display(ssd1322):
     """Implementation for the SSD1322 display."""
     
     def __init__(self, interface_type='spi', pins=None):
@@ -23,10 +21,7 @@ class SSD1322Display(DisplayBase):
         """
         self.interface_type = interface_type
         self.pins = pins or {}
-        self.device = None
         
-    def initialize(self):
-        """Initialize the display interface."""
         try:
             if self.interface_type == 'spi':
                 # Extract pin configurations with defaults
@@ -43,13 +38,13 @@ class SSD1322Display(DisplayBase):
             else:
                 raise ValueError(f"Unsupported interface type: {self.interface_type}")
             
-            # Create the device
-            self.device = ssd1322(interface, width=256, height=64)
+            # Initialize the parent class
+            super().__init__(interface, width=256, height=64)
             logger.debug("Initialized SSD1322 display")
-            return True
+            
         except Exception as e:
             logger.error(f"Error initializing display: {e}")
-            return False
+            raise
             
     def display(self, image):
         """Display an image on the screen.
@@ -57,18 +52,14 @@ class SSD1322Display(DisplayBase):
         Args:
             image: PIL image to display
         """
-        if self.device:
-            try:
-                # Convert to mode '1' (1-bit) if needed
-                if image.mode != "1":
-                    image = image.convert("1")
-                self.device.display(image)
-                return True
-            except Exception as e:
-                logger.error(f"Error displaying image: {e}")
-                return False
-        else:
-            logger.error("Display not initialized")
+        try:
+            # Convert to mode '1' (1-bit) if needed
+            if image.mode != "1":
+                image = image.convert("1")
+            super().display(image)
+            return True
+        except Exception as e:
+            logger.error(f"Error displaying image: {e}")
             return False
             
     def cleanup(self):
@@ -79,9 +70,9 @@ class SSD1322Display(DisplayBase):
     @property
     def width(self):
         """Get the width of the display."""
-        return self.device.width if self.device else 0
+        return self.width
     
     @property
     def height(self):
         """Get the height of the display."""
-        return self.device.height if self.device else 0 
+        return self.height 
