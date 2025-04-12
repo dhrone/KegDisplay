@@ -100,11 +100,11 @@ done
 
 # Get interface type
 INTERFACE_TYPE=""
-while [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "spi" ]; do
-    read -p "What type of interface is being used? (bitbang/spi): " INTERFACE_TYPE
+while [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "pigpio" ] && [ "$INTERFACE_TYPE" != "spi" ]; do
+    read -p "What type of interface is being used? (bitbang/pigpio/spi): " INTERFACE_TYPE
     INTERFACE_TYPE=$(echo "$INTERFACE_TYPE" | tr '[:upper:]' '[:lower:]')
-    if [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "spi" ]; then
-        error "Invalid choice. Please enter 'bitbang' or 'spi'."
+    if [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "pigpio" ] && [ "$INTERFACE_TYPE" != "spi" ]; then
+        error "Invalid choice. Please enter 'bitbang', 'pigpio', or 'spi'."
     fi
 done
 
@@ -118,12 +118,12 @@ while [ "$INSTALL_TKINTER" != "y" ] && [ "$INSTALL_TKINTER" != "n" ]; do
     fi
 done
 
-# Additional interface settings if using bitbang
+# Additional interface settings if using bitbang or pigpio
 RS_PIN=""
 E_PIN=""
 DATA_PINS=""
 
-if [ "$INTERFACE_TYPE" = "bitbang" ]; then
+if [ "$INTERFACE_TYPE" = "bitbang" ] || [ "$INTERFACE_TYPE" = "pigpio" ]; then
     # Get RS pin
     while ! [[ "$RS_PIN" =~ ^[0-9]+$ ]]; do
         read -p "Enter the RS pin number: " RS_PIN
@@ -174,10 +174,53 @@ apt-get install -y python3 git gcc vim-tiny sqlite3 python3-dev python3-rpi.gpio
     build-essential python3-venv python3-distutils python3-setuptools \
     libssl-dev libncurses5-dev libsqlite3-dev libreadline-dev \
     libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev \
-    gfortran libopenblas-dev liblapack-dev pigpio python3-pigpio || {
+    gfortran libopenblas-dev liblapack-dev || {
     error "Failed to install system dependencies.";
     exit 1;
 }
+
+# Install pigpio if using pigpio interface
+if [ "$INTERFACE_TYPE" = "pigpio" ]; then
+    log "Installing pigpio for pigpio interface..."
+    apt-get install -y pigpio python3-pigpio || {
+        error "Failed to install pigpio.";
+        exit 1;
+    }
+
+    # Configure pigpio daemon
+    log "Configuring pigpio daemon..."
+    # Create systemd service file for pigpiod
+    cat > /etc/systemd/system/pigpiod.service << 'EOF'
+[Unit]
+Description=pigpio daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/pigpiod -l
+Type=forking
+PIDFile=/run/pigpio.pid
+ExecStop=/bin/systemctl kill -s SIGKILL pigpiod
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+    # Enable and start pigpiod service
+    systemctl daemon-reload
+    systemctl enable pigpiod || {
+        error "Failed to enable pigpiod service.";
+        exit 1;
+    }
+    systemctl start pigpiod || {
+        error "Failed to start pigpiod service.";
+        exit 1;
+    }
+
+    # Ensure pigpio socket has correct permissions
+    chmod 666 /var/run/pigpio.sock || {
+        log "Note: pigpio socket permissions could not be set. This might be because the service hasn't created it yet.";
+    }
+fi
 
 # Install tkinter if requested
 if [ "$INSTALL_TKINTER" = "y" ]; then
@@ -207,40 +250,6 @@ if getent group gpio > /dev/null; then
 else
     log "gpio group not found. Creating udev rules for GPIO access."
 fi
-
-# Configure pigpio daemon
-log "Configuring pigpio daemon..."
-# Create systemd service file for pigpiod
-cat > /etc/systemd/system/pigpiod.service << 'EOF'
-[Unit]
-Description=pigpio daemon
-After=network.target
-
-[Service]
-ExecStart=/usr/bin/pigpiod -l
-Type=forking
-PIDFile=/run/pigpio.pid
-ExecStop=/bin/systemctl kill -s SIGKILL pigpiod
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-# Enable and start pigpiod service
-systemctl daemon-reload
-systemctl enable pigpiod || {
-    error "Failed to enable pigpiod service.";
-    exit 1;
-}
-systemctl start pigpiod || {
-    error "Failed to start pigpiod service.";
-    exit 1;
-}
-
-# Ensure pigpio socket has correct permissions
-chmod 666 /var/run/pigpio.sock || {
-    log "Note: pigpio socket permissions could not be set. This might be because the service hasn't created it yet.";
-}
 
 # Create udev rules for GPIO access
 log "Creating udev rules for GPIO access..."
@@ -354,14 +363,14 @@ fi
 
 # Initialize the database
 log "Initializing the database..."
-sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && mkdir -p KegDisplay" || {
+sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && mkdir -p /home/beer/KegDisplay/KegDisplay" || {
     error "Failed to create KegDisplay directory.";
     exit 1;
 }
 
 # Check if the database already exists
-if [ -f "/home/beer/Dev/KegDisplay/KegDisplay/beer.db" ]; then
-    log "Database already exists at /home/beer/Dev/KegDisplay/KegDisplay/beer.db"
+if [ -f "/home/beer/KegDisplay/KegDisplay/beer.db" ]; then
+    log "Database already exists at /home/beer/KegDisplay/KegDisplay/beer.db"
     read -p "Do you want to reinitialize the database? This will overwrite the existing database. (y/n): " REINIT_DB
     REINIT_DB=$(echo "$REINIT_DB" | tr '[:upper:]' '[:lower:]')
     if [ "$REINIT_DB" != "y" ]; then
@@ -386,15 +395,9 @@ else
 fi
 
 # Verify the database was created in the correct location
-if [ ! -f "/home/beer/Dev/KegDisplay/KegDisplay/beer.db" ]; then
-    log "Database not found in the expected location. Checking if it exists elsewhere..."
-    # Check if the database exists in the parent directory
-    if [ -f "/home/beer/Dev/KegDisplay/beer.db" ]; then
-        log "Database exists in the parent directory. This is fine if you're using a custom configuration."
-    else
-        error "Database was not created. Please check the application logs for more information.";
-        exit 1;
-    fi
+if [ ! -f "/home/beer/KegDisplay/KegDisplay/beer.db" ]; then
+    error "Database was not created in the expected location. Please check the application logs for more information.";
+    exit 1;
 fi
 
 log "Database initialization completed."
@@ -412,7 +415,7 @@ cp /home/beer/Dev/KegDisplay/taggstaps.service /etc/systemd/system/ || {
 # Customize the taggstaps service file with the correct parameters
 log "Customizing taggstaps service configuration..."
 # Use sed to modify the service file with the appropriate command
-sed -i "s|ExecStart=.*|ExecStart=/home/beer/.local/bin/poetry run python -m KegDisplay.taggstaps --tap $TAP_NUMBER --display $DISPLAY_TYPE --interface $INTERFACE_TYPE$([ "$INTERFACE_TYPE" = "bitbang" ] && echo " --RS $RS_PIN --E $E_PIN --PINS $DATA_PINS")|" /etc/systemd/system/taggstaps.service || {
+sed -i "s|ExecStart=.*|ExecStart=/home/beer/.local/bin/poetry run python -m KegDisplay.taggstaps --tap $TAP_NUMBER --display $DISPLAY_TYPE --interface $INTERFACE_TYPE$([ "$INTERFACE_TYPE" = "bitbang" ] || [ "$INTERFACE_TYPE" = "pigpio" ] && echo " --RS $RS_PIN --E $E_PIN --PINS $DATA_PINS")|" /etc/systemd/system/taggstaps.service || {
     error "Failed to update taggstaps.service configuration.";
     exit 1;
 }
