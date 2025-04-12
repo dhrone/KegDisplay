@@ -37,7 +37,8 @@ install_poetry_dependencies() {
         fi
         
         # Check if the error is related to the lock file
-        if sudo -u beer bash -c "cd $directory && /home/beer/.poetry/bin/poetry lock --no-update" 2>&1 | grep -q "Lock file is out of date"; then
+        log "Checking lock file status..."
+        if sudo -u beer bash -c "cd $directory && /home/beer/.poetry/bin/poetry lock" 2>&1 | grep -q "Lock file is out of date"; then
             log "Lock file is out of date. Updating lock file..."
             if sudo -u beer bash -c "cd $directory && /home/beer/.poetry/bin/poetry lock"; then
                 log "Lock file updated successfully. Retrying installation..."
