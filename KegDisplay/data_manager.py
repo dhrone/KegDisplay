@@ -167,12 +167,6 @@ class DataManager:
                     }
                     self.renderer.update_dataset("beers", beer_data, merge=True)
                     logger.info(f"Updated beer data for tap {tapnr}: {beer_row['Name']}")
-                    
-                    # Force sequence regeneration
-                    self.renderer.image_sequence = self.renderer.generate_image_sequence()
-                    self.renderer.sequence_index = 0
-                    self.renderer.last_frame_time = current_time
-                    logger.info(f"Generated new sequence with {len(self.renderer.image_sequence)} frames")
                     return True
                     
             # Check if current beer data changed
@@ -196,12 +190,6 @@ class DataManager:
                         }
                         self.renderer.update_dataset("beers", beer_data, merge=True)
                         logger.info(f"Updated beer data for beer {self.current_beer_id}: {beer_row['Name']}")
-                        
-                        # Force sequence regeneration
-                        self.renderer.image_sequence = self.renderer.generate_image_sequence()
-                        self.renderer.sequence_index = 0
-                        self.renderer.last_frame_time = current_time
-                        logger.info(f"Generated new sequence with {len(self.renderer.image_sequence)} frames")
                         return True
                     
             return False
