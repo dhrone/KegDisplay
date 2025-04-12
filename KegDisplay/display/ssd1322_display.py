@@ -13,7 +13,7 @@ logger = logging.getLogger("KegDisplay")
 class SSD1322Display(ssd1322):
     """Implementation for the SSD1322 display."""
     
-    def __init__(self, interface_type='spi', pins=None, mode='1'):
+    def __init__(self, interface_type='spi', pins=None, **kwargs):
         """Initialize the SSD1322 display.
         
         Args:
@@ -21,6 +21,8 @@ class SSD1322Display(ssd1322):
             pins: Dictionary of pin settings (for SPI: DC, RST)
             mode: Display mode ('1' for 1-bit or 'rgb' for RGB)
         """
+
+        mode = kwargs.get('mode', '1')
         if mode not in ['1', 'rgb']:
             raise ValueError(f"Invalid mode '{mode}'. Must be either '1' or 'rgb'")
             
@@ -74,7 +76,7 @@ class SSD1322Display(ssd1322):
             logger.debug("Image displayed successfully")
             return True
         except AssertionError as e:
-            logger.error(f"Image mode mismatch: Expected mode {self.mode}, got {image.mode}")
+            logger.error(f"Image mode mismatch: Expected mode {self.mode}, got {image.mode}\n{traceback.format_exc()}")
             return False
         except Exception as e:
             logger.error(f"Error displaying image: {e}\n{traceback.format_exc()}")
