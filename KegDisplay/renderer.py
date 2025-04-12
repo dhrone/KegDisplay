@@ -423,46 +423,35 @@ class SequenceRenderer:
         current_time = time.time()
         current_image, duration = self.image_sequence[self.sequence_index]
         
-        # Use the sequence's duration for this frame
-        adjusted_target_time = max(0.005, duration)
-        
         # Check if it's time to display the next frame
-        if current_time - self.last_frame_time >= adjusted_target_time:
-            frame_start = time.time()
-            
+        if current_time - self.last_frame_time >= duration:
             # Display the current frame
             self.display.display(current_image)
             
-            # Capture timestamp after displaying the frame
-            frame_end = time.time()
-            self.last_frame_time = frame_end
-            
-            # Advance to next frame
+            # Update timing and counters
+            self.last_frame_time = current_time
             self.sequence_index = (self.sequence_index + 1) % len(self.image_sequence)
             
-            # Update frame rate statistics - only count frames that are actually displayed
-            if duration <= self.target_frame_time:
+            # Only count frames that are actually being displayed
+            if duration <= target_frame_time:
                 self.frame_count += 1
                 self.frames_since_last_check += 1
-                self.current_fps = self.frame_count / (frame_end - self.fps_start_time)
+                self.current_fps = self.frame_count / (current_time - self.fps_start_time)
             
-            # In debug mode, log FPS stats every 60 seconds
-            if debug_mode and (frame_end - self.last_stats_time >= 60):
-                elapsed_since_last = frame_end - self.last_stats_time
+            # Debug logging (only if enabled and enough time has passed)
+            if debug_mode and (current_time - self.last_stats_time >= 60):
+                elapsed_since_last = current_time - self.last_stats_time
                 fps_since_last = self.frames_since_last_check / elapsed_since_last
                 
-                # Check if we're significantly below target
-                fps_ratio = fps_since_last / target_fps
-                if fps_ratio < 0.9:  # 10% below target is considered significant
+                if fps_since_last < target_fps * 0.9:
                     logger.warning(f"Performance alert: Average FPS is {fps_since_last:.2f}, " 
-                                  f"which is {(1-fps_ratio)*100:.1f}% below target of {target_fps}")
+                                  f"which is {(1-fps_since_last/target_fps)*100:.1f}% below target of {target_fps}")
                 else:
                     logger.info(f"Performance stats: Average FPS is {fps_since_last:.2f} " 
                                f"(target: {target_fps})")
                 
-                # Reset counters for the next check period
                 self.frames_since_last_check = 0
-                self.last_stats_time = frame_end
+                self.last_stats_time = current_time
                 
             return True
             
