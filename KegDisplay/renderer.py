@@ -80,9 +80,18 @@ class SequenceRenderer:
         else:
             logger.debug("Renderer initialized without initial tap information")
         
-        # Target frame time in seconds
-        target_frame_time = 1.0 / 30  # Default to 30 FPS
-        self.target_frame_time = target_frame_time  # Store for external access
+        # Initialize config values
+        self.target_fps = 30  # Default value
+        self.debug_mode = False
+        self.target_frame_time = 1.0 / self.target_fps
+        
+        # Update config values if dataset is available
+        if dataset_obj and hasattr(dataset_obj, 'get'):
+            sys_data = dataset_obj.get('sys', {})
+            if isinstance(sys_data, dict):
+                self.target_fps = sys_data.get('target_fps', 30)
+                self.debug_mode = sys_data.get('debug', False)
+                self.target_frame_time = 1.0 / self.target_fps
         
     def load_page(self, page_path):
         """Load a page template from a YAML file.
@@ -402,23 +411,7 @@ class SequenceRenderer:
             bool: True if frame was displayed, False otherwise
         """
         if not self.image_sequence:
-            logger.debug("No image sequence available")
             return False
-        
-        # Get config values
-        target_fps = 30  # Default value
-        debug_mode = False
-        
-        # If we have access to the config, get the actual values
-        if hasattr(self.main_display, '_dataset') and self.main_display._dataset:
-            sys_data = self.main_display._dataset.get('sys', {})
-            if isinstance(sys_data, dict):
-                target_fps = sys_data.get('target_fps', 30)
-                debug_mode = sys_data.get('debug', False)
-        
-        # Target frame time in seconds
-        target_frame_time = 1.0 / target_fps
-        self.target_frame_time = target_frame_time  # Store for external access
             
         current_time = time.time()
         current_image, duration = self.image_sequence[self.sequence_index]
@@ -433,22 +426,22 @@ class SequenceRenderer:
             self.sequence_index = (self.sequence_index + 1) % len(self.image_sequence)
             
             # Only count frames that are actually being displayed
-            if duration <= target_frame_time:
+            if duration <= self.target_frame_time:
                 self.frame_count += 1
                 self.frames_since_last_check += 1
                 self.current_fps = self.frame_count / (current_time - self.fps_start_time)
             
             # Debug logging (only if enabled and enough time has passed)
-            if debug_mode and (current_time - self.last_stats_time >= 60):
+            if self.debug_mode and (current_time - self.last_stats_time >= 60):
                 elapsed_since_last = current_time - self.last_stats_time
                 fps_since_last = self.frames_since_last_check / elapsed_since_last
                 
-                if fps_since_last < target_fps * 0.9:
+                if fps_since_last < self.target_fps * 0.9:
                     logger.warning(f"Performance alert: Average FPS is {fps_since_last:.2f}, " 
-                                  f"which is {(1-fps_since_last/target_fps)*100:.1f}% below target of {target_fps}")
+                                  f"which is {(1-fps_since_last/self.target_fps)*100:.1f}% below target of {self.target_fps}")
                 else:
                     logger.info(f"Performance stats: Average FPS is {fps_since_last:.2f} " 
-                               f"(target: {target_fps})")
+                               f"(target: {self.target_fps})")
                 
                 self.frames_since_last_check = 0
                 self.last_stats_time = current_time
