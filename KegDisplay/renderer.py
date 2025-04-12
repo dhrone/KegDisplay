@@ -434,29 +434,29 @@ class SequenceRenderer:
             self.display.display(current_image)
             
             # Capture timestamp after displaying the frame
-            self.last_frame_time = current_time
+            frame_end = time.time()
+            self.last_frame_time = frame_end
             
             # Advance to next frame
             self.sequence_index = (self.sequence_index + 1) % len(self.image_sequence)
             
-            # Update frame rate statistics
-            self.frame_count += 1
-            self.frames_since_last_check += 1
-            
-            # Calculate current FPS - only count frames that are actually displayed
-            elapsed = current_time - self.fps_start_time
-            if elapsed > 0:
-                # Only count frames that are actually displayed (not static periods)
-                if duration <= self.target_frame_time:
+            # Update frame rate statistics - only count frames that are actually displayed
+            if duration <= self.target_frame_time:
+                self.frame_count += 1
+                self.frames_since_last_check += 1
+                
+                # Calculate current FPS based on actual frame display time
+                elapsed = frame_end - self.fps_start_time
+                if elapsed > 0:
                     self.current_fps = self.frame_count / elapsed
-                else:
-                    # For static periods, don't count the frame in FPS calculation
-                    self.frame_count -= 1
-                    self.frames_since_last_check -= 1
+            else:
+                # For static periods, don't count the frame in FPS calculation
+                # but still update the last frame time
+                pass
             
             # In debug mode, log FPS stats every 60 seconds
-            if debug_mode and (current_time - self.last_stats_time >= 60):
-                elapsed_since_last = current_time - self.last_stats_time
+            if debug_mode and (frame_end - self.last_stats_time >= 60):
+                elapsed_since_last = frame_end - self.last_stats_time
                 fps_since_last = self.frames_since_last_check / elapsed_since_last if elapsed_since_last > 0 else 0
                 
                 # Check if we're significantly below target
@@ -470,7 +470,7 @@ class SequenceRenderer:
                 
                 # Reset counters for the next check period
                 self.frames_since_last_check = 0
-                self.last_stats_time = current_time
+                self.last_stats_time = frame_end
                 
             return True
             
