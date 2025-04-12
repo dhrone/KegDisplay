@@ -70,6 +70,11 @@ class Application:
             if debug_mode:
                 logger.info(f"Debug mode enabled. Target FPS: {target_fps}")
     
+        # Set initial tap number from config
+        tap_number = self.config_manager.get_config('tap')
+        self.renderer.update_dataset('sys', {'tapnr': tap_number}, merge=True)
+        logger.info(f"Using tap number {tap_number} from configuration")
+
         # Initialize display with splash screen
         logger.info("Initializing display with splash screen...")
         splash_image = self.renderer.render('start')
@@ -123,14 +128,7 @@ class Application:
             
         if len(tap_data) == 0:
             logger.warning("No tap mappings found in database")
-            self.renderer.update_dataset("taps", { 1: 1}, merge=True)
-        
-        # Make sure we have a default tap selected
-        if not self.renderer._dataset.get('sys', {}).get('tapnr'):
-            # Use tap number from config
-            tap_number = self.config_manager.get_config('tap')
-            self.renderer.update_dataset('sys', {'tapnr': tap_number}, merge=True)
-            logger.info(f"Using tap number {tap_number} from configuration")
+            self.renderer.update_dataset("taps", { tap_number: 1}, merge=True)
         
         # Generate image sequence for the first beer canvas
         self.renderer.image_sequence = self.renderer.generate_image_sequence()
