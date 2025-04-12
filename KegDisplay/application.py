@@ -195,10 +195,10 @@ class Application:
                         self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)
                 
                 # Display current frame
-                self.renderer.display_next_frame()
+                duration = self.renderer.display_next_frame()
                 
                 # Calculate time until next frame more accurately
-                next_frame_time = self.renderer.last_frame_time + self.renderer.target_frame_time
+                next_frame_time = self.renderer.last_frame_time + duration
                 sleep_time = max(0, next_frame_time - time.time())
                 if sleep_time > 0:
                     # Only sleep if we have enough time to make it worthwhile

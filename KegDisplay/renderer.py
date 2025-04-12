@@ -402,23 +402,21 @@ class SequenceRenderer:
             bool: True if frame was displayed, False otherwise
         """
         if not self.image_sequence:
-            return False
+            return 0.0
             
-        current_time = time.time()
         current_image, duration = self.image_sequence[self.sequence_index]
+     
+        # Record the current frame
+        self.last_frame_time = time.time()
+
+        # Display the current frame
+        self.display.display(current_image)
         
-        # Check if it's time to display the next frame
-        if current_time - self.last_frame_time >= duration:
-            # Display the current frame
-            self.display.display(current_image)
-            
-            # Update timing
-            self.last_frame_time = current_time
-            self.sequence_index = (self.sequence_index + 1) % len(self.image_sequence)
+        # update sequence index
+        self.sequence_index = (self.sequence_index + 1) % len(self.image_sequence)
+
+        return duration
                 
-            return True
-            
-        return False
 
     # Kept for backward compatibility but does nothing now
     def sync_datasets(self):
