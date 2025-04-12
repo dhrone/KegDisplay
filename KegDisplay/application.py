@@ -127,8 +127,10 @@ class Application:
         
         # Make sure we have a default tap selected
         if not self.renderer._dataset.get('sys', {}).get('tapnr'):
-            # Default to tap 1
-            self.renderer.update_dataset('sys', {'tapnr': 1}, merge=True)
+            # Use tap number from config
+            tap_number = self.config_manager.get_config('tap')
+            self.renderer.update_dataset('sys', {'tapnr': tap_number}, merge=True)
+            logger.info(f"Using tap number {tap_number} from configuration")
         
         # Generate image sequence for the first beer canvas
         self.renderer.image_sequence = self.renderer.generate_image_sequence()

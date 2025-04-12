@@ -29,11 +29,11 @@ FONTS:
   normal:
     type: truetype
     file: DejaVuSans.ttf
-    size: 16 
+    size: 20
   small:
     type: truetype
     file: DejaVuSans.ttf
-    size: 14
+    size: 16
   large:
     type: truetype
     file: DejaVuSans.ttf

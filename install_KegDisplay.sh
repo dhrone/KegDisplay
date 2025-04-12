@@ -174,7 +174,7 @@ apt-get install -y python3 git gcc vim-tiny sqlite3 python3-dev python3-rpi.gpio
     build-essential python3-venv python3-distutils python3-setuptools \
     libssl-dev libncurses5-dev libsqlite3-dev libreadline-dev \
     libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev \
-    gfortran libopenblas-dev liblapack-dev fonts-dejavu-core || {
+    gfortran libopenblas-dev liblapack-dev fonts-dejavu-core openssl || {
     error "Failed to install system dependencies.";
     exit 1;
 }
@@ -517,6 +517,48 @@ if [ "$INSTALL_TYPE" = "primary" ]; then
     }
     success "KegDisplay primary system has been installed successfully!"
     log "The web interface is available at http://$(hostname -I | awk '{print $1}'):8080"
+
+    # If this is a primary installation, generate SSL certificate
+    log "Generating SSL certificate for web interface..."
+    # Create directories if they don't exist
+    mkdir -p /etc/ssl/private
+    mkdir -p /etc/ssl/certs
+    
+    # Set proper permissions on parent directories
+    chmod 750 /etc/ssl/private
+    chmod 755 /etc/ssl/certs
+    chown root:ssl-cert /etc/ssl/private
+    
+    # Generate certificate and key
+    openssl req -x509 -newkey rsa:4096 -keyout /etc/ssl/private/kegdisplay.key -out /etc/ssl/certs/kegdisplay.crt -days 365 -nodes -subj "/CN=localhost" || {
+        error "Failed to generate SSL certificate.";
+        exit 1;
+    }
+    
+    # Set proper ownership and permissions
+    chown root:root /etc/ssl/private/kegdisplay.key
+    chown root:root /etc/ssl/certs/kegdisplay.crt
+    chmod 640 /etc/ssl/private/kegdisplay.key
+    chmod 644 /etc/ssl/certs/kegdisplay.crt
+    
+    # Create ssl-cert group if it doesn't exist and add beer user to it
+    if ! getent group ssl-cert > /dev/null; then
+        groupadd ssl-cert || {
+            error "Failed to create ssl-cert group.";
+            exit 1;
+        }
+        log "Created ssl-cert group."
+    fi
+    
+    usermod -a -G ssl-cert beer || {
+        error "Failed to add beer user to ssl-cert group.";
+        exit 1;
+    }
+    log "Added beer user to ssl-cert group."
+    
+    chgrp ssl-cert /etc/ssl/private/kegdisplay.key
+    
+    log "Note: You will need to log out and log back in for the SSL certificate group permissions to take effect."
 else
     systemctl enable dbsync_service.service || {
         error "Failed to enable dbsync_service service.";
