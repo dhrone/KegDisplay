@@ -1,6 +1,6 @@
 PATHS:
   'images': './images'
-  'fonts': 'fonts/'
+  'fonts': '/usr/share/fonts/truetype/dejavu/'
 
 
 DEFAULTS:
