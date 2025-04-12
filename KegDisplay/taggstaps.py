@@ -47,30 +47,10 @@ def start():
         # Create dependency container
         container = DependencyContainer()
         
-        # Initialize components - IMPORTANT: Pass sys.argv to ensure command line args are used
+        # Initialize components
         try:
-            # Parse command line arguments
-            parser = argparse.ArgumentParser(description='KegDisplay application')
-            parser.add_argument('--display', type=str, choices=['ws0010', 'ssd1322', 'virtual'], help='Display type')
-            parser.add_argument('--interface', type=str, choices=['bitbang', 'spi', 'pigpio'], help='Interface type')
-            parser.add_argument('--RS', type=int, help='RS pin for bitbang interface')
-            parser.add_argument('--E', type=int, help='E pin for bitbang interface')
-            parser.add_argument('--PINS', type=int, nargs='+', help='Data pins for bitbang interface')
-            parser.add_argument('--DC', type=int, default=24, help='DC pin for SPI interface (default: 24)')
-            parser.add_argument('--RST', type=int, default=25, help='RST pin for SPI interface (default: 25)')
-            parser.add_argument('--tap', type=int, help='Tap number')
-            parser.add_argument('--page', type=str, help='Page template file')
-            parser.add_argument('--db', type=str, help='Database file')
-            parser.add_argument('--log-level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], help='Log level')
-            
-            # Parse the arguments
-            args = parser.parse_args()
-            
-            # Convert args to dict for config manager
-            config_args = vars(args)
-            
-            # Initialize components with the parsed arguments
-            config_manager, display, renderer, data_manager = container.create_application_components(config_args)
+            # Initialize components with command line arguments
+            config_manager, display, renderer, data_manager = container.create_application_components(sys.argv[1:])
             
             # Update log level based on config
             log_level = config_manager.get_config('log_level')
