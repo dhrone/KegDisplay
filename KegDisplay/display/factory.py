@@ -8,6 +8,7 @@ from .ws0010_display import WS0010Display
 from .ws0010_pigpio_display import WS0010PigpioDisplay
 from .ssd1322_display import SSD1322Display
 from .base import DisplayBase
+import traceback
 
 # Try to import VirtualDisplay, but don't fail if it's not available
 try:
@@ -70,5 +71,5 @@ class DisplayFactory:
             logger.error(f"Failed to create display: {e}")
             return None
         except Exception as e:
-            logger.error(f"Unexpected error creating display: {e}")
+            logger.error(f"Unexpected error creating display: %s\n%s", e, traceback.format_exc())
             return None 
