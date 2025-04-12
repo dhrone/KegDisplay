@@ -120,7 +120,7 @@ class SequenceRenderer:
             
             return True
         except Exception as e:
-            logger.error(f"Error loading page: {e}")
+            logger.error(f"Error loading page: {e} {traceback.format_exc()}")
             return False
     
     def update_dataset(self, key, value, merge=False):
