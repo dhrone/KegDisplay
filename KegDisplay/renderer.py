@@ -443,10 +443,16 @@ class SequenceRenderer:
             self.frame_count += 1
             self.frames_since_last_check += 1
             
-            # Calculate current FPS
+            # Calculate current FPS - only count frames that are actually displayed
             elapsed = current_time - self.fps_start_time
             if elapsed > 0:
-                self.current_fps = self.frame_count / elapsed
+                # Only count frames that are actually displayed (not static periods)
+                if duration <= self.target_frame_time:
+                    self.current_fps = self.frame_count / elapsed
+                else:
+                    # For static periods, don't count the frame in FPS calculation
+                    self.frame_count -= 1
+                    self.frames_since_last_check -= 1
             
             # In debug mode, log FPS stats every 60 seconds
             if debug_mode and (current_time - self.last_stats_time >= 60):

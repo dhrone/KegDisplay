@@ -91,12 +91,16 @@ class Application:
                 beer_data = self.renderer._dataset.get('beers', {})
                 tap_data = self.renderer._dataset.get('taps', {})
                 
-                if len(beer_data) > 0 and len(tap_data) > 0:
-                    logger.info(f"Successfully loaded {len(beer_data)} beers and {len(tap_data)} taps")
+                # Exclude __timestamp__ key from count
+                beer_count = len([k for k in beer_data.keys() if k != '__timestamp__'])
+                tap_count = len([k for k in tap_data.keys() if k != '__timestamp__'])
+                
+                if beer_count > 0 and tap_count > 0:
+                    logger.info(f"Successfully loaded {beer_count} beers and {tap_count} taps")
                     data_loaded = True
                     break
                 
-                logger.debug(f"Waiting for data... (beers: {len(beer_data)}, taps: {len(tap_data)})")
+                logger.debug(f"Waiting for data... (beers: {beer_count}, taps: {tap_count})")
                 time.sleep(retry_interval)
             except Exception as e:
                 logger.error(f"Error loading initial data: {e}")
