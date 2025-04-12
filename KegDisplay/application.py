@@ -221,7 +221,4 @@ class Application:
         logger.debug("Cleaning up resources")
         
         if self.data_manager:
-            self.data_manager.cleanup()
-            
-        if self.renderer.display:
-            self.renderer.display.cleanup() 
+            self.data_manager.cleanup() 
