@@ -43,16 +43,31 @@ class DisplayFactory:
             if display_type == 'ws0010':
                 if interface_type == 'bitbang':
                     logger.debug("Creating WS0010 display with luma.core bitbang interface")
-                    return WS0010Display(**kwargs)
+                    # Filter kwargs for WS0010Display
+                    display_kwargs = {
+                        'interface_type': interface_type,
+                        'pins': kwargs.get('pins', {})
+                    }
+                    return WS0010Display(**display_kwargs)
                 elif interface_type == 'pigpio':
                     logger.debug("Creating WS0010 display with pigpio interface")
-                    return WS0010PigpioDisplay(**kwargs)
+                    # Filter kwargs for WS0010PigpioDisplay
+                    display_kwargs = {
+                        'interface_type': interface_type,
+                        'pins': kwargs.get('pins', {})
+                    }
+                    return WS0010PigpioDisplay(**display_kwargs)
                 else:
                     logger.error(f"Unsupported interface '{interface_type}' for WS0010 display")
                     return None
             elif display_type == 'ssd1322':
                 if interface_type == 'spi':
-                    return SSD1322Display(**kwargs)
+                    # Filter kwargs for SSD1322Display
+                    display_kwargs = {
+                        'interface_type': interface_type,
+                        'pins': kwargs.get('pins', {})
+                    }
+                    return SSD1322Display(**display_kwargs)
                 else:
                     logger.error(f"Unsupported interface '{interface_type}' for SSD1322 display")
                     return None
@@ -61,9 +76,12 @@ class DisplayFactory:
                     logger.error("Virtual display requested but not available. Install tkinter to use this feature.")
                     raise ValueError("Virtual display is not available. Install tkinter to use this feature.")
                 logger.debug("Creating virtual display")
-                resolution = kwargs.get('resolution', (256, 64))
-                zoom = kwargs.get('zoom', 3)
-                return VirtualDisplay(resolution=resolution, zoom=zoom)
+                # Filter kwargs for VirtualDisplay
+                display_kwargs = {
+                    'resolution': kwargs.get('resolution', (256, 64)),
+                    'zoom': kwargs.get('zoom', 3)
+                }
+                return VirtualDisplay(**display_kwargs)
             else:
                 logger.error(f"Unsupported display type '{display_type}'")
                 return None
