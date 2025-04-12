@@ -10,11 +10,11 @@ def create_database(db_path=None):
     
     Args:
         db_path (str, optional): Path where the database should be created.
-                               Defaults to /home/beer/KegDisplay/KegDisplay/beer.db
+                                 Defaults to /home/beer/Dev/KegDisplay/KegDisplay/beer.db
     """
     # Set default path if not provided
     if db_path is None:
-        db_path = "/home/beer/KegDisplay/KegDisplay/beer.db"
+        db_path = "/home/beer/Dev/KegDisplay/KegDisplay/beer.db"
     
     # Ensure the directory exists
     db_dir = os.path.dirname(db_path)
