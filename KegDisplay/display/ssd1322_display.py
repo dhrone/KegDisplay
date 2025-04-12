@@ -5,6 +5,7 @@ Implementation for the SSD1322 display
 import logging
 from luma.core.interface.serial import spi
 from luma.oled.device import ssd1322
+import traceback
 
 logger = logging.getLogger("KegDisplay")
 
@@ -21,6 +22,8 @@ class SSD1322Display(ssd1322):
         """
         self.interface_type = interface_type
         self.pins = pins or {}
+
+        logger.info(f"Initializing SSD1322 display with interface type: {self.interface_type} and pins: {self.pins}")
         
         try:
             if self.interface_type == 'spi':
@@ -59,7 +62,7 @@ class SSD1322Display(ssd1322):
             super().display(image)
             return True
         except Exception as e:
-            logger.error(f"Error displaying image: {e}")
+            logger.error(f"Error displaying image: {e}\n{traceback.format_exc()}")
             return False
             
     def cleanup(self):
