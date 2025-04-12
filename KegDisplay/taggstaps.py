@@ -51,8 +51,8 @@ def start():
         try:
             # Parse command line arguments
             parser = argparse.ArgumentParser(description='KegDisplay application')
-            parser.add_argument('--display', type=str, help='Display type')
-            parser.add_argument('--interface', type=str, help='Interface type')
+            parser.add_argument('--display', type=str, choices=['ws0010', 'ssd1322', 'virtual'], help='Display type')
+            parser.add_argument('--interface', type=str, choices=['bitbang', 'spi', 'pigpio'], help='Interface type')
             parser.add_argument('--RS', type=int, help='RS pin for bitbang interface')
             parser.add_argument('--E', type=int, help='E pin for bitbang interface')
             parser.add_argument('--PINS', type=int, nargs='+', help='Data pins for bitbang interface')
@@ -61,7 +61,7 @@ def start():
             parser.add_argument('--tap', type=int, help='Tap number')
             parser.add_argument('--page', type=str, help='Page template file')
             parser.add_argument('--db', type=str, help='Database file')
-            parser.add_argument('--log_level', type=str, help='Log level')
+            parser.add_argument('--log-level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], help='Log level')
             
             args = parser.parse_args(sys.argv[1:])
             
