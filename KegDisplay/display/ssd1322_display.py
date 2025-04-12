@@ -56,10 +56,14 @@ class SSD1322Display(ssd1322):
             image: PIL image to display
         """
         try:
-            # Convert to mode '1' (1-bit) if needed
-            if image.mode != "1":
-                image = image.convert("1")
+            # Convert to mode 'L' (8-bit greyscale) if needed
+            if image.mode != "L":
+                logger.debug(f"Converting image from mode {image.mode} to mode L")
+                image = image.convert("L")
+            
+            # Display the image
             super().display(image)
+            logger.debug("Image displayed successfully")
             return True
         except Exception as e:
             logger.error(f"Error displaying image: {e}\n{traceback.format_exc()}")
