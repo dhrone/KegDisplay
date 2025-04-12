@@ -63,13 +63,14 @@ def start():
             parser.add_argument('--db', type=str, help='Database file')
             parser.add_argument('--log-level', type=str, choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'], help='Log level')
             
-            args = parser.parse_args(sys.argv[1:])
+            # Parse the arguments
+            args = parser.parse_args()
             
             # Convert args to dict for config manager
             config_args = vars(args)
             
             # Initialize components with the parsed arguments
-            config_manager, display, renderer, data_manager = container.create_application_components(args=config_args)
+            config_manager, display, renderer, data_manager = container.create_application_components(config_args)
             
             # Update log level based on config
             log_level = config_manager.get_config('log_level')
