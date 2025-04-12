@@ -67,12 +67,3 @@ class SSD1322Display(ssd1322):
         # No specific cleanup needed for SSD1322
         pass
     
-    @property
-    def width(self):
-        """Get the width of the display."""
-        return self.width
-    
-    @property
-    def height(self):
-        """Get the height of the display."""
-        return self.height 
