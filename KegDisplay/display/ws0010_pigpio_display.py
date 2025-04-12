@@ -34,7 +34,7 @@ class WS0010PigpioDisplay(ws0010):
             interface = bitbang_6800_pigpio(gpio=gpio, **kwargs)
             
             # Initialize the base class with our interface
-            super().__init__(interface, **kwargs)
+            super().__init__(interface, width=100, height=16, **kwargs)
             
             logger.info("Initialized WS0010 display with pigpio interface")
         except ImportError as e:
@@ -68,14 +68,4 @@ class WS0010PigpioDisplay(ws0010):
             self._interface.cleanup()
             logger.info("Cleaned up WS0010 display resources")
         except Exception as e:
-            logger.error("Error during cleanup: %s", e)
-
-    @property
-    def width(self):
-        """Get the width of the display."""
-        return 100 if self.device else 0
-    
-    @property
-    def height(self):
-        """Get the height of the display."""
-        return 16 if self.device else 0 
+            logger.error("Error during cleanup: %s", e) 

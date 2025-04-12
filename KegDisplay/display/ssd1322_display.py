@@ -18,8 +18,8 @@ class SSD1322Display(DisplayBase):
         """Initialize the SSD1322 display.
         
         Args:
-            interface_type: Type of interface (typically 'spi')
-            pins: Dictionary of pin settings (not typically used for SPI)
+            interface_type: Type of interface ('spi' or 'i2c')
+            pins: Dictionary of pin settings (for SPI: SCLK, MOSI, DC, RST, CS)
         """
         self.interface_type = interface_type
         self.pins = pins or {}
@@ -29,20 +29,30 @@ class SSD1322Display(DisplayBase):
         """Initialize the display interface."""
         try:
             if self.interface_type == 'spi':
-                interface = spi()
-                logger.debug("Initialized SPI interface for SSD1322")
+                # Extract pin configurations with defaults
+                sclk = self.pins.get('SCLK', 11)
+                mosi = self.pins.get('MOSI', 10)
+                dc = self.pins.get('DC', 9)
+                rst = self.pins.get('RST', 8)
+                cs = self.pins.get('CS', 7)
+                
+                # Create the interface
+                interface = spi(device=0, port=0, bus_speed_hz=16000000,
+                              sclk=sclk, mosi=mosi, dc=dc, rst=rst, cs=cs)
+                logger.debug(f"Initialized SPI interface with SCLK={sclk}, MOSI={mosi}, DC={dc}, RST={rst}, CS={cs}")
+            elif self.interface_type == 'i2c':
+                from luma.core.interface.serial import i2c
+                interface = i2c(port=1, address=0x3C)
+                logger.debug("Initialized I2C interface")
             else:
-                # SSD1322 typically uses SPI, but we'll allow for flexibility
-                from luma.core.interface.serial import spi
-                interface = spi()
-                logger.debug(f"Falling back to SPI interface for unsupported type: {self.interface_type}")
+                raise ValueError(f"Unsupported interface type: {self.interface_type}")
             
             # Create the device
-            self.device = ssd1322(serial_interface=interface, mode='1')
+            self.device = ssd1322(interface, width=256, height=64)
             logger.debug("Initialized SSD1322 display")
             return True
         except Exception as e:
-            logger.error(f"Error initializing SSD1322 display: {e}")
+            logger.error(f"Error initializing display: {e}")
             return False
             
     def display(self, image):
@@ -59,10 +69,10 @@ class SSD1322Display(DisplayBase):
                 self.device.display(image)
                 return True
             except Exception as e:
-                logger.error(f"Error displaying image on SSD1322: {e}")
+                logger.error(f"Error displaying image: {e}")
                 return False
         else:
-            logger.error("SSD1322 display not initialized")
+            logger.error("Display not initialized")
             return False
             
     def cleanup(self):
@@ -73,9 +83,9 @@ class SSD1322Display(DisplayBase):
     @property
     def width(self):
         """Get the width of the display."""
-        return 256 if self.device else 0
+        return self.device.width if self.device else 0
     
     @property
     def height(self):
         """Get the height of the display."""
-        return 64 if self.device else 0 
+        return self.device.height if self.device else 0 
