@@ -111,19 +111,23 @@ class DefaultDisplayFactory(DisplayFactoryInterface):
             Exception: If display creation fails
         """
         try:
+            # Extract display type and interface type
+            display_type = config['display']
+            interface_type = config['interface']
+            
+            # Create the display with all other config as kwargs
             display = DisplayFactory.create_display(
-                config['display'],
-                interface_type=config['interface'],
-                pins=config.get('pins', {}),
+                display_type,
+                interface_type=interface_type,
                 **config
             )
             
-            logger.info(f"Created {config['display']} display")
+            logger.info(f"Created {display_type} display")
             return display
             
         except Exception as e:
-            logger.error(f"Failed to create {config['display']} display: {e}")
-            raise Exception(f"Failed to create {config['display']} display: {e}")
+            logger.error(f"Failed to create {display_type} display: {e}")
+            raise Exception(f"Failed to create {display_type} display: {e}")
 
 
 class DefaultRendererFactory(RendererFactoryInterface):
