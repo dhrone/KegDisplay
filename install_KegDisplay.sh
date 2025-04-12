@@ -313,10 +313,10 @@ sudo -u beer bash -c "curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs 
 }
 
 # Source Rust environment
-source "$HOME/.cargo/env" || {
+if ! sudo -u beer bash -c "source /home/beer/.cargo/env"; then
     error "Failed to source Rust environment.";
     exit 1;
-}
+fi
 
 # Install Poetry
 log "Installing Poetry..."
