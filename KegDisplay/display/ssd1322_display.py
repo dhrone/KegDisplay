@@ -81,3 +81,9 @@ class SSD1322Display(ssd1322):
             logger.error(f"Error displaying image: {e}\n{traceback.format_exc()}")
             return False
             
+    def cleanup(self):
+        """Clean up resources."""
+        logger.debug("Cleaning up resources")
+        
+        # Calling the cleanup method of the parent class
+        super().cleanup()
