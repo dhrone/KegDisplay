@@ -195,7 +195,7 @@ class Application:
                         self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)
                 
                 # Display current frame
-                frame_displayed = self.renderer.display_next_frame()
+                self.renderer.display_next_frame()
                 
                 # Calculate time until next frame more accurately
                 next_frame_time = self.renderer.last_frame_time + self.renderer.target_frame_time
@@ -203,8 +203,8 @@ class Application:
                 if sleep_time > 0:
                     # Only sleep if we have enough time to make it worthwhile
                     if sleep_time > 0.001:
-                        # time.sleep(sleep_time)  # Commented out to maximize display_next_frame speed
-                        pass  # Added to fix linter error
+                        time.sleep(sleep_time)
+
                 
             except KeyboardInterrupt:
                 logger.info("KeyboardInterrupt received, initiating shutdown")
