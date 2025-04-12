@@ -7,10 +7,12 @@ DEFAULTS:
   display:
     dsize: &dsize [256, 64]
     type: &dtype ssd1322
+    mode: &mode '1'
     
   widgets:
     scroll: &scroll
       type: scroll
+      mode: *mode
       dgap: __self__['size'][0]/4, 0
       size: [256, 22]
       distance: 2
@@ -43,12 +45,14 @@ WIDGETS:
     # STARTING WIDGET
     splash: &splash
         type: text
+        mode: *mode
         dvalue: f"Tap {sys['tapnr']}"
         font: large
 
     # Beer Display
     name: &name
         type: text
+        mode: *mode
         dvalue: f"{beers[taps[sys['tapnr']]]['Name']}"
         font: normal
     description: &description
@@ -58,16 +62,19 @@ WIDGETS:
         effect: *scroll
     abv: &abv
         type: text
+        mode: *mode
         font: tiny
         just: rt
         dvalue: f"{beers[taps[sys['tapnr']]]['ABV']}"
     updb: &updb
         type: text
+        mode: *mode
         font: small
         just: mt
         dvalue: f"Hold my\nBeer!"        
     rectStart: &rectStart
         type: rectangle
+        mode: *mode
         xy: [0, 0, 255, 63]
         fill: black
         outline: black
@@ -77,6 +84,7 @@ CANVASES:
   # PLAY CANVASES
   beerCanvas: &beerCanvas
     type: canvas
+    mode: *mode
     items:
       - <<: *name
         placement: [0, 2]
@@ -90,6 +98,7 @@ CANVASES:
 
   splashCanvas: &splashCanvas
     type: canvas
+    mode: *mode
     items:
       - <<: *splash
         placement: [0, 0, mm]
@@ -103,6 +112,7 @@ CANVASES:
 
   updateCanvas: &updateCanvas
     type: canvas
+    mode: *mode
     items:
       - <<: *updb
         placement: [0, 0, mm]
@@ -116,6 +126,7 @@ CANVASES:
 
 DISPLAY:
   size: *dsize
+  mode: *mode
   items:
     - name: RUN
       <<: *beerCanvas
