@@ -19,7 +19,7 @@ class SSD1322Display(DisplayBase):
         
         Args:
             interface_type: Type of interface ('spi' or 'i2c')
-            pins: Dictionary of pin settings (for SPI: SCLK, MOSI, DC, RST, CS)
+            pins: Dictionary of pin settings (for SPI: DC, RST)
         """
         self.interface_type = interface_type
         self.pins = pins or {}
@@ -30,16 +30,12 @@ class SSD1322Display(DisplayBase):
         try:
             if self.interface_type == 'spi':
                 # Extract pin configurations with defaults
-                sclk = self.pins.get('SCLK', 11)
-                mosi = self.pins.get('MOSI', 10)
-                dc = self.pins.get('DC', 9)
-                rst = self.pins.get('RST', 8)
-                cs = self.pins.get('CS', 7)
+                dc = self.pins.get('DC', 24)
+                rst = self.pins.get('RST', 25)
                 
                 # Create the interface
-                interface = spi(device=0, port=0, bus_speed_hz=16000000,
-                              sclk=sclk, mosi=mosi, dc=dc, rst=rst, cs=cs)
-                logger.debug(f"Initialized SPI interface with SCLK={sclk}, MOSI={mosi}, DC={dc}, RST={rst}, CS={cs}")
+                interface = spi(device=0, port=0, gpio_DC=dc, gpio_RST=rst)
+                logger.debug(f"Initialized SPI interface with DC={dc}, RST={rst}")
             elif self.interface_type == 'i2c':
                 from luma.core.interface.serial import i2c
                 interface = i2c(port=1, address=0x3C)

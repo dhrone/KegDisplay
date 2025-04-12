@@ -20,9 +20,13 @@ class ConfigManager:
             'tap': 1,
             'display': 'ws0010',
             'interface': 'bitbang',
-            'RS': 7,
-            'E': 8,
-            'PINS': [25, 5, 6, 12],
+            'pins': {
+                'RS': 7,
+                'E': 8,
+                'PINS': [25, 5, 6, 12],
+                'DC': 24,
+                'RST': 25
+            },
             'page': 'KegDisplay/page.yaml',
             'db': 'KegDisplay/beer.db',
             'log_level': 'INFO',
@@ -66,6 +70,12 @@ class ConfigManager:
                            type=int,
                            nargs='+',
                            help='Provide a list of data pins if they are needed')
+        parser.add_argument('--DC',
+                           type=int,
+                           help='DC pin for SPI interface')
+        parser.add_argument('--RST',
+                           type=int,
+                           help='RST pin for SPI interface')
         parser.add_argument('--interface',
                            choices=['bitbang', 'spi', 'pigpio'],
                            default='bitbang',
@@ -108,6 +118,8 @@ class ConfigManager:
                     self.config[key] = tuple(value)
                 elif key == 'fps':
                     self.config['target_fps'] = value
+                elif key in ['RS', 'E', 'PINS', 'DC', 'RST']:
+                    self.config['pins'][key] = value
                 else:
                     self.config[key] = value
         
@@ -137,9 +149,9 @@ class ConfigManager:
         if self.config['interface'] in ['bitbang', 'pigpio']:
             # Make sure pins are provided for bitbang interface
             if self.config['display'] == 'ws0010' and (
-                self.config['RS'] is None or 
-                self.config['E'] is None or 
-                not self.config['PINS']
+                self.config['pins']['RS'] is None or 
+                self.config['pins']['E'] is None or 
+                not self.config['pins']['PINS']
             ):
                 logger.error("Missing pin configuration for bitbang interface")
                 return False

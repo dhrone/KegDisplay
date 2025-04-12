@@ -11,6 +11,7 @@ Main module for taggstaps program
 import sys
 import signal
 import os
+import argparse
 
 # Import logging configuration first, before any other modules
 from .log_config import configure_logging, update_log_level, LOGGER_NAME
@@ -48,7 +49,27 @@ def start():
         
         # Initialize components - IMPORTANT: Pass sys.argv to ensure command line args are used
         try:
-            config_manager, display, renderer, data_manager = container.create_application_components(args=sys.argv[1:])
+            # Parse command line arguments
+            parser = argparse.ArgumentParser(description='KegDisplay application')
+            parser.add_argument('--display', type=str, help='Display type')
+            parser.add_argument('--interface', type=str, help='Interface type')
+            parser.add_argument('--RS', type=int, help='RS pin for bitbang interface')
+            parser.add_argument('--E', type=int, help='E pin for bitbang interface')
+            parser.add_argument('--PINS', type=int, nargs='+', help='Data pins for bitbang interface')
+            parser.add_argument('--DC', type=int, default=24, help='DC pin for SPI interface (default: 24)')
+            parser.add_argument('--RST', type=int, default=25, help='RST pin for SPI interface (default: 25)')
+            parser.add_argument('--tap', type=int, help='Tap number')
+            parser.add_argument('--page', type=str, help='Page template file')
+            parser.add_argument('--db', type=str, help='Database file')
+            parser.add_argument('--log_level', type=str, help='Log level')
+            
+            args = parser.parse_args(sys.argv[1:])
+            
+            # Convert args to dict for config manager
+            config_args = vars(args)
+            
+            # Initialize components with the parsed arguments
+            config_manager, display, renderer, data_manager = container.create_application_components(args=config_args)
             
             # Update log level based on config
             log_level = config_manager.get_config('log_level')

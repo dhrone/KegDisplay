@@ -114,9 +114,8 @@ class DefaultDisplayFactory(DisplayFactoryInterface):
             display = DisplayFactory.create_display(
                 config['display'],
                 interface_type=config['interface'],
-                RS=config['RS'],
-                E=config['E'],
-                PINS=config['PINS']
+                pins=config.get('pins', {}),
+                **config
             )
             
             logger.info(f"Created {config['display']} display")

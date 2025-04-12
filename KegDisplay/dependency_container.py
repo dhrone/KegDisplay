@@ -113,6 +113,7 @@ class DependencyContainer:
             logger.debug("All components created successfully")
             
             return config_manager, display, renderer, data_manager
+            
         except Exception as e:
             logger.error(f"Error creating components: {e}")
             raise

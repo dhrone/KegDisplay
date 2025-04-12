@@ -251,6 +251,27 @@ else
     log "gpio group not found. Creating udev rules for GPIO access."
 fi
 
+# Add beer user to spi group
+if getent group spi > /dev/null; then
+    usermod -a -G spi beer || {
+        error "Failed to add beer user to spi group.";
+        exit 1;
+    }
+    log "Added beer user to spi group."
+else
+    log "spi group not found. Creating udev rules for SPI access."
+    # Create spi group if it doesn't exist
+    groupadd spi || {
+        error "Failed to create spi group.";
+        exit 1;
+    }
+    usermod -a -G spi beer || {
+        error "Failed to add beer user to spi group.";
+        exit 1;
+    }
+    log "Created spi group and added beer user to it."
+fi
+
 # Create udev rules for GPIO access
 log "Creating udev rules for GPIO access..."
 cat > /etc/udev/rules.d/99-gpio.rules << 'EOF'
@@ -258,6 +279,12 @@ SUBSYSTEM=="gpio", KERNEL=="gpiochip*", GROUP="gpio", MODE="0660"
 SUBSYSTEM=="gpio", KERNEL=="gpio*", GROUP="gpio", MODE="0660"
 SUBSYSTEM=="gpio", KERNEL=="gpio*", RUN+="/bin/chgrp gpio /dev/gpio%n"
 SUBSYSTEM=="gpio", KERNEL=="gpio*", RUN+="/bin/chmod g+rw /dev/gpio%n"
+EOF
+
+# Create udev rules for SPI access
+log "Creating udev rules for SPI access..."
+cat > /etc/udev/rules.d/99-spi.rules << 'EOF'
+SUBSYSTEM=="spidev", GROUP="spi", MODE="0660"
 EOF
 
 # Create gpio group if it doesn't exist
