@@ -363,14 +363,14 @@ fi
 
 # Initialize the database
 log "Initializing the database..."
-sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && mkdir -p /home/beer/KegDisplay/KegDisplay" || {
+sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && mkdir -p KegDisplay" || {
     error "Failed to create KegDisplay directory.";
     exit 1;
 }
 
 # Check if the database already exists
-if [ -f "/home/beer/KegDisplay/KegDisplay/beer.db" ]; then
-    log "Database already exists at /home/beer/KegDisplay/KegDisplay/beer.db"
+if [ -f "/home/beer/Dev/KegDisplay/KegDisplay/beer.db" ]; then
+    log "Database already exists at /home/beer/Dev/KegDisplay/KegDisplay/beer.db"
     read -p "Do you want to reinitialize the database? This will overwrite the existing database. (y/n): " REINIT_DB
     REINIT_DB=$(echo "$REINIT_DB" | tr '[:upper:]' '[:lower:]')
     if [ "$REINIT_DB" != "y" ]; then
@@ -395,7 +395,7 @@ else
 fi
 
 # Verify the database was created in the correct location
-if [ ! -f "/home/beer/KegDisplay/KegDisplay/beer.db" ]; then
+if [ ! -f "/home/beer/Dev/KegDisplay/KegDisplay/beer.db" ]; then
     error "Database was not created in the expected location. Please check the application logs for more information.";
     exit 1;
 fi
