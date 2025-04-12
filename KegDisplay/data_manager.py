@@ -7,6 +7,7 @@ Handles database access and updates.
 import sqlite3
 import logging
 import time
+import os
 from datetime import datetime, UTC
 
 # Use the pre-configured logger
@@ -39,6 +40,11 @@ class DataManager:
             bool: True if initialization successful, False otherwise
         """
         try:
+            # Check if database file exists
+            if not os.path.exists(self.db_path):
+                logger.error(f"Database file does not exist: {os.path.abspath(self.db_path)}")
+                return False
+                
             # Connect to the database
             self.conn = sqlite3.connect(self.db_path)
             self.conn.row_factory = sqlite3.Row  # Use row factory for named access
