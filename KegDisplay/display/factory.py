@@ -30,31 +30,31 @@ class DisplayFactory:
     """
     
     @staticmethod
-    def create_display(display_type: str, interface: str = 'bitbang', **kwargs) -> Optional[Any]:
+    def create_display(display_type: str, interface_type: str = 'bitbang', **kwargs) -> Optional[Any]:
         """
         Create a display instance based on the specified type and interface.
         
         :param display_type: Type of display to create (e.g., 'ws0010', 'ssd1322')
-        :param interface: Interface type (e.g., 'bitbang', 'pigpio', 'spi'). Defaults to 'bitbang'
+        :param interface_type: Interface type (e.g., 'bitbang', 'pigpio', 'spi'). Defaults to 'bitbang'
         :param kwargs: Additional arguments passed to the display constructor
         :return: Display instance or None if creation fails
         """
         try:
             if display_type == 'ws0010':
-                if interface == 'bitbang':
+                if interface_type == 'bitbang':
                     logger.debug("Creating WS0010 display with luma.core bitbang interface")
                     return WS0010Display(**kwargs)
-                elif interface == 'pigpio':
+                elif interface_type == 'pigpio':
                     logger.debug("Creating WS0010 display with pigpio interface")
                     return WS0010PigpioDisplay(**kwargs)
                 else:
-                    logger.error(f"Unsupported interface '{interface}' for WS0010 display")
+                    logger.error(f"Unsupported interface '{interface_type}' for WS0010 display")
                     return None
             elif display_type == 'ssd1322':
-                if interface == 'spi':
+                if interface_type == 'spi':
                     return SSD1322Display(**kwargs)
                 else:
-                    logger.error(f"Unsupported interface '{interface}' for SSD1322 display")
+                    logger.error(f"Unsupported interface '{interface_type}' for SSD1322 display")
                     return None
             elif display_type == 'virtual':
                 if not VIRTUAL_DISPLAY_AVAILABLE:
