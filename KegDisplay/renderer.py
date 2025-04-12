@@ -8,6 +8,7 @@ import time
 import logging
 import hashlib
 import json
+import traceback
 from collections import deque
 
 from tinyDisplay.render.collection import canvas, sequence
