@@ -63,11 +63,6 @@ def create_database(db_path=None):
         )
         ''')
         
-        # Create sqlite_sequence table (this is automatically created by SQLite)
-        cursor.execute('''
-        CREATE TABLE sqlite_sequence(name,seq)
-        ''')
-        
         # Create version table
         cursor.execute('''
         CREATE TABLE version (
