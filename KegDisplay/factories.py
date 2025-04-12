@@ -110,32 +110,13 @@ class DefaultDisplayFactory(DisplayFactoryInterface):
         Raises:
             Exception: If display creation fails
         """
-        # Create display parameters based on interface type
-        display_params = {
-            'interface_type': config['interface']
-        }
-        
-        # Add pin parameters if using bitbang interface
-        if config['interface'] == 'bitbang':
-            display_params.update({
-                'RS': config['RS'],
-                'E': config['E'],
-                'PINS': config['PINS']
-            })
-            display = DisplayFactory.create_display(
-                config['display'],
-                **display_params
-            )
-        # Add pin parameters if using pigpio interface
-        elif config['interface'] == 'pigpio':
-            from .display.ws0010_pigpio_display import WS0010PigpioDisplay
-            display = WS0010PigpioDisplay(
-                RS=config['RS'],
-                E=config['E'],
-                PINS=config['PINS']
-            )
-        else:
-            raise ValueError(f"Unsupported interface type: {config['interface']}")
+        display = DisplayFactory.create_display(
+            config['display'],
+            interface_type=config['interface'],
+            RS=config['RS'],
+            E=config['E'],
+            PINS=config['PINS']
+        )
         
         if not display.initialize():
             raise Exception(f"Failed to initialize {config['display']} display")

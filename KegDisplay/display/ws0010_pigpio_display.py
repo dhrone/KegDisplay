@@ -6,6 +6,7 @@ import logging
 from luma.oled.device import ws0010
 from luma.core.render import canvas
 from PIL import Image
+import traceback
 
 from .bitbang_6800_pigpio import bitbang_6800_pigpio
 
@@ -21,28 +22,26 @@ class WS0010PigpioDisplay(ws0010):
     Raspberry Pi systems.
     """
     
-    def __init__(self, RS=None, E=None, PINS=None, **kwargs):
+    def __init__(self, gpio=None, **kwargs):
         """
         Initialize the display with pigpio interface.
         
-        :param RS: Register Select pin
-        :param E: Enable pin
-        :param PINS: List of data pins
+        :param gpio: Optional pigpio instance. If not provided, a new one will be created.
         :param kwargs: Additional arguments passed to the base class.
         """
         try:
             # Initialize the pigpio interface
-            interface = bitbang_6800_pigpio(RS=RS, E=E, PINS=PINS)
+            interface = bitbang_6800_pigpio(gpio=gpio, **kwargs)
             
             # Initialize the base class with our interface
-            super().__init__(interface)
+            super().__init__(interface, **kwargs)
             
             logger.info("Initialized WS0010 display with pigpio interface")
         except ImportError as e:
-            logger.error("Failed to initialize WS0010 display with pigpio interface: %s", e)
+            logger.error("Failed to initialize WS0010 display with pigpio interface: %s\n%s", e, traceback.format_exc())
             raise
         except Exception as e:
-            logger.error("Unexpected error initializing WS0010 display: %s", e)
+            logger.error("Unexpected error initializing WS0010 display: %s\n%s", e, traceback.format_exc())
             raise
 
     def display(self, image):
@@ -66,8 +65,7 @@ class WS0010PigpioDisplay(ws0010):
         """Clean up resources."""
         try:
             # Clean up the interface
-            if hasattr(self, '_interface'):
-                self._interface.cleanup()
+            self._interface.cleanup()
             logger.info("Cleaned up WS0010 display resources")
         except Exception as e:
             logger.error("Error during cleanup: %s", e)
@@ -75,9 +73,9 @@ class WS0010PigpioDisplay(ws0010):
     @property
     def width(self):
         """Get the width of the display."""
-        return 100 if hasattr(self, 'device') and self.device else 0
+        return 100 if self.device else 0
     
     @property
     def height(self):
         """Get the height of the display."""
-        return 16 if hasattr(self, 'device') and self.device else 0 
+        return 16 if self.device else 0 
