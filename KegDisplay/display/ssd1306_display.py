@@ -60,13 +60,4 @@ class SSD1306Display(ssd1306):
             super().display(image)
         except Exception as e:
             logger.error(f"Error displaying image: {e}")
-            raise
-
-    def cleanup(self):
-        """Clean up resources."""
-        try:
-            if hasattr(self, '_interface'):
-                self._interface.cleanup()
-            logger.debug("Cleaned up SSD1306 display resources")
-        except Exception as e:
-            logger.error(f"Error during cleanup: {e}") 
+            raise 

@@ -36,7 +36,7 @@ class WS0010PigpioDisplay(ws0010):
             # Initialize the base class with our interface
             super().__init__(interface, width=100, height=16, **kwargs)
             
-            logger.info("Initialized WS0010 display with pigpio interface")
+            logger.debug("Initialized WS0010 display with pigpio interface")
         except ImportError as e:
             logger.error("Failed to initialize WS0010 display with pigpio interface: %s\n%s", e, traceback.format_exc())
             raise
@@ -59,13 +59,4 @@ class WS0010PigpioDisplay(ws0010):
             super().display(image)
         except Exception as e:
             logger.error("Error displaying image: %s", e)
-            raise
-
-    def cleanup(self):
-        """Clean up resources."""
-        try:
-            # Clean up the interface
-            self._interface.cleanup()
-            logger.info("Cleaned up WS0010 display resources")
-        except Exception as e:
-            logger.error("Error during cleanup: %s", e) 
+            raise 
