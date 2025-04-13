@@ -131,7 +131,11 @@ class Application:
         if len(tap_data) == 0:
             logger.warning("No tap mappings found in database")
             self.renderer.update_dataset("taps", { tap_number: 1}, merge=True)
-        
+
+        # Change status to running after splash screen
+        self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)
+        logger.debug("Status changed to 'running'")
+
         # Generate image sequence for the first beer canvas
         self.renderer.image_sequence = self.renderer.generate_image_sequence()
         self.renderer.sequence_index = 0
@@ -148,10 +152,6 @@ class Application:
         # Wait for the splash time to elapse
         while time.time() - current_time < splash_time:
             time.sleep(0.1)
-
-        # Change status to running after splash screen
-        self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)
-        logger.debug("Status changed to 'running' after splash screen")
 
         # Main loop
         logger.info("Starting main loop...")
