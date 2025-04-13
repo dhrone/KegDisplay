@@ -1,6 +1,9 @@
 Fresh bookworm install of lite 32 bit distro
 install with user beer
 
+To copy the install script to the device the command is:
+curl -O https://raw.githubusercontent.com/dhrone/KegDisplay/main/install_KegDisplay.sh
+
 sudo apt-get update
 sudo apt-get install git pip pipx -y
 sudo apt-get install python3-pip python3-pil libjpeg-dev zlib1g-dev libfreetype6-dev liblcms2-dev libopenjp2-7 -y

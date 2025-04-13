@@ -3,13 +3,14 @@ Description=KegDisplay Database Synchronization Service
 After=network.target
 
 [Service]
+Type=simple
+User=beer
 ExecStart=/root/.local/bin/poetry run python -m KegDisplay.dbsync_service --mode client
 WorkingDirectory=/root/Dev/KegDisplay
+Restart=on-failure
+RestartSec=5
 StandardOutput=journal
 StandardError=journal
-Restart=always
-User=root
-
 
 [Install]
 WantedBy=multi-user.target 
