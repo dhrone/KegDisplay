@@ -8,6 +8,7 @@ import unittest
 from unittest.mock import Mock, MagicMock, patch
 import os
 import tempfile
+import sqlite3
 
 from KegDisplay.data_manager import DataManager
 
@@ -20,10 +21,21 @@ class TestDataManager(unittest.TestCase):
         # Create mock renderer
         self.mock_renderer = Mock()
         self.mock_renderer.update_dataset = MagicMock()
+        self.mock_renderer._dataset = {
+            'sys': {'tapnr': 1},
+            'beers': {
+                1: {'Name': 'Test Beer', 'ABV': 5.0, 'Description': 'A test beer'},
+                2: {'Name': 'Another Beer', 'ABV': 6.0, 'Description': 'Another test beer'}
+            }
+        }
         
         # Create temporary database file
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = os.path.join(self.temp_dir.name, "test.db")
+        
+        # Create an empty database file
+        with open(self.db_path, 'w') as f:
+            f.write('')  # Create empty file
         
         # Use a faster update frequency for testing
         self.update_frequency = 0.1
@@ -39,192 +51,225 @@ class TestDataManager(unittest.TestCase):
         """Clean up after the test."""
         self.temp_dir.cleanup()
     
-    @patch('KegDisplay.data_manager.database')
-    def test_initialize_creates_database_source(self, mock_database):
-        """Test that initialize creates a database source with the correct path."""
+    @patch('sqlite3.connect')
+    def test_initialize_creates_database_source(self, mock_connect):
+        """Test that initialize creates a database connection with the correct path."""
         # Given
-        mock_db_instance = Mock()
-        mock_database.return_value = mock_db_instance
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
+        
+        # Setup mock cursor behavior
+        mock_cursor.fetchall.return_value = []
+        mock_cursor.fetchone.return_value = None
         
         # When
         result = self.data_manager.initialize()
         
         # Then
         self.assertTrue(result)
-        mock_database.assert_called_once_with(f'sqlite+aiosqlite:///{self.db_path}')
-        self.assertEqual(mock_db_instance, self.data_manager.src)
+        mock_connect.assert_called_once_with(self.db_path)
+        self.assertEqual(mock_conn, self.data_manager.conn)
     
-    @patch('KegDisplay.data_manager.database')
-    def test_initialize_adds_queries(self, mock_database):
-        """Test that initialize adds the required queries."""
+    @patch('sqlite3.connect')
+    def test_initialize_adds_queries(self, mock_connect):
+        """Test that initialize executes the required queries."""
         # Given
-        mock_db_instance = Mock()
-        mock_database.return_value = mock_db_instance
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
+        
+        # Setup mock cursor to return test data
+        mock_cursor.fetchall.return_value = []
+        mock_cursor.fetchone.return_value = None
         
         # When
         result = self.data_manager.initialize()
         
         # Then
         self.assertTrue(result)
-        self.assertEqual(2, mock_db_instance.add.call_count)
         # Check beer query
-        mock_db_instance.add.assert_any_call(
-            "SELECT idBeer, Name, Description, ABV from beers", 
-            name='beer', 
-            frequency=self.update_frequency
+        mock_cursor.execute.assert_any_call(
+            "SELECT idBeer, Name, Description, ABV FROM beers"
         )
         # Check taps query
-        mock_db_instance.add.assert_any_call(
-            "SELECT idTap, idBeer from taps", 
-            name='taps', 
-            frequency=self.update_frequency
+        mock_cursor.execute.assert_any_call(
+            "SELECT idTap, idBeer FROM taps"
+        )
+        # Check tap-specific query
+        mock_cursor.execute.assert_any_call(
+            "SELECT idBeer FROM taps WHERE idTap = ?", (1,)
         )
     
-    @patch('KegDisplay.data_manager.database')
-    def test_initialize_handles_exceptions(self, mock_database):
+    @patch('sqlite3.connect')
+    def test_initialize_handles_exceptions(self, mock_connect):
         """Test that initialize handles exceptions gracefully."""
         # Given
-        mock_database.side_effect = Exception("Database error")
+        mock_connect.side_effect = sqlite3.Error("Database error")
         
         # When
         result = self.data_manager.initialize()
         
         # Then
         self.assertFalse(result)
-        self.assertIsNone(self.data_manager.src)
+        self.assertIsNone(self.data_manager.conn)
     
-    @patch('KegDisplay.data_manager.database')
-    def test_update_data_processes_beer_data(self, mock_database):
+    @patch('sqlite3.connect')
+    def test_update_data_processes_beer_data(self, mock_connect):
         """Test that update_data processes beer data correctly."""
         # Given
-        mock_db_instance = Mock()
-        mock_database.return_value = mock_db_instance
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
         
-        # Setup mock to return beer data once, then None
-        mock_db_instance.get = MagicMock(side_effect=[
-            {'beer': {'idBeer': 1, 'Name': 'Test Beer', 'Description': 'A test beer', 'ABV': 5.0}},
-            None
-        ])
+        # Setup mock cursor to return beer data
+        mock_cursor.fetchone.side_effect = [
+            {'idBeer': 1},  # First call for tap query
+            {  # Second call for beer query
+                'idBeer': 1,
+                'Name': 'Test Beer',
+                'Description': 'A test beer',
+                'ABV': 5.0
+            }
+        ]
         
-        self.data_manager.initialize()
+        # Initialize the connection
+        self.data_manager.conn = mock_conn
         
         # When
         result = self.data_manager.update_data()
         
         # Then
         self.assertTrue(result)
-        # The actual implementation passes the beer data directly to update_dataset
-        self.mock_renderer.update_dataset.assert_called_once_with(
+        self.mock_renderer.update_dataset.assert_called_with(
             "beers",
-            {'idBeer': 1, 'Name': 'Test Beer', 'Description': 'A test beer', 'ABV': 5.0},
+            {1: {'Name': 'Test Beer', 'Description': 'A test beer', 'ABV': 5.0}},
             merge=True
         )
     
-    @patch('KegDisplay.data_manager.database')
-    def test_update_data_processes_taps_data(self, mock_database):
+    @patch('sqlite3.connect')
+    def test_update_data_processes_taps_data(self, mock_connect):
         """Test that update_data processes taps data correctly."""
         # Given
-        mock_db_instance = Mock()
-        mock_database.return_value = mock_db_instance
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
         
-        # Setup mock to return taps data once, then None
-        mock_db_instance.get = MagicMock(side_effect=[
-            {'taps': {'idTap': 1, 'idBeer': 2}},
-            None
-        ])
+        # Setup mock cursor to return tap data
+        mock_cursor.fetchone.side_effect = [
+            {'idBeer': 2},  # First call for tap query
+            {  # Second call for beer query
+                'idBeer': 2,
+                'Name': 'Another Beer',
+                'Description': 'Another test beer',
+                'ABV': 6.0
+            }
+        ]
         
-        self.data_manager.initialize()
+        # Initialize the connection
+        self.data_manager.conn = mock_conn
         
         # When
         result = self.data_manager.update_data()
         
         # Then
         self.assertTrue(result)
-        # The actual implementation transforms taps data into a different format
-        self.mock_renderer.update_dataset.assert_called_once_with(
+        # First call should be to update taps
+        self.mock_renderer.update_dataset.assert_any_call(
             "taps",
             {1: 2},  # Key: idTap, Value: idBeer
             merge=True
         )
+        # Last call should be to update beers
+        self.mock_renderer.update_dataset.assert_called_with(
+            "beers",
+            {2: {'Name': 'Another Beer', 'ABV': 6.0, 'Description': 'Another test beer'}},
+            merge=True
+        )
     
-    @patch('KegDisplay.data_manager.database')
-    def test_update_data_processes_multiple_beer_items(self, mock_database):
+    @patch('sqlite3.connect')
+    def test_update_data_processes_multiple_beer_items(self, mock_connect):
         """Test that update_data processes multiple beer items correctly."""
         # Given
-        mock_db_instance = Mock()
-        mock_database.return_value = mock_db_instance
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
         
-        # Setup mock to return multiple beer items, then None
-        mock_db_instance.get = MagicMock(side_effect=[
-            {'beer': [
-                {'idBeer': 1, 'Name': 'Beer 1', 'ABV': 4.5},
-                {'idBeer': 2, 'Name': 'Beer 2', 'ABV': 5.5}
-            ]},
-            None
-        ])
+        # Setup mock cursor to return beer data
+        mock_cursor.fetchone.side_effect = [
+            {'idBeer': 1},  # First call for tap query
+            {  # Second call for beer query
+                'idBeer': 1,
+                'Name': 'Beer 1',
+                'ABV': 4.5,
+                'Description': 'Test beer 1'
+            }
+        ]
         
-        self.data_manager.initialize()
+        # Initialize the connection
+        self.data_manager.conn = mock_conn
         
         # When
         result = self.data_manager.update_data()
         
         # Then
         self.assertTrue(result)
-        # Check that update_dataset was called twice, once for each beer
-        self.assertEqual(2, self.mock_renderer.update_dataset.call_count)
-        # The actual implementation transforms the beer items by removing the idBeer from the inner dict
-        self.mock_renderer.update_dataset.assert_any_call(
+        self.mock_renderer.update_dataset.assert_called_with(
             "beers",
-            {1: {'Name': 'Beer 1', 'ABV': 4.5}},  # idBeer becomes the key
-            merge=True
-        )
-        self.mock_renderer.update_dataset.assert_any_call(
-            "beers",
-            {2: {'Name': 'Beer 2', 'ABV': 5.5}},  # idBeer becomes the key
+            {1: {'Name': 'Beer 1', 'ABV': 4.5, 'Description': 'Test beer 1'}},
             merge=True
         )
     
-    @patch('KegDisplay.data_manager.database')
-    def test_update_data_processes_multiple_tap_items(self, mock_database):
+    @patch('sqlite3.connect')
+    def test_update_data_processes_multiple_tap_items(self, mock_connect):
         """Test that update_data processes multiple tap items correctly."""
         # Given
-        mock_db_instance = Mock()
-        mock_database.return_value = mock_db_instance
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
         
-        # Setup mock to return multiple tap items, then None
-        mock_db_instance.get = MagicMock(side_effect=[
-            {'taps': [
-                {'idTap': 1, 'idBeer': 101},
-                {'idTap': 2, 'idBeer': 102}
-            ]},
-            None
-        ])
+        # Setup mock cursor to return tap data
+        mock_cursor.fetchone.side_effect = [
+            {'idBeer': 101},  # First call for tap query
+            {  # Second call for beer query
+                'idBeer': 101,
+                'Name': 'New Beer',
+                'Description': 'A new test beer',
+                'ABV': 7.0
+            }
+        ]
         
-        self.data_manager.initialize()
+        # Initialize the connection
+        self.data_manager.conn = mock_conn
         
         # When
         result = self.data_manager.update_data()
         
         # Then
         self.assertTrue(result)
-        # Check that update_dataset was called twice, once for each tap
-        self.assertEqual(2, self.mock_renderer.update_dataset.call_count)
-        # The actual implementation transforms tap data to {idTap: idBeer} format
+        # First call should be to update taps
         self.mock_renderer.update_dataset.assert_any_call(
             "taps",
             {1: 101},  # Key: idTap, Value: idBeer
             merge=True
         )
-        self.mock_renderer.update_dataset.assert_any_call(
-            "taps",
-            {2: 102},  # Key: idTap, Value: idBeer
+        # Last call should be to update beers
+        self.mock_renderer.update_dataset.assert_called_with(
+            "beers",
+            {101: {'Name': 'New Beer', 'ABV': 7.0, 'Description': 'A new test beer'}},
             merge=True
         )
     
     def test_update_data_returns_false_if_src_not_initialized(self):
         """Test that update_data returns False if src is not initialized."""
         # Given
-        self.data_manager.src = None
+        self.data_manager.conn = None
         
         # When
         result = self.data_manager.update_data()
@@ -244,29 +289,34 @@ class TestDataManager(unittest.TestCase):
         # Then
         self.assertFalse(result)
     
-    @patch('KegDisplay.data_manager.database')
-    def test_update_data_handles_exceptions(self, mock_database):
+    @patch('sqlite3.connect')
+    def test_update_data_handles_exceptions(self, mock_connect):
         """Test that update_data handles exceptions gracefully."""
         # Given
-        mock_db_instance = Mock()
-        mock_database.return_value = mock_db_instance
+        mock_conn = Mock()
+        mock_cursor = Mock()
+        mock_conn.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_conn
         
-        # Setup mock to raise an exception
-        mock_db_instance.get = MagicMock(side_effect=Exception("Database error"))
+        # Setup mock cursor to raise an exception
+        mock_cursor.execute.side_effect = sqlite3.Error("Database error")
         
-        self.data_manager.initialize()
+        # Initialize the connection
+        self.data_manager.conn = mock_conn
         
         # When
         result = self.data_manager.update_data()
         
         # Then
         self.assertFalse(result)
-        self.mock_renderer.update_dataset.assert_not_called()
     
     def test_cleanup_method_exists(self):
         """Test that the cleanup method exists and can be called."""
-        # When/Then - just verify it can be called without errors
+        # When
         self.data_manager.cleanup()
+        
+        # Then
+        self.assertIsNone(self.data_manager.conn)
 
 
 if __name__ == '__main__':

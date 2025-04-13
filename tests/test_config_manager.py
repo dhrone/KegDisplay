@@ -40,9 +40,9 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(1, config['tap'])
         self.assertEqual('ws0010', config['display'])
         self.assertEqual('bitbang', config['interface'])
-        self.assertEqual(7, config['RS'])
-        self.assertEqual(8, config['E'])
-        self.assertEqual([25, 5, 6, 12], config['PINS'])
+        self.assertEqual(7, config['pins']['RS'])
+        self.assertEqual(8, config['pins']['E'])
+        self.assertEqual([25, 5, 6, 12], config['pins']['PINS'])
         self.assertEqual('KegDisplay/page.yaml', config['page'])
         self.assertEqual('KegDisplay/beer.db', config['db'])
         self.assertEqual('INFO', config['log_level'])
@@ -81,9 +81,9 @@ class TestConfigManager(unittest.TestCase):
         
         # Then
         config = self.config_manager.get_config()
-        self.assertEqual(10, config['RS'])
-        self.assertEqual(11, config['E'])
-        self.assertEqual([20, 21, 22, 23], config['PINS'])
+        self.assertEqual(10, config['pins']['RS'])
+        self.assertEqual(11, config['pins']['E'])
+        self.assertEqual([20, 21, 22, 23], config['pins']['PINS'])
     
     def test_validate_config_with_valid_files(self):
         """Test that validate_config returns True when files exist."""
@@ -119,7 +119,7 @@ class TestConfigManager(unittest.TestCase):
         self.config_manager.config['db'] = str(self.db_file)
         self.config_manager.config['interface'] = 'bitbang'
         self.config_manager.config['display'] = 'ws0010'
-        self.config_manager.config['RS'] = None
+        self.config_manager.config['pins']['RS'] = None
         
         # When/Then
         self.assertFalse(self.config_manager.validate_config())
@@ -130,7 +130,7 @@ class TestConfigManager(unittest.TestCase):
         config = self.config_manager.get_config()
         
         # Then
-        self.assertEqual(14, len(config))  # Updated to match current config items
+        self.assertEqual(12, len(config))  # Updated to match current config items
         self.assertEqual(1, config['tap'])
     
     def test_get_config_returns_specific_key(self):
