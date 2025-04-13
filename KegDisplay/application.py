@@ -77,6 +77,8 @@ class Application:
 
         # Initialize display with splash screen
         logger.info("Initializing display with splash screen...")
+        logger.debug(f"Display configuration: {self.config_manager.get_config('display')}")
+        logger.debug(f"Page configuration: {self.config_manager.get_config('page')}")
         splash_image = self.renderer.render('start')
         if splash_image:
             self.renderer.display.display(splash_image)
@@ -134,6 +136,12 @@ class Application:
         self.renderer.image_sequence = self.renderer.generate_image_sequence()
         self.renderer.sequence_index = 0
         self.renderer.last_frame_time = time.time()
+        
+        # Log the current dataset state
+        logger.debug(f"Current dataset state: {self.renderer._dataset}")
+        logger.debug(f"Current beer data: {self.renderer._dataset.get('beers', {})}")
+        logger.debug(f"Current tap data: {self.renderer._dataset.get('taps', {})}")
+        
         logger.info(f"Generated sequence with {len(self.renderer.image_sequence)} frames")
 
         # Wait for the splash time to elapse
@@ -144,11 +152,19 @@ class Application:
         logger.info("Starting main loop...")
         frame_count = 0
         last_data_check = time.time()
+        last_status_log = time.time()
         data_check_interval = 1.0  # Check for data changes every second
+        status_log_interval = 5.0  # Log status every 5 seconds
         
         while self.running:
             try:
                 current_time = time.time()
+                
+                # Log current status every 5 seconds
+                if current_time - last_status_log >= status_log_interval:
+                    current_status = self.renderer._dataset.get('sys', {}).get('status', 'unknown')
+                    logger.debug(f"Current status: {current_status}")
+                    last_status_log = current_time
                 
                 # Check for database updates periodically
                 if current_time - last_data_check >= data_check_interval:
