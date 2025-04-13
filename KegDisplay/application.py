@@ -139,7 +139,8 @@ class Application:
         
         # Log the current dataset state
         logger.debug(f"Current dataset state: {self.renderer._dataset}")
-        logger.debug(f"Current beer data: {self.renderer._dataset.get('beers', {})}")
+        beer_data = str(self.renderer._dataset.get('beers', {}))
+        logger.debug(f"Current beer data: {beer_data[:80]}{'...' if len(beer_data) > 80 else ''}")
         logger.debug(f"Current tap data: {self.renderer._dataset.get('taps', {})}")
         
         logger.info(f"Generated sequence with {len(self.renderer.image_sequence)} frames")
@@ -147,6 +148,10 @@ class Application:
         # Wait for the splash time to elapse
         while time.time() - current_time < splash_time:
             time.sleep(0.1)
+
+        # Change status to running after splash screen
+        self.renderer.update_dataset('sys', {'status': 'running'}, merge=True)
+        logger.debug("Status changed to 'running' after splash screen")
 
         # Main loop
         logger.info("Starting main loop...")
