@@ -32,6 +32,14 @@ install_poetry_dependencies() {
         
         # Try to install dependencies
         if sudo -u beer bash -c "cd $directory && source /home/beer/.cargo/env && /home/beer/.poetry/bin/poetry install"; then
+            # Install development dependencies if requested
+            if [ "$INSTALL_TKINTER" = "y" ]; then
+                log "Installing development dependencies..."
+                sudo -u beer bash -c "cd $directory && /home/beer/.poetry/bin/poetry install --with dev" || {
+                    error "Failed to install development dependencies.";
+                    return 1;
+                }
+            fi
             success "Python dependencies installed successfully!"
             return 0
         fi
@@ -442,7 +450,7 @@ cp /home/beer/Dev/KegDisplay/taggstaps.service /etc/systemd/system/ || {
 # Customize the taggstaps service file with the correct parameters
 log "Customizing taggstaps service configuration..."
 # Use sed to modify the service file with the appropriate command
-sed -i "s|ExecStart=.*|ExecStart=/home/beer/.local/bin/poetry run python -m KegDisplay.taggstaps --tap $TAP_NUMBER --display $DISPLAY_TYPE --interface $INTERFACE_TYPE$([ "$INTERFACE_TYPE" = "bitbang" ] || [ "$INTERFACE_TYPE" = "pigpio" ] && echo " --RS $RS_PIN --E $E_PIN --PINS $DATA_PINS")|" /etc/systemd/system/taggstaps.service || {
+sed -i "s|ExecStart=.*|ExecStart=/home/beer/.poetry/bin/poetry run python -m KegDisplay.taggstaps --tap $TAP_NUMBER --display $DISPLAY_TYPE --interface $INTERFACE_TYPE$([ "$INTERFACE_TYPE" = "bitbang" ] || [ "$INTERFACE_TYPE" = "pigpio" ] && echo " --RS $RS_PIN --E $E_PIN --PINS $DATA_PINS")|" /etc/systemd/system/taggstaps.service || {
     error "Failed to update taggstaps.service configuration.";
     exit 1;
 }
@@ -482,7 +490,7 @@ else
     }
     
     # Update the ExecStart command to use client mode
-    sed -i "s|ExecStart=.*|ExecStart=/home/beer/.local/bin/poetry run python -m KegDisplay.dbsync_service --mode client|" /etc/systemd/system/dbsync_service.service || {
+    sed -i "s|ExecStart=.*|ExecStart=/home/beer/.poetry/bin/poetry run python -m KegDisplay.dbsync_service --mode client|" /etc/systemd/system/dbsync_service.service || {
         error "Failed to update dbsync_service.service configuration.";
         exit 1;
     }
