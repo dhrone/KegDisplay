@@ -248,7 +248,8 @@ class SequenceRenderer:
         """Render a single frame and return the image.
         
         Args:
-            status: Optional status to update in the dataset
+            status: Optional status to cause a specific state to be displayed
+                    This is useful for display the splash screen or the updating screen
             
         Returns:
             PIL.Image: The rendered image
@@ -256,7 +257,8 @@ class SequenceRenderer:
         if self.main_display is None:
             logger.error("Cannot render: No display loaded")
             return None
-            
+
+        saved_status = self.main_display._dataset.get('sys', {}).get('status', 'unknown')
         try:
             if status:
                 # Use our helper method to update the status
@@ -269,6 +271,9 @@ class SequenceRenderer:
         except Exception as e:
             logger.error(f"Error rendering: {e} {traceback.format_exc()}")
             return None
+        finally:
+            # Restore the saved status
+            self.update_dataset('sys', {'status': saved_status}, merge=True)
     
     def _prepare_dataset(self):
         """Prepare and validate the dataset for sequence generation.
