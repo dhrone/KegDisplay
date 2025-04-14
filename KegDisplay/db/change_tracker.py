@@ -8,6 +8,7 @@ import logging
 import hashlib
 import os
 from datetime import datetime, UTC
+import json
 
 logger = logging.getLogger("KegDisplay")
 
@@ -40,6 +41,7 @@ class ChangeTracker:
                     operation TEXT NOT NULL,
                     row_id INTEGER NOT NULL,
                     timestamp TEXT NOT NULL,
+                    content TEXT NOT NULL,
                     content_hash TEXT NOT NULL
                 )
             ''')
@@ -85,12 +87,23 @@ class ChangeTracker:
         with self.db_manager.get_connection() as conn:
             cursor = conn.cursor()
             timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
-            content_hash = self._get_table_hash(table_name)
+            
+            # Get the actual row data for the change
+            cursor.execute(f"SELECT * FROM {table_name} WHERE rowid = ?", (row_id,))
+            row = cursor.fetchone()
+            if row:
+                # Convert row data to a list and serialize to JSON
+                content = json.dumps(list(row))
+                # Calculate hash of the content for verification
+                content_hash = hashlib.md5(content.encode()).hexdigest()
+            else:
+                content = "[]"
+                content_hash = hashlib.md5(content.encode()).hexdigest()
             
             cursor.execute('''
-                INSERT INTO change_log (table_name, operation, row_id, timestamp, content_hash)
-                VALUES (?, ?, ?, ?, ?)
-            ''', (table_name, operation, row_id, timestamp, content_hash))
+                INSERT INTO change_log (table_name, operation, row_id, timestamp, content, content_hash)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (table_name, operation, row_id, timestamp, content, content_hash))
             
             # Update version timestamp
             cursor.execute("UPDATE version SET last_modified = ?", (timestamp,))
@@ -112,7 +125,7 @@ class ChangeTracker:
         with self.db_manager.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('''
-                SELECT table_name, operation, row_id, timestamp, content_hash
+                SELECT table_name, operation, row_id, timestamp, content, content_hash
                 FROM change_log
                 WHERE timestamp > ?
                 ORDER BY timestamp
@@ -130,72 +143,6 @@ class ChangeTracker:
                     logger.warning(f"Extremely large change set detected ({len(changes)} records). Consider implementing change log pruning.")
             
         return changes
-    
-    def apply_changes(self, changes):
-        """Apply changes from a changeset
-        
-        Args:
-            changes: List of changes to apply
-            
-        Returns:
-            success: True if all changes applied successfully, False otherwise
-        """
-        with self.db_manager.get_connection() as conn:
-            cursor = conn.cursor()
-            
-            last_timestamp = None
-            
-            for table_name, operation, row_id, timestamp, content_hash in changes:
-                try:
-                    if operation == 'INSERT':
-                        # Get the row data from the source database
-                        cursor.execute(f"SELECT * FROM {table_name} WHERE rowid = ?", (row_id,))
-                        row_data = cursor.fetchone()
-                        if row_data:
-                            # Get column names
-                            cursor.execute(f"PRAGMA table_info({table_name})")
-                            columns = [col[1] for col in cursor.fetchall()]
-                            
-                            # Create INSERT statement
-                            placeholders = ','.join(['?' for _ in columns])
-                            cursor.execute(f"INSERT INTO {table_name} ({','.join(columns)}) VALUES ({placeholders})", row_data)
-                    
-                    elif operation == 'UPDATE':
-                        # Get the row data from the source database
-                        cursor.execute(f"SELECT * FROM {table_name} WHERE rowid = ?", (row_id,))
-                        row_data = cursor.fetchone()
-                        if row_data:
-                            # Get column names
-                            cursor.execute(f"PRAGMA table_info({table_name})")
-                            columns = [col[1] for col in cursor.fetchall()]
-                            
-                            # Create UPDATE statement
-                            set_clause = ','.join([f"{col}=?" for col in columns])
-                            cursor.execute(f"UPDATE {table_name} SET {set_clause} WHERE rowid=?", row_data + (row_id,))
-                    
-                    elif operation == 'DELETE':
-                        cursor.execute(f"DELETE FROM {table_name} WHERE rowid=?", (row_id,))
-                    
-                    # Log the change
-                    cursor.execute('''
-                        INSERT INTO change_log (table_name, operation, row_id, timestamp, content_hash)
-                        VALUES (?, ?, ?, ?, ?)
-                    ''', (table_name, operation, row_id, timestamp, content_hash))
-                    
-                    last_timestamp = timestamp
-                
-                except sqlite3.Error as e:
-                    logger.error(f"Error applying change: {e}")
-                    continue
-            
-            # Update version timestamp
-            if last_timestamp:
-                cursor.execute("UPDATE version SET last_modified = ?", (last_timestamp,))
-            
-            conn.commit()
-            logger.info(f"Applied {len(changes)} changes to database")
-            
-            return True
     
     def get_db_version(self):
         """Calculate database version based on content and get timestamp

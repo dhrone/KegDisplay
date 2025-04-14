@@ -4,6 +4,9 @@ import os
 import sqlite3
 import time
 from datetime import datetime, timedelta, UTC
+import shutil
+import json
+import hashlib
 
 from KegDisplay.db.database import DatabaseManager
 from KegDisplay.db.change_tracker import ChangeTracker
@@ -43,7 +46,7 @@ class TestChangeTracker(unittest.TestCase):
             columns = cursor.fetchall()
             column_names = [col[1] for col in columns]
             
-            expected_columns = ['id', 'table_name', 'operation', 'row_id', 'timestamp', 'content_hash']
+            expected_columns = ['id', 'table_name', 'operation', 'row_id', 'timestamp', 'content', 'content_hash']
             for col in expected_columns:
                 self.assertIn(col, column_names, f"Column {col} missing in change_log table")
             
@@ -69,7 +72,7 @@ class TestChangeTracker(unittest.TestCase):
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT table_name, operation, row_id 
+                SELECT table_name, operation, row_id, content, content_hash 
                 FROM change_log 
                 WHERE table_name = ? AND operation = ? AND row_id = ?
             """, ("beers", "INSERT", beer_id))
@@ -79,6 +82,8 @@ class TestChangeTracker(unittest.TestCase):
             self.assertEqual(result[0], "beers", "Table name doesn't match")
             self.assertEqual(result[1], "INSERT", "Operation doesn't match")
             self.assertEqual(result[2], beer_id, "Row ID doesn't match")
+            self.assertIsNotNone(result[3], "Content should not be None")
+            self.assertIsNotNone(result[4], "Content hash should not be None")
     
     def test_get_changes_since(self):
         """Test retrieving changes since a given timestamp."""
@@ -125,32 +130,45 @@ class TestChangeTracker(unittest.TestCase):
         # Create a timestamp
         timestamp = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         
-        # Get a hash for the content
+        # Get the content and hash for the beer
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(f"SELECT * FROM beers WHERE idBeer = ?", (beer_id,))
             row = cursor.fetchone()
-            content_hash = self.change_tracker._get_table_hash("beers")
+            content = {
+                'name': row[1],
+                'style': row[2],
+                'abv': row[3],
+                'ibu': row[4],
+                'srm': row[5],
+                'description': row[6]
+            }
+            content_str = json.dumps(content)
+            content_hash = hashlib.md5(content_str.encode()).hexdigest()
         
         # Create a change
-        change = ("beers", "UPDATE", beer_id, timestamp, content_hash)
+        change = ("beers", "UPDATE", beer_id, timestamp, content, content_hash)
         changes.append(change)
         
-        # Apply the changes
-        result = self.change_tracker.apply_changes(changes)
-        self.assertTrue(result, "Apply changes should return True")
+        # Apply the changes through database manager API
+        self.db_manager.apply_sync_changes(changes)
         
-        # Verify the change was logged
+        # Verify the change was applied and logged
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute("""
-                SELECT table_name, operation, row_id 
+                SELECT table_name, operation, row_id, content, content_hash 
                 FROM change_log 
                 WHERE table_name = ? AND operation = ? AND row_id = ? AND timestamp = ?
             """, ("beers", "UPDATE", beer_id, timestamp))
             
             result = cursor.fetchone()
             self.assertIsNotNone(result, "Change was not logged")
+            self.assertEqual(result[0], "beers", "Table name doesn't match")
+            self.assertEqual(result[1], "UPDATE", "Operation doesn't match")
+            self.assertEqual(result[2], beer_id, "Row ID doesn't match")
+            self.assertEqual(result[3], content_str, "Content doesn't match")
+            self.assertEqual(result[4], content_hash, "Content hash doesn't match")
     
     def test_get_db_version(self):
         """Test retrieving the database version."""

@@ -5,11 +5,12 @@ Handles core database operations for beer and tap management.
 
 import sqlite3
 import logging
-from datetime import datetime
+from datetime import datetime, UTC
 import os
 import json
 import threading
 import queue
+import hashlib
 
 logger = logging.getLogger("KegDisplay")
 
@@ -81,6 +82,27 @@ class DatabaseManager:
                 CREATE TABLE IF NOT EXISTS taps (
                     idTap INTEGER PRIMARY KEY,
                     idBeer INTEGER
+                )
+            ''')
+            
+            # Create change_log table if it doesn't exist
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS change_log (
+                    id INTEGER PRIMARY KEY,
+                    table_name TEXT NOT NULL,
+                    operation TEXT NOT NULL,
+                    row_id INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    content TEXT,
+                    content_hash TEXT
+                )
+            ''')
+            
+            # Create version table if it doesn't exist
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS version (
+                    id INTEGER PRIMARY KEY,
+                    last_modified TEXT NOT NULL
                 )
             ''')
             
@@ -520,128 +542,102 @@ class DatabaseManager:
             
             return [row[0] for row in cursor.fetchall()]
             
-    def apply_sync_changes(self, changes, temp_db_path):
-        """Apply changes received during synchronization without replacing the original file
+    def apply_sync_changes(self, changes):
+        """Apply changes received during sync
         
         Args:
-            changes: List of change records to apply
-            temp_db_path: Path to the temporary database file for validation
-            
-        Returns:
-            success: Whether the changes were successfully applied
+            changes: List of changes to apply
         """
-        logger.info(f"Applying {len(changes)} changes from sync")
-        
+        if not changes:
+            return
+            
         try:
-            # Open both databases
-            with sqlite3.connect(self.db_path) as main_conn, sqlite3.connect(temp_db_path) as temp_conn:
-                main_cursor = main_conn.cursor()
-                temp_cursor = temp_conn.cursor()
+            # Start transaction
+            with self.get_connection() as conn:
+                conn.execute('BEGIN TRANSACTION')
                 
-                # Begin transaction
-                main_conn.execute("BEGIN TRANSACTION")
+                # Create change_log and version tables if they don't exist
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS change_log (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        table_name TEXT NOT NULL,
+                        operation TEXT NOT NULL,
+                        row_id INTEGER NOT NULL,
+                        timestamp TEXT NOT NULL,
+                        content TEXT NOT NULL,
+                        content_hash TEXT NOT NULL
+                    )
+                ''')
                 
+                conn.execute('''
+                    CREATE TABLE IF NOT EXISTS version (
+                        id INTEGER PRIMARY KEY,
+                        timestamp TEXT NOT NULL,
+                        hash TEXT NOT NULL
+                    )
+                ''')
+                
+                # Apply each change
                 for change in changes:
-                    # Handle the tuple format from change_tracker: (table_name, operation, row_id, timestamp, content_hash)
-                    if isinstance(change, (list, tuple)) and len(change) >= 3:
-                        table = change[0]
-                        operation = change[1]
-                        record_id = change[2]
-                    elif isinstance(change, dict):
-                        table = change.get("table")
-                        operation = change.get("operation")
-                        record_id = change.get("record_id")
+                    if len(change) < 6:  # Should have (table_name, operation, row_id, timestamp, content, content_hash)
+                        logger.warning(f"Invalid change format: {change}")
+                        continue
+                        
+                    table_name, operation, row_id, timestamp, content, content_hash = change
+                    
+                    # Convert content to string if it's a dictionary
+                    if isinstance(content, dict):
+                        content_str = json.dumps(content)
                     else:
-                        logger.warning(f"Skipping invalid change record format: {change}")
+                        content_str = content
+                    
+                    # Verify content hash matches content
+                    if hashlib.md5(content_str.encode()).hexdigest() != content_hash:
+                        logger.warning(f"Content hash mismatch for change: {change}")
                         continue
                     
-                    if not all([table, operation, record_id]):
-                        logger.warning(f"Skipping invalid change record: {change}")
-                        continue
+                    # Apply the change
+                    if operation == 'INSERT':
+                        if table_name == 'beers':
+                            conn.execute('''
+                                INSERT OR REPLACE INTO beers (idBeer, Name, ABV, IBU, Color, Description)
+                                VALUES (?, ?, ?, ?, ?, ?)
+                            ''', (row_id, content.get('name'), content.get('abv'),
+                                  content.get('ibu'), content.get('srm'), content.get('description')))
+                        elif table_name == 'taps':
+                            conn.execute('''
+                                INSERT OR REPLACE INTO taps (idTap, idBeer)
+                                VALUES (?, ?)
+                            ''', (row_id, content.get('beer_id')))
+                    elif operation == 'UPDATE':
+                        if table_name == 'beers':
+                            conn.execute('''
+                                UPDATE beers SET Name=?, ABV=?, IBU=?, Color=?, Description=?
+                                WHERE idBeer=?
+                            ''', (content.get('name'), content.get('abv'),
+                                  content.get('ibu'), content.get('srm'), content.get('description'), row_id))
+                        elif table_name == 'taps':
+                            conn.execute('''
+                                UPDATE taps SET idBeer=?
+                                WHERE idTap=?
+                            ''', (content.get('beer_id'), row_id))
+                    elif operation == 'DELETE':
+                        conn.execute(f'DELETE FROM {table_name} WHERE id{table_name[:-1]}=?', (row_id,))
                     
-                    # Log the change being processed
-                    logger.debug(f"Processing change: {table} {operation} {record_id}")
-                    
-                    if table == "beers":
-                        if operation == "INSERT" or operation == "UPDATE":
-                            # Get the beer data from temp db
-                            temp_cursor.execute("SELECT * FROM beers WHERE idBeer = ?", (record_id,))
-                            beer_data = temp_cursor.fetchone()
-                            
-                            if not beer_data:
-                                logger.warning(f"Beer {record_id} not found in temp database")
-                                continue
-                            
-                            # Check if beer exists in main db
-                            main_cursor.execute("SELECT COUNT(*) FROM beers WHERE idBeer = ?", (record_id,))
-                            exists = main_cursor.fetchone()[0] > 0
-                            
-                            if exists and operation == "UPDATE":
-                                # Update existing record
-                                columns = [d[0] for d in temp_cursor.description]
-                                update_sql = f"UPDATE beers SET {', '.join(f'{col} = ?' for col in columns[1:])} WHERE idBeer = ?"
-                                main_cursor.execute(update_sql, beer_data[1:] + (record_id,))
-                                logger.debug(f"Updated beer {record_id}")
-                            elif not exists and operation == "INSERT":
-                                # Insert new record, preserving ID
-                                columns = [d[0] for d in temp_cursor.description]
-                                placeholders = ", ".join(["?"] * len(columns))
-                                insert_sql = f"INSERT INTO beers ({', '.join(columns)}) VALUES ({placeholders})"
-                                main_cursor.execute(insert_sql, beer_data)
-                                logger.debug(f"Inserted beer {record_id}")
-                            else:
-                                logger.warning(f"Operation {operation} doesn't match beer record state")
-                                
-                        elif operation == "DELETE":
-                            # Delete the beer
-                            main_cursor.execute("DELETE FROM beers WHERE idBeer = ?", (record_id,))
-                            logger.debug(f"Deleted beer {record_id}")
-                            
-                    elif table == "taps":
-                        if operation == "INSERT" or operation == "UPDATE":
-                            # Get the tap data from temp db
-                            temp_cursor.execute("SELECT * FROM taps WHERE idTap = ?", (record_id,))
-                            tap_data = temp_cursor.fetchone()
-                            
-                            if not tap_data:
-                                logger.warning(f"Tap {record_id} not found in temp database")
-                                continue
-                            
-                            # Check if tap exists in main db
-                            main_cursor.execute("SELECT COUNT(*) FROM taps WHERE idTap = ?", (record_id,))
-                            exists = main_cursor.fetchone()[0] > 0
-                            
-                            if exists and operation == "UPDATE":
-                                # Update existing record
-                                beer_id = tap_data[1]  # idBeer is the second column
-                                main_cursor.execute("UPDATE taps SET idBeer = ? WHERE idTap = ?", (beer_id, record_id))
-                                logger.debug(f"Updated tap {record_id}")
-                            elif not exists and operation == "INSERT":
-                                # Insert new record, preserving ID
-                                columns = [d[0] for d in temp_cursor.description]
-                                placeholders = ", ".join(["?"] * len(columns))
-                                insert_sql = f"INSERT INTO taps ({', '.join(columns)}) VALUES ({placeholders})"
-                                main_cursor.execute(insert_sql, tap_data)
-                                logger.debug(f"Inserted tap {record_id}")
-                            else:
-                                logger.warning(f"Operation {operation} doesn't match tap record state")
-                                
-                        elif operation == "DELETE":
-                            # Delete the tap
-                            main_cursor.execute("DELETE FROM taps WHERE idTap = ?", (record_id,))
-                            logger.debug(f"Deleted tap {record_id}")
-                    
-                    else:
-                        logger.warning(f"Unknown table in change record: {table}")
+                    # Log the change
+                    conn.execute('''
+                        INSERT INTO change_log (table_name, operation, row_id, timestamp, content, content_hash)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    ''', (table_name, operation, row_id, timestamp, content_str, content_hash))
                 
                 # Commit transaction
-                main_conn.commit()
-                logger.info("Changes applied successfully")
-                return True
+                conn.commit()
                 
         except Exception as e:
             logger.error(f"Error applying sync changes: {e}")
-            return False
+            with self.get_connection() as conn:
+                conn.rollback()
+            raise
     
     def import_from_file(self, temp_db_path):
         """Import the entire database from a file without replacing the original
