@@ -342,13 +342,22 @@ DISPLAY:
         mock_page._dataset.__contains__ = MagicMock(return_value=True)
         mock_page._dataset.__getitem__ = MagicMock(return_value={})
         
+        # Track the status changes
+        status_changes = []
+        def mock_update_dataset(key, value, merge=False):
+            if key == 'sys' and 'status' in value:
+                status_changes.append(value['status'])
+        self.test_dataset.update = MagicMock(side_effect=mock_update_dataset)
+        
         self.renderer.main_display = mock_page
         
         # When
         self.renderer.render(status="test_status")
         
         # Then
-        self.assertEqual("test_status", self.test_dataset.get('sys', {}).get('status'))
+        # Verify that the status was set to test_status and then restored
+        self.assertEqual(len(status_changes), 2)  # Should be set and restored
+        self.assertEqual(status_changes[0], "test_status")  # First change should be to test_status
     
     def test_render_returns_none_without_main_display(self):
         """Test that render returns None when no main display is loaded."""

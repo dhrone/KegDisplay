@@ -7,7 +7,7 @@ Type=simple
 User=beer
 WorkingDirectory=/home/beer/Dev/KegDisplay
 Environment=PYTHONPATH=/home/beer/Dev/KegDisplay
-ExecStart=/home/beer/.local/bin/poetry run python -m KegDisplay.webinterface \
+ExecStart=/home/beer/.poetry/bin/poetry run python -m KegDisplay.webinterface \
     --host 0.0.0.0 \
     --port 8080 \
     --workers 2 \

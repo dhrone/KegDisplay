@@ -5,7 +5,7 @@ After=network.target
 [Service]
 Type=simple
 User=beer
-ExecStart=/root/.local/bin/poetry run python -m KegDisplay.dbsync_service --mode client
+ExecStart=/home/beer/.poetry/bin/poetry run python -m KegDisplay.dbsync_service --mode client
 WorkingDirectory=/root/Dev/KegDisplay
 Restart=on-failure
 RestartSec=5
