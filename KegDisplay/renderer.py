@@ -227,7 +227,7 @@ class SequenceRenderer:
         if self.tapnr in taps:
             tap_mapping[self.tapnr] = taps.get(self.tapnr)
         current_tap_hash = self.dict_hash(tap_mapping)
-        
+
         # 2. The beer data for the beer currently assigned to this tap
         beer_data = {}
         if current_beer_id is not None and current_beer_id in beers:
@@ -243,6 +243,8 @@ class SequenceRenderer:
         # Check if either hash has changed
         tap_changed = current_tap_hash != self.taps_hash
         beer_changed = current_beer_hash != self.beers_hash
+
+        logger.info(f"tap_mapping: {tap_mapping} current_tap_hash: {current_tap_hash} self.taps_hash: {self.taps_hash}")
         
         # Update the stored hashes
         if tap_changed or beer_changed:
