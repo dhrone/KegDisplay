@@ -223,12 +223,16 @@ class SequenceRenderer:
         
         # First check - let's only hash the data we care about:
         # 1. The tap mapping for this display's assigned tap number
-        tap_mapping = {self.tapnr: taps.get(self.tapnr)} if self.tapnr in taps else {}
+        tap_mapping = {}
+        if self.tapnr in taps:
+            tap_mapping[self.tapnr] = taps.get(self.tapnr)
         current_tap_hash = self.dict_hash(tap_mapping)
         
         # 2. The beer data for the beer currently assigned to this tap
-        beer_data = {current_beer_id: beers.get(current_beer_id)} if current_beer_id and current_beer_id in beers else {}
-        current_beer_hash = self.dict_hash(beer_data, '__timestamp__')
+        beer_data = {}
+        if current_beer_id is not None and current_beer_id in beers:
+            beer_data[current_beer_id] = beers.get(current_beer_id)
+        current_beer_hash = self.dict_hash(beer_data)
         
         # Initialize hashes if not set (first call)
         if self.taps_hash is None or self.beers_hash is None:
@@ -237,9 +241,14 @@ class SequenceRenderer:
             return True
             
         # Check if either hash has changed
-        if current_tap_hash != self.taps_hash or current_beer_hash != self.beers_hash:
+        tap_changed = current_tap_hash != self.taps_hash
+        beer_changed = current_beer_hash != self.beers_hash
+        
+        # Update the stored hashes
+        if tap_changed or beer_changed:
             self.taps_hash = current_tap_hash
             self.beers_hash = current_beer_hash
+            logger.debug(f"Data changed detected: tap change={tap_changed}, beer change={beer_changed}")
             return True
             
         return False

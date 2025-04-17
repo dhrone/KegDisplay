@@ -168,7 +168,7 @@ class Application:
                     
                     # Check if data has changed
                     data_changed = self.renderer.check_data_changed()
-                    
+
                     if data_changed:
                         sys_data = self.renderer._dataset.get('sys', {})
                         tapnr = sys_data.get('tapnr', 1)
