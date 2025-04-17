@@ -121,10 +121,8 @@ class SequenceRenderer:
             
             # Initialize beer hash - avoid using 'in' operator for mock compatibility
             beer_data = {}
-            if current_beer_id is not None:
-                beer_value = beers.get(current_beer_id)
-                if beer_value is not None:
-                    beer_data[current_beer_id] = beer_value
+            if current_beer_id is not None and current_beer_id in beers:
+                beer_data[current_beer_id] = beers.get(current_beer_id)
             self.beers_hash = self.dict_hash(beer_data, '__timestamp__')
         except Exception as e:
             logger.warning(f"Error initializing hashes (this is expected in tests): {e}")
@@ -177,12 +175,21 @@ class SequenceRenderer:
             return
             
         try:
+            # Log what's being updated
+            logger.info(f"Updating dataset: key={key}, value={value}, merge={merge}")
+            
             # Use the dataset's update method - this is the only safe way to modify data
             self._dataset.update(key, value, merge=merge)
-                    
-            # We no longer update hashes here - this will be handled by check_data_changed
-            # This prevents check_data_changed from not detecting changes because the hashes
-            # were already updated when the data changed
+            
+            # Reset relevant hash when beer or tap data is updated
+            # This forces the system to re-evaluate on the next check_data_changed() call
+            if key == 'beers':
+                self.beers_hash = None
+                logger.info(f"Reset beers_hash due to beer data update")
+            elif key == 'taps':
+                self.taps_hash = None
+                logger.info(f"Reset taps_hash due to tap mapping update")
+                
         except Exception as e:
             logger.error(f"Error updating dataset: {e} {traceback.format_exc()}")
         
@@ -218,6 +225,11 @@ class SequenceRenderer:
         # Get the beer ID currently assigned to this tap
         current_beer_id = taps.get(self.tapnr)
         
+        # Log raw data for debugging
+        logger.info(f"Tap {self.tapnr} beer ID: {current_beer_id}")
+        if current_beer_id is not None and current_beer_id in beers:
+            logger.info(f"Current beer data: {beers.get(current_beer_id)}")
+        
         # First check - let's only hash the data we care about:
         # 1. The tap mapping for this display's assigned tap number
         tap_mapping = {}
@@ -230,7 +242,10 @@ class SequenceRenderer:
         if current_beer_id is not None and current_beer_id in beers:
             beer_data[current_beer_id] = beers.get(current_beer_id)
         current_beer_hash = self.dict_hash(beer_data)
-
+        
+        # Log what's being hashed
+        logger.info(f"Hashing tap mapping: {tap_mapping}")
+        logger.info(f"Hashing beer data: {beer_data}")
 
         # Initialize hashes if not set (first call)
         if self.taps_hash is None or self.beers_hash is None:
@@ -241,13 +256,21 @@ class SequenceRenderer:
         # Check if either hash has changed
         tap_changed = current_tap_hash != self.taps_hash
         beer_changed = current_beer_hash != self.beers_hash
-
         
-        # Update the stored hashes
+        # Log detailed information for debugging
+        logger.info(f"Checking for changes on tap {self.tapnr} (beer ID: {current_beer_id})")
+        logger.info(f"Tap mapping hash: current={current_tap_hash}, stored={self.taps_hash}, changed={tap_changed}")
+        logger.info(f"Beer data hash: current={current_beer_hash}, stored={self.beers_hash}, changed={beer_changed}")
+        
+        # Update the stored hashes and return true if anything changed
         if tap_changed or beer_changed:
+            if tap_changed:
+                logger.info(f"Tap mapping changed for tap {self.tapnr}")
+            if beer_changed:
+                logger.info(f"Beer data changed for beer ID {current_beer_id}")
+                
             self.taps_hash = current_tap_hash
             self.beers_hash = current_beer_hash
-            logger.debug(f"Data changed detected: tap change={tap_changed}, beer change={beer_changed}")
             return True
             
         return False
