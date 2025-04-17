@@ -233,7 +233,9 @@ class SequenceRenderer:
         if current_beer_id is not None and current_beer_id in beers:
             beer_data[current_beer_id] = beers.get(current_beer_id)
         current_beer_hash = self.dict_hash(beer_data)
-        
+
+        logger.info(f"tap_mapping: {tap_mapping} current_tap_hash: {current_tap_hash} self.taps_hash: {self.taps_hash}")
+
         # Initialize hashes if not set (first call)
         if self.taps_hash is None or self.beers_hash is None:
             self.taps_hash = current_tap_hash
@@ -244,7 +246,6 @@ class SequenceRenderer:
         tap_changed = current_tap_hash != self.taps_hash
         beer_changed = current_beer_hash != self.beers_hash
 
-        logger.info(f"tap_mapping: {tap_mapping} current_tap_hash: {current_tap_hash} self.taps_hash: {self.taps_hash}")
         
         # Update the stored hashes
         if tap_changed or beer_changed:
