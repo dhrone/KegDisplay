@@ -180,12 +180,9 @@ class SequenceRenderer:
             # Use the dataset's update method - this is the only safe way to modify data
             self._dataset.update(key, value, merge=merge)
                     
-            # Update hashes if this is a relevant dataset change
-            if key in ['beers', 'taps']:
-                try:
-                    self._initialize_hashes(self._dataset)
-                except Exception as e:
-                    logger.warning(f"Error updating hashes (this is expected in tests): {e}")
+            # We no longer update hashes here - this will be handled by check_data_changed
+            # This prevents check_data_changed from not detecting changes because the hashes
+            # were already updated when the data changed
         except Exception as e:
             logger.error(f"Error updating dataset: {e} {traceback.format_exc()}")
         
