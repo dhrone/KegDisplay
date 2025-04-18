@@ -154,8 +154,8 @@ class DefaultRendererFactory(RendererFactoryInterface):
         Raises:
             Exception: If renderer creation fails
         """
-        # Create the renderer, possibly with initial dataset values
-        renderer = SequenceRenderer(display, dataset_obj)
+        # Create the renderer, with initial dataset values and config
+        renderer = SequenceRenderer(display, dataset_obj, config)
         
         # Load the page template - this will get tinyDisplay's dataset
         if not renderer.load_page(config['page']):

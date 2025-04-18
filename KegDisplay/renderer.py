@@ -44,12 +44,13 @@ def load(page_path, dataset=None):
 class SequenceRenderer:
     """Handles rendering and sequencing of display images."""
     
-    def __init__(self, display, dataset_obj=None):
+    def __init__(self, display, dataset_obj=None, config=None):
         """Initialize the renderer.
         
         Args:
             display: Display object to render to
             dataset_obj: Initial dataset values (optional, mainly for testing)
+            config: Configuration dictionary (optional, if not provided, defaults will be used)
         """
         self.display = display
         self.main_display = None
@@ -70,10 +71,15 @@ class SequenceRenderer:
         self.last_adjustment_time = time.time()
         self.frame_timing_history = deque(maxlen=30)  # Keep history of last 30 frames for smoothing
         
-        # Get configuration from config manager
-        config = ConfigManager()
-        self.tapnr = config.get_config('tap')  # Default is already set in ConfigManager
-        self.target_fps = config.get_config('target_fps')  # Default is already set in ConfigManager
+        # Get configuration - either from provided config dict or fallback to ConfigManager
+        if config is None:
+            # Only create a new ConfigManager if no config was provided
+            from KegDisplay.config.config_manager import ConfigManager
+            config = ConfigManager().get_config()
+            logger.warning("No config provided to SequenceRenderer, using defaults")
+            
+        self.tapnr = config.get('tap', 1)  # Use config dict get() method for safe access
+        self.target_fps = config.get('target_fps', 30)  # Use config dict get() method for safe access
         self.target_frame_time = 1.0 / self.target_fps
         
         logger.info(f"Renderer initialized for tap #{self.tapnr}")
