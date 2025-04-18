@@ -227,9 +227,6 @@ class SequenceRenderer:
         # Get the beer ID currently assigned to this tap
         current_beer_id = taps.get(self.tapnr)
         
-        if current_beer_id is not None and current_beer_id in beers:
-            logger.info(f"Current beer data: {beers.get(current_beer_id)}")
-        
         # First check - let's only hash the data we care about:
         # 1. The tap mapping for this display's assigned tap number
         tap_mapping = {}
