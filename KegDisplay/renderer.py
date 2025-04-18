@@ -72,29 +72,24 @@ class SequenceRenderer:
         
         # Get configuration from config manager
         config = ConfigManager()
+        self.tapnr = config.get_config('tap')  # Default is already set in ConfigManager
         self.target_fps = config.get_config('target_fps')  # Default is already set in ConfigManager
         self.target_frame_time = 1.0 / self.target_fps
-        self.tapnr = config.get_config('tap')  # Default is already set in ConfigManager
         
         logger.debug(f"Renderer initialized for tap #{self.tapnr}")
         
-        # Get tap number if available in the initial dataset
-        tapnr = None
-        if dataset_obj and hasattr(dataset_obj, 'get'):
-            sys_data = dataset_obj.get('sys', {})
-            if isinstance(sys_data, dict) and 'tapnr' in sys_data:
-                tapnr = sys_data['tapnr']
-                logger.debug(f"Renderer initialized for tap #{tapnr}")
-        else:
-            logger.debug("Renderer initialized without initial tap information")
+        # If we have a dataset, initialize it with our tap number
+        if dataset_obj and hasattr(dataset_obj, 'update'):
+            dataset_obj.update('sys', {'tapnr': self.tapnr}, merge=True)
+            logger.debug(f"Dataset initialized with tap #{self.tapnr}")
+            
+            # Update FPS from dataset if available
+            if hasattr(dataset_obj, 'get'):
+                sys_data = dataset_obj.get('sys', {})
+                if isinstance(sys_data, dict):
+                    self.target_fps = sys_data.get('target_fps', self.target_fps)
+                    self.target_frame_time = 1.0 / self.target_fps
         
-        # Update config values if dataset is available
-        if dataset_obj and hasattr(dataset_obj, 'get'):
-            sys_data = dataset_obj.get('sys', {})
-            if isinstance(sys_data, dict):
-                self.target_fps = sys_data.get('target_fps', 30)
-                self.target_frame_time = 1.0 / self.target_fps
-    
     def _initialize_hashes(self, dataset_obj):
         """Initialize the data change detection hashes.
         
@@ -222,6 +217,7 @@ class SequenceRenderer:
         beers = self._dataset.get('beers', {})
         taps = self._dataset.get('taps', {})
         
+        # Always use self.tapnr (from command line config) as the authoritative value
         # Get the beer ID currently assigned to this tap
         current_beer_id = taps.get(self.tapnr)
         
@@ -319,10 +315,9 @@ class SequenceRenderer:
         # Check if beer data exists
         beers = self.main_display._dataset.get('beers', {})
         taps = self.main_display._dataset.get('taps', {})
-        sys_data = self.main_display._dataset.get('sys', {})
         
-        # Get tap number and beer ID for this display
-        tapnr = sys_data.get('tapnr', 1)
+        # Always use self.tapnr from config as the authoritative tap number
+        tapnr = self.tapnr
         beer_id = taps.get(tapnr)
         
         # Track current beer for change detection
@@ -335,7 +330,7 @@ class SequenceRenderer:
             logger.debug(f"Display for tap {tapnr}, showing beer ID {beer_id}")
             logger.debug(f"Current beer data: {str(beers)[:80]}")
             logger.debug(f"Current tap data: {str(taps)[:80]}")
-            logger.debug(f"Current system data: {str(sys_data)[:80]}")
+            logger.debug(f"Current system data: {str(self.main_display._dataset.get('sys', {}))[:80]}")
         elif self._last_logged_beer != current_beer_key:
             # Log only when tap or beer ID changes
             self._last_logged_beer = current_beer_key

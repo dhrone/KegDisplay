@@ -185,13 +185,30 @@ DISPLAY:
         # Create a renderer with a mock dataset for this specific test
         mock_dataset = Mock()
         mock_dataset.update = MagicMock()
+        mock_dataset.get = MagicMock(return_value={})
+        
+        # Create the renderer with the mock dataset
+        # This should trigger the first update in __init__ to set tapnr
         renderer = SequenceRenderer(self.mock_display, mock_dataset)
         
-        # When
+        # When - make another explicit update
         renderer.update_dataset("test_key", {"test": "value"}, merge=True)
         
-        # Then
-        mock_dataset.update.assert_called_once_with("test_key", {"test": "value"}, merge=True)
+        # Then - verify both updates happened
+        # First call should be from initialization setting the tapnr
+        # Second call should be our explicit update
+        self.assertEqual(2, mock_dataset.update.call_count)
+        
+        # Verify the first call was to set tapnr in sys data
+        first_call_args = mock_dataset.update.call_args_list[0]
+        self.assertEqual('sys', first_call_args[0][0])  # First arg should be 'sys'
+        self.assertIn('tapnr', first_call_args[0][1])   # Second arg should have 'tapnr' key
+        
+        # Verify the second call matches our explicit update
+        second_call_args = mock_dataset.update.call_args_list[1]
+        self.assertEqual("test_key", second_call_args[0][0])
+        self.assertEqual({"test": "value"}, second_call_args[0][1])
+
     
     def test_dict_hash_generates_consistent_hash(self):
         """Test that dict_hash generates a consistent hash for the same dictionary."""
