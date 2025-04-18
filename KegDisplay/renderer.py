@@ -227,8 +227,6 @@ class SequenceRenderer:
         # Get the beer ID currently assigned to this tap
         current_beer_id = taps.get(self.tapnr)
         
-        # Log raw data for debugging
-        logger.info(f"Tap {self.tapnr} beer ID: {current_beer_id}")
         if current_beer_id is not None and current_beer_id in beers:
             logger.info(f"Current beer data: {beers.get(current_beer_id)}")
         
@@ -255,16 +253,13 @@ class SequenceRenderer:
         # Check if either hash has changed
         tap_changed = current_tap_hash != self.taps_hash
         beer_changed = current_beer_hash != self.beers_hash
-        
-        # Log detailed information for debugging
-        logger.info(f"Checking for changes on tap {self.tapnr} (beer ID: {current_beer_id})")
- 
+         
         # Update the stored hashes and return true if anything changed
         if tap_changed or beer_changed:
             if tap_changed:
-                logger.info(f"Tap mapping changed for tap {self.tapnr}")
+                logger.debug(f"Tap mapping changed for tap {self.tapnr}")
             if beer_changed:
-                logger.info(f"Beer data changed for beer ID {current_beer_id}")
+                logger.debug(f"Beer data changed for beer ID {current_beer_id}")
                 
             self.taps_hash = current_tap_hash
             self.beers_hash = current_beer_hash
