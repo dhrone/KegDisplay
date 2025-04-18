@@ -76,7 +76,7 @@ class SequenceRenderer:
         self.target_fps = config.get_config('target_fps')  # Default is already set in ConfigManager
         self.target_frame_time = 1.0 / self.target_fps
         
-        logger.debug(f"Renderer initialized for tap #{self.tapnr}")
+        logger.info(f"Renderer initialized for tap #{self.tapnr}")
         
         # If we have a dataset, initialize it with our tap number
         if dataset_obj and hasattr(dataset_obj, 'update'):
@@ -239,9 +239,6 @@ class SequenceRenderer:
             beer_data[current_beer_id] = beers.get(current_beer_id)
         current_beer_hash = self.dict_hash(beer_data)
         
-        # Log what's being hashed
-        logger.info(f"Hashing tap mapping: {tap_mapping}")
-        logger.info(f"Hashing beer data: {beer_data}")
 
         # Initialize hashes if not set (first call)
         if self.taps_hash is None or self.beers_hash is None:
@@ -255,9 +252,7 @@ class SequenceRenderer:
         
         # Log detailed information for debugging
         logger.info(f"Checking for changes on tap {self.tapnr} (beer ID: {current_beer_id})")
-        logger.info(f"Tap mapping hash: current={current_tap_hash}, stored={self.taps_hash}, changed={tap_changed}")
-        logger.info(f"Beer data hash: current={current_beer_hash}, stored={self.beers_hash}, changed={beer_changed}")
-        
+ 
         # Update the stored hashes and return true if anything changed
         if tap_changed or beer_changed:
             if tap_changed:
