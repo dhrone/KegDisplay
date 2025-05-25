@@ -263,6 +263,22 @@ else
     cd KegDisplay
 fi
 
+# Clone the KegDisplayDB repository
+log "Cloning KegDisplayDB repository..."
+sudo -u beer mkdir -p /home/beer/Dev
+cd /home/beer/Dev
+if [ -d "KegDisplayDB" ]; then
+    log "KegDisplayDB directory already exists, updating..."
+    cd KegDisplayDB
+    sudo -u beer git pull
+else
+    sudo -u beer git clone https://github.com/dhrone/KegDisplayDB || {
+        error "Failed to clone KegDisplayDB repository.";
+        exit 1;
+    }
+    cd KegDisplayDB
+fi
+
 # Install Python dependencies using Poetry
 log "Installing Python dependencies..."
 if ! install_poetry_dependencies "/home/beer/Dev/KegDisplay"; then
