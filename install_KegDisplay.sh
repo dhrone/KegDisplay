@@ -21,6 +21,22 @@ success() {
     echo -e "\033[1;32m[SUCCESS]\033[0m $1"
 }
 
+# Function to display usage
+usage() {
+    echo "Usage: $0 [options]"
+    echo "Options:"
+    echo "  -t, --type TYPE           Installation type (primary/secondary)"
+    echo "  -n, --tap-number NUM      Tap number (1-99)"
+    echo "  -d, --display TYPE        Display type (ws0010/ssd1322)"
+    echo "  -i, --interface TYPE      Interface type (bitbang/pigpio/spi)"
+    echo "  -k, --tkinter BOOL        Install tkinter (true/false)"
+    echo "  -r, --rs-pin NUM          RS pin number (required for bitbang/pigpio)"
+    echo "  -e, --e-pin NUM           E pin number (required for bitbang/pigpio)"
+    echo "  -p, --data-pins PINS      Data pins (space-separated, required for bitbang/pigpio)"
+    echo "  -h, --help                Display this help message"
+    exit 1
+}
+
 # Function to handle Poetry installation with lock file recovery
 install_poetry_dependencies() {
     local directory=$1
@@ -33,7 +49,7 @@ install_poetry_dependencies() {
         # Try to install dependencies
         if sudo -u beer bash -c "cd $directory && source /home/beer/.cargo/env && /home/beer/.poetry/bin/poetry install"; then
             # Install development dependencies if requested
-            if [ "$INSTALL_TKINTER" = "y" ]; then
+            if [ "$INSTALL_TKINTER" = "true" ]; then
                 log "Installing development dependencies..."
                 sudo -u beer bash -c "cd $directory && /home/beer/.poetry/bin/poetry install --with dev" || {
                     error "Failed to install development dependencies.";
@@ -67,106 +83,133 @@ install_poetry_dependencies() {
     return 1
 }
 
+# Parse command line arguments
+INSTALL_TYPE=""
+TAP_NUMBER=""
+DISPLAY_TYPE=""
+INTERFACE_TYPE=""
+INSTALL_TKINTER="false"
+RS_PIN=""
+E_PIN=""
+DATA_PINS=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -t|--type)
+            INSTALL_TYPE="$2"
+            shift 2
+            ;;
+        -n|--tap-number)
+            TAP_NUMBER="$2"
+            shift 2
+            ;;
+        -d|--display)
+            DISPLAY_TYPE="$2"
+            shift 2
+            ;;
+        -i|--interface)
+            INTERFACE_TYPE="$2"
+            shift 2
+            ;;
+        -k|--tkinter)
+            INSTALL_TKINTER="$2"
+            shift 2
+            ;;
+        -r|--rs-pin)
+            RS_PIN="$2"
+            shift 2
+            ;;
+        -e|--e-pin)
+            E_PIN="$2"
+            shift 2
+            ;;
+        -p|--data-pins)
+            DATA_PINS="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            ;;
+        *)
+            error "Unknown option: $1"
+            usage
+            ;;
+    esac
+done
+
 # Verify the script is run as root
 if [ "$(id -u)" -ne 0 ]; then
     error "This script must be run as root"
     exit 1
 fi
 
-# Welcome message
-log "Welcome to the KegDisplay installation script."
-log "This script will set up KegDisplay on your system."
+# Validate required arguments
+if [ -z "$INSTALL_TYPE" ] || [ -z "$TAP_NUMBER" ] || [ -z "$DISPLAY_TYPE" ] || [ -z "$INTERFACE_TYPE" ]; then
+    error "Missing required arguments"
+    usage
+fi
 
-# Determine installation type
-INSTALL_TYPE=""
-while [ "$INSTALL_TYPE" != "primary" ] && [ "$INSTALL_TYPE" != "secondary" ]; do
-    read -p "Is this a primary (with web interface) or secondary installation? (primary/secondary): " INSTALL_TYPE
-    INSTALL_TYPE=$(echo "$INSTALL_TYPE" | tr '[:upper:]' '[:lower:]')
-    if [ "$INSTALL_TYPE" != "primary" ] && [ "$INSTALL_TYPE" != "secondary" ]; then
-        error "Invalid choice. Please enter 'primary' or 'secondary'."
-    fi
-done
+# Validate installation type
+if [ "$INSTALL_TYPE" != "primary" ] && [ "$INSTALL_TYPE" != "secondary" ]; then
+    error "Invalid installation type. Must be 'primary' or 'secondary'"
+    usage
+fi
 
-# Get the tap number for this installation
-TAP_NUMBER=""
-while ! [[ "$TAP_NUMBER" =~ ^[0-9]+$ ]]; do
-    read -p "What tap number will this installation use? (1-99): " TAP_NUMBER
-    if ! [[ "$TAP_NUMBER" =~ ^[0-9]+$ ]] || [ "$TAP_NUMBER" -lt 1 ] || [ "$TAP_NUMBER" -gt 99 ]; then
-        error "Please enter a valid tap number between 1 and 99."
-    fi
-done
+# Validate tap number
+if ! [[ "$TAP_NUMBER" =~ ^[0-9]+$ ]] || [ "$TAP_NUMBER" -lt 1 ] || [ "$TAP_NUMBER" -gt 99 ]; then
+    error "Invalid tap number. Must be between 1 and 99"
+    usage
+fi
 
-# Get display type
-DISPLAY_TYPE=""
-while [ "$DISPLAY_TYPE" != "ws0010" ] && [ "$DISPLAY_TYPE" != "ssd1322" ]; do
-    read -p "What type of display is connected? (ws0010/ssd1322): " DISPLAY_TYPE
-    DISPLAY_TYPE=$(echo "$DISPLAY_TYPE" | tr '[:upper:]' '[:lower:]')
-    if [ "$DISPLAY_TYPE" != "ws0010" ] && [ "$DISPLAY_TYPE" != "ssd1322" ]; then
-        error "Invalid choice. Please enter 'ws0010' or 'ssd1322'."
-    fi
-done
+# Validate display type
+if [ "$DISPLAY_TYPE" != "ws0010" ] && [ "$DISPLAY_TYPE" != "ssd1322" ]; then
+    error "Invalid display type. Must be 'ws0010' or 'ssd1322'"
+    usage
+fi
 
-# Get interface type
-INTERFACE_TYPE=""
-while [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "pigpio" ] && [ "$INTERFACE_TYPE" != "spi" ]; do
-    read -p "What type of interface is being used? (bitbang/pigpio/spi): " INTERFACE_TYPE
-    INTERFACE_TYPE=$(echo "$INTERFACE_TYPE" | tr '[:upper:]' '[:lower:]')
-    if [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "pigpio" ] && [ "$INTERFACE_TYPE" != "spi" ]; then
-        error "Invalid choice. Please enter 'bitbang', 'pigpio', or 'spi'."
-    fi
-done
+# Validate interface type
+if [ "$INTERFACE_TYPE" != "bitbang" ] && [ "$INTERFACE_TYPE" != "pigpio" ] && [ "$INTERFACE_TYPE" != "spi" ]; then
+    error "Invalid interface type. Must be 'bitbang', 'pigpio', or 'spi'"
+    usage
+fi
 
-# Ask if tkinter is needed for testing
-INSTALL_TKINTER=""
-while [ "$INSTALL_TKINTER" != "y" ] && [ "$INSTALL_TKINTER" != "n" ]; do
-    read -p "Do you need tkinter for testing? (y/n): " INSTALL_TKINTER
-    INSTALL_TKINTER=$(echo "$INSTALL_TKINTER" | tr '[:upper:]' '[:lower:]')
-    if [ "$INSTALL_TKINTER" != "y" ] && [ "$INSTALL_TKINTER" != "n" ]; then
-        error "Invalid choice. Please enter 'y' or 'n'."
-    fi
-done
+# Validate tkinter value
+if [ "$INSTALL_TKINTER" != "true" ] && [ "$INSTALL_TKINTER" != "false" ]; then
+    error "Invalid tkinter value. Must be 'true' or 'false'"
+    usage
+fi
 
-# Additional interface settings if using bitbang or pigpio
-RS_PIN=""
-E_PIN=""
-DATA_PINS=""
-
+# Validate interface-specific arguments
 if [ "$INTERFACE_TYPE" = "bitbang" ] || [ "$INTERFACE_TYPE" = "pigpio" ]; then
-    # Get RS pin
-    while ! [[ "$RS_PIN" =~ ^[0-9]+$ ]]; do
-        read -p "Enter the RS pin number: " RS_PIN
-        if ! [[ "$RS_PIN" =~ ^[0-9]+$ ]]; then
-            error "Please enter a valid pin number."
-        fi
-    done
+    if [ -z "$RS_PIN" ] || [ -z "$E_PIN" ] || [ -z "$DATA_PINS" ]; then
+        error "RS pin, E pin, and data pins are required for $INTERFACE_TYPE interface"
+        usage
+    fi
     
-    # Get E pin
-    while ! [[ "$E_PIN" =~ ^[0-9]+$ ]]; do
-        read -p "Enter the E pin number: " E_PIN
-        if ! [[ "$E_PIN" =~ ^[0-9]+$ ]]; then
-            error "Please enter a valid pin number."
-        fi
-    done
+    # Validate RS pin
+    if ! [[ "$RS_PIN" =~ ^[0-9]+$ ]]; then
+        error "Invalid RS pin number"
+        usage
+    fi
     
-    # Get data pins
-    while true; do
-        read -p "Enter the data pins (space-separated, e.g., '25 5 6 12'): " DATA_PINS
-        # Check if each entered pin is a number
-        valid=true
-        for pin in $DATA_PINS; do
-            if ! [[ "$pin" =~ ^[0-9]+$ ]]; then
-                valid=false
-                break
-            fi
-        done
-        
-        if [ "$valid" = true ] && [ -n "$DATA_PINS" ]; then
-            break
-        else
-            error "Please enter valid pin numbers separated by spaces."
+    # Validate E pin
+    if ! [[ "$E_PIN" =~ ^[0-9]+$ ]]; then
+        error "Invalid E pin number"
+        usage
+    fi
+    
+    # Validate data pins
+    for pin in $DATA_PINS; do
+        if ! [[ "$pin" =~ ^[0-9]+$ ]]; then
+            error "Invalid data pin number: $pin"
+            usage
         fi
     done
 fi
+
+# Welcome message
+log "Welcome to the KegDisplay installation script."
+log "This script will set up KegDisplay on your system."
 
 # Begin installation
 log "Beginning system installation..."
@@ -231,7 +274,7 @@ EOF
 fi
 
 # Install tkinter if requested
-if [ "$INSTALL_TKINTER" = "y" ]; then
+if [ "$INSTALL_TKINTER" = "true" ]; then
     log "Installing tkinter..."
     apt-get install -y python3-tk || {
         error "Failed to install tkinter.";
