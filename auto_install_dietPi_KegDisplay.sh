@@ -113,6 +113,47 @@ apt-get install -y python3 git gcc vim-tiny sqlite3 python3-dev python3-rpi.gpio
     exit 1;
 }
 
+# Install pigpio for pigpio interface
+log "Installing pigpio for pigpio interface..."
+apt-get install -y pigpio python3-pigpio || {
+    error "Failed to install pigpio.";
+    exit 1;
+}
+
+# Configure pigpio daemon
+log "Configuring pigpio daemon..."
+# Create systemd service file for pigpiod
+cat > /etc/systemd/system/pigpiod.service << 'EOF'
+[Unit]
+Description=pigpio daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/pigpiod -l
+Type=forking
+PIDFile=/run/pigpio.pid
+ExecStop=/bin/systemctl kill -s SIGKILL pigpiod
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Enable and start pigpiod service
+systemctl daemon-reload
+systemctl enable pigpiod || {
+    error "Failed to enable pigpiod service.";
+    exit 1;
+}
+systemctl start pigpiod || {
+    error "Failed to start pigpiod service.";
+    exit 1;
+}
+
+# Ensure pigpio socket has correct permissions
+chmod 666 /var/run/pigpio.sock || {
+    log "Note: pigpio socket permissions could not be set. This might be because the service hasn't created it yet.";
+}
+
 # Create beer user account
 log "Creating beer user account..."
 id -u beer &>/dev/null || useradd -m -s /bin/bash beer || {
@@ -270,13 +311,26 @@ cd /home/beer/Dev
 if [ -d "KegDisplayDB" ]; then
     log "KegDisplayDB directory already exists, updating..."
     cd KegDisplayDB
-    sudo -u beer git pull
+    sudo -u beer git fetch --all
+    sudo -u beer git checkout feature/database-optimization
+    sudo -u beer git pull origin feature/database-optimization
 else
     sudo -u beer git clone https://github.com/dhrone/KegDisplayDB || {
         error "Failed to clone KegDisplayDB repository.";
         exit 1;
     }
     cd KegDisplayDB
+    sudo -u beer git checkout feature/database-optimization || {
+        error "Failed to checkout feature/database-optimization branch.";
+        exit 1;
+    }
+fi
+
+# Install Python dependencies for KegDisplayDB using Poetry
+log "Installing Python dependencies for KegDisplayDB..."
+if ! install_poetry_dependencies "/home/beer/Dev/KegDisplayDB"; then
+    error "Failed to install KegDisplayDB Python dependencies. Installation aborted."
+    exit 1
 fi
 
 # Install Python dependencies using Poetry
@@ -293,33 +347,6 @@ sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && mkdir -p KegDisplay" || {
     exit 1;
 }
 
-# Check if the database already exists
-if [ -f "/home/beer/Dev/KegDisplay/KegDisplay/beer.db" ]; then
-    log "Database already exists at /home/beer/Dev/KegDisplay/KegDisplay/beer.db"
-    log "Reinitializing database..."
-    sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && /home/beer/.poetry/bin/poetry run python -m KegDisplay.db.createDB" || {
-        error "Failed to initialize database.";
-        exit 1;
-    }
-    log "Database reinitialized successfully."
-else
-    # Initialize the database using the repository's create script
-    log "Initializing database..."
-    sudo -u beer bash -c "cd /home/beer/Dev/KegDisplay && /home/beer/.poetry/bin/poetry run python -m KegDisplay.db.createDB" || {
-        error "Failed to initialize database.";
-        exit 1;
-    }
-    log "Database initialized successfully."
-fi
-
-# Verify the database was created in the correct location
-if [ ! -f "/home/beer/Dev/KegDisplay/KegDisplay/beer.db" ]; then
-    error "Database was not created in the expected location. Please check the application logs for more information.";
-    exit 1;
-fi
-
-log "Database initialization completed."
-
 # Create systemd service files
 log "Creating systemd service files..."
 
@@ -327,6 +354,20 @@ log "Creating systemd service files..."
 log "Installing taggstaps service..."
 cp /home/beer/Dev/KegDisplay/taggstaps.service /etc/systemd/system/ || {
     error "Failed to copy taggstaps.service file.";
+    exit 1;
+}
+
+# Install sync service file from KegDisplayDB
+log "Installing sync service..."
+cp /home/beer/Dev/KegDisplayDB/sync.service /etc/systemd/system/ || {
+    error "Failed to copy sync.service file.";
+    exit 1;
+}
+
+# Install kegdisplay service file from KegDisplayDB
+log "Installing kegdisplay service..."
+cp /home/beer/Dev/KegDisplayDB/kegdisplay.service /etc/systemd/system/ || {
+    error "Failed to copy kegdisplay.service file.";
     exit 1;
 }
 
@@ -338,22 +379,21 @@ sed -i "s|ExecStart=.*|ExecStart=/home/beer/.poetry/bin/poetry run python -m Keg
     exit 1;
 }
 
-# Update the WorkingDirectory path in the service file
+# Update the WorkingDirectory path in the taggstaps service file
 sed -i "s|WorkingDirectory=.*|WorkingDirectory=/home/beer/Dev/KegDisplay|" /etc/systemd/system/taggstaps.service || {
     error "Failed to update taggstaps.service WorkingDirectory.";
     exit 1;
 }
 
-# Install webinterface service file
-log "Installing webinterface service..."
-cp /home/beer/Dev/KegDisplay/webinterface.service /etc/systemd/system/ || {
-    error "Failed to copy webinterface.service file.";
+# Update the WorkingDirectory path in the sync service file
+sed -i "s|WorkingDirectory=.*|WorkingDirectory=/home/beer/Dev/KegDisplayDB|" /etc/systemd/system/sync.service || {
+    error "Failed to update sync.service WorkingDirectory.";
     exit 1;
 }
 
-# Update the WorkingDirectory path in the service file
-sed -i "s|WorkingDirectory=.*|WorkingDirectory=/home/beer/Dev/KegDisplay|" /etc/systemd/system/webinterface.service || {
-    error "Failed to update webinterface.service WorkingDirectory.";
+# Update the WorkingDirectory path in the kegdisplay service file
+sed -i "s|WorkingDirectory=.*|WorkingDirectory=/home/beer/Dev/KegDisplayDB|" /etc/systemd/system/kegdisplay.service || {
+    error "Failed to update kegdisplay.service WorkingDirectory.";
     exit 1;
 }
 
@@ -374,13 +414,23 @@ systemctl start taggstaps.service || {
     exit 1;
 }
 
-# Enable and start webinterface service
-systemctl enable webinterface.service || {
-    error "Failed to enable webinterface service.";
+# Enable and start sync service
+systemctl enable sync.service || {
+    error "Failed to enable sync service.";
     exit 1;
 }
-systemctl start webinterface.service || {
-    error "Failed to start webinterface service.";
+systemctl start sync.service || {
+    error "Failed to start sync service.";
+    exit 1;
+}
+
+# Enable and start kegdisplay service
+systemctl enable kegdisplay.service || {
+    error "Failed to enable kegdisplay service.";
+    exit 1;
+}
+systemctl start kegdisplay.service || {
+    error "Failed to start kegdisplay service.";
     exit 1;
 }
 
@@ -425,9 +475,10 @@ log "Added beer user to ssl-cert group."
 chgrp ssl-cert /etc/ssl/private/kegdisplay.key
 
 success "KegDisplay has been installed successfully!"
-log "The web interface is available at http://$(hostname -I | awk '{print $1}'):8080"
 log "To check the status of the services, run:"
+log "  systemctl status pigpiod.service"
 log "  systemctl status taggstaps.service"
-log "  systemctl status webinterface.service"
+log "  systemctl status sync.service"
+log "  systemctl status kegdisplay.service"
 log "Log files are located in /var/log/KegDisplay/"
 log "Thank you for installing KegDisplay!" 

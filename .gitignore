@@ -178,3 +178,5 @@ KegDisplay/ssl/*
 
 # Ignore profile data
 taggstaps_profile*
+dietpi-wifi.txt
+dietpi.txt
