@@ -10,7 +10,7 @@ set -e  # Exit immediately if a command exits with a non-zero status
 INSTALL_TYPE="primary"
 TAP_NUMBER="1"
 DISPLAY_TYPE="ws0010"
-INTERFACE_TYPE="bitbang"
+INTERFACE_TYPE="pigpio"
 INSTALL_TKINTER="false"
 RS_PIN="7"
 E_PIN="8"
